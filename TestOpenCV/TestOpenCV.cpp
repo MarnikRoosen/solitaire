@@ -4,6 +4,8 @@
 #include "stdafx.h"
 #include "TestOpenCV.h"
 
+//test gitlab commit
+
 int main(int argc, char** argv)
 {
 	HWND hwndDesktop = GetDesktopWindow();
