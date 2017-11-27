@@ -2,7 +2,7 @@
 // Mouse events source: https://opencv-srf.blogspot.be/2011/11/mouse-events.html
 
 #include "stdafx.h"
-#include "TestOpenCV.h"
+#include "GameAnalysis.h"
 
 //test gitlab commit
 
