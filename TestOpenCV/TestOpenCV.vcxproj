@@ -171,6 +171,9 @@
     </ClCompile>
     <ClCompile Include="GameAnalysis.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\x64\Debug\3ofspades.PNG" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

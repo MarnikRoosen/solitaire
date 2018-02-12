@@ -5,6 +5,7 @@
 #include "opencv2/core/core.hpp"
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <utility>
 #include <Windows.h>
 #include <iostream>
 #pragma comment(lib, "Gdi32.lib")
@@ -28,5 +29,7 @@ Mat hwnd2mat(HWND hwnd);
 
 void CallBackFunc(int event, int x, int y, int flags, void* userdata);
 int main(int argc, char ** argv);
-void detectCard();
+Mat detectCard();
 void getApplicationView();
+std::pair<Mat, Mat> getCardCharacteristics(Mat aCard);
+void classifyCard(std::pair<Mat, Mat> cardCharacteristics);

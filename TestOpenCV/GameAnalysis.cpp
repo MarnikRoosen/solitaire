@@ -8,12 +8,67 @@ const string basePath = "C:/Users/marni/source/repos/gameAnalysis/x64/Debug/";
 
 int main(int argc, char** argv)
 {
-	detectCard();
+	Mat card = detectCard();
+	std::pair<Mat, Mat> cardCharacteristics = getCardCharacteristics(card);
+	classifyCard(cardCharacteristics);
 	//getApplicationView();
 	return 0;
 }
 
-void detectCard()
+void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
+{
+
+}
+
+std::pair<Mat, Mat> getCardCharacteristics(Mat aCard)
+{
+	Rect classArea;
+	classArea.x = aCard.cols / 100;
+	classArea.y = aCard.rows / 100;
+	classArea.width = aCard.cols / 4.2;
+	classArea.height = aCard.rows / 3.8;
+	Mat card = Mat(aCard, classArea).clone();
+
+	Mat grayImg, blurredImg, threshImg;
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+
+	// convert the image to gray
+	cvtColor(card, grayImg, COLOR_BGR2GRAY);
+
+	// apply gaussian blur to improve card detection
+	GaussianBlur(grayImg, blurredImg, Size(1, 1), 1000);
+
+	// threshold the image to keep only brighter regions (cards are white)
+	threshold(blurredImg, threshImg, 120, 255, THRESH_BINARY);
+
+	// find all the contours using the thresholded image
+	findContours(threshImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	Mat rank, type;
+	std::pair<Mat, Mat> cardCharacteristics;
+	int type_index = 0;
+	for (int i = 0; i < contours.size(); i++) // iterate through each contour. 
+	{
+		double a = contourArea(contours[i], false);  //  Find the area of contour
+		if (type_index == 1 && a < card.cols * card.rows * 0.9) {	// Don't take the outerborder (margin of 10%)
+			Rect bounding_rect = boundingRect(contours[i]);
+			type = Mat(card, bounding_rect).clone();
+			imshow("type", type);
+		}
+		if (type_index == 0 && a < card.cols * card.rows * 0.9) {	// Don't take the outerborder (margin of 10%)
+			Rect bounding_rect = boundingRect(contours[i]);
+			rank = Mat(card, bounding_rect).clone();
+			imshow("rank", rank);
+			type_index = 1;
+		}
+	}	
+	cardCharacteristics = std::make_pair(type, rank);
+	waitKey(0);
+	return cardCharacteristics;
+}
+
+Mat detectCard()
 {
 	// load testimage
 	String filename = "3ofspades.png";
@@ -23,8 +78,10 @@ void detectCard()
 	if (!src.data)
 	{
 		cout << "Could not open or find the image" << std::endl;
-		return;
+		exit(EXIT_FAILURE);
 	}
+
+	imshow("original image", src);
 
 	Mat grayImg, blurredImg, threshImg;
 	vector<vector<Point>> contours;
@@ -58,11 +115,9 @@ void detectCard()
 	}
 
 	// display the largest contour
-	rectangle(src, bounding_rect, Scalar(0, 0, 255), 1, 8, 0);
-	rectangle(src, Point(bounding_rect.x, bounding_rect.y), Point(bounding_rect.x + bounding_rect.width/4.2, bounding_rect.y + bounding_rect.height / 3.8), Scalar(0, 255, 255), 1, 8, 0);
-	imshow("src", src);
-
-	waitKey(0);
+	Mat card = Mat(src, bounding_rect).clone();
+	imshow("card", card);
+	return card;
 }
 
 void getApplicationView()
