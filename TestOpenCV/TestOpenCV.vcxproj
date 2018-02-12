@@ -23,7 +23,7 @@
     <ProjectGuid>{4060F119-4638-4B1E-9637-80A8A08C0FD9}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>TestOpenCV</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
     <ProjectName>GameAnalysis</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -78,9 +78,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);D:\opencv\include\;</IncludePath>
-    <LibraryPath>D:\opencv\lib\;D:\opencv\bin\;$(LibraryPath)</LibraryPath>
-    <SourcePath>$(VC_SourcePath);D:\opencv\modules\calib3d\src;D:\opencv\modules\contrib\src;D:\opencv\modules\core\src;D:\opencv\modules\features2d\src;D:\opencv\modules\flann\src;D:\opencv\modules\gpu\src;D:\opencv\modules\gpu\src;D:\opencv\modules\highgui\src;D:\opencv\modules\imgproc\src;D:\opencv\modules\legacy\src;D:\opencv\modules\ml\src;D:\opencv\modules\objdetect\src;D:\opencv\modules\video\src;</SourcePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\opencv\include\</IncludePath>
+    <LibraryPath>C:\opencv\lib\;C:\opencv\bin\;$(LibraryPath)</LibraryPath>
+    <SourcePath>$(VC_SourcePath);C:\opencv\modules\calib3d\src;C:\opencv\modules\contrib\src;C:\opencv\modules\core\src;C:\opencv\modules\features2d\src;C:\opencv\modules\flann\src;C:\opencv\modules\gpu\src;C:\opencv\modules\highgui\src;C:\opencv\modules\imgproc\src;C:\opencv\modules\legacy\src;C:\opencv\modules\ml\src;C:\opencv\modules\objdetect\src;C:\opencv\modules\video\src</SourcePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -108,16 +108,16 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\opencv331\build\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\opencv340\build\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\opencv331\build\x64\vc14\lib\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opencv_world331d.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:\opencv340\build\x64\vc14\lib\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>opencv_world340d.lib;</AdditionalDependencies>
     </Link>
     <ProjectReference>
-      <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
+      <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
     </ProjectReference>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

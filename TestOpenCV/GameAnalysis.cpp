@@ -4,23 +4,81 @@
 #include "stdafx.h"
 #include "GameAnalysis.h"
 
-//test gitlab commit
+const string basePath = "C:/Users/marni/source/repos/gameAnalysis/x64/Debug/";
 
 int main(int argc, char** argv)
 {
-	HWND hwndDesktop = GetDesktopWindow();
-	namedWindow("output", WINDOW_NORMAL);
+	detectCard();
+	//getApplicationView();
+	return 0;
+}
+
+void detectCard()
+{
+	// load testimage
+	String filename = "3ofspades.png";
+	Mat src = imread(basePath + filename);
+	
+	// check for invalid input
+	if (!src.data)
+	{
+		cout << "Could not open or find the image" << std::endl;
+		return;
+	}
+
+	Mat grayImg, blurredImg, threshImg;
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+
+	// convert the image to gray
+	cvtColor(src, grayImg, COLOR_BGR2GRAY);
+
+	// apply gaussian blur to improve card detection
+	GaussianBlur(grayImg, blurredImg, Size(1, 1), 1000);
+
+	// threshold the image to keep only brighter regions (cards are white)
+	threshold(blurredImg, threshImg, 120, 255, THRESH_BINARY);
+
+	// find all the contours using the thresholded image
+	findContours(threshImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
+	// find the largest contour
+	int largest_area = 0;
+	int largest_contour_index = 0;
+	Rect bounding_rect;
+
+	for (int i = 0; i < contours.size(); i++) // iterate through each contour. 
+	{
+		double a = contourArea(contours[i], false);  //  Find the area of contour
+		if (a > largest_area) {
+			largest_area = a;
+			largest_contour_index = i;                //Store the index of largest contour
+			bounding_rect = boundingRect(contours[i]); // Find the bounding rectangle for biggest contour
+		}
+	}
+
+	// display the largest contour
+	rectangle(src, bounding_rect, Scalar(0, 0, 255), 1, 8, 0);
+	rectangle(src, Point(bounding_rect.x, bounding_rect.y), Point(bounding_rect.x + bounding_rect.width/4.2, bounding_rect.y + bounding_rect.height / 3.8), Scalar(0, 255, 255), 1, 8, 0);
+	imshow("src", src);
+
+	waitKey(0);
+}
+
+void getApplicationView()
+{
+	HWND hwndDesktop = GetDesktopWindow();	//returns a desktop window handler
+											//namedWindow("output", WINDOW_NORMAL);	//creates a resizable window
 	int key = 0;
 
 	while (key != 27)	//key = 27 -> error
 	{
 		Mat src = hwnd2mat(hwndDesktop);
-		namedWindow("My Window", 1);	
+		namedWindow("My Window", WINDOW_NORMAL);
 		setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
-		imshow("My Window", src);
+															//imshow("My Window", src);
 		waitKey(1);
 	}
-	return 0;
 }
 
 Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window

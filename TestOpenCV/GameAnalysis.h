@@ -3,6 +3,8 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core/core.hpp"
+#include <opencv2/opencv.hpp>
+#include <vector>
 #include <Windows.h>
 #include <iostream>
 #pragma comment(lib, "Gdi32.lib")
@@ -11,7 +13,6 @@ using namespace cv;
 using namespace std;
 
 Mat hwnd2mat(HWND hwnd);
-
 
 /*
 * Function: void CallBackFunc(int event, int x, int y, int flags, void* userdata)
@@ -26,3 +27,6 @@ Mat hwnd2mat(HWND hwnd);
 */
 
 void CallBackFunc(int event, int x, int y, int flags, void* userdata);
+int main(int argc, char ** argv);
+void detectCard();
+void getApplicationView();
