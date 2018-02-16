@@ -14,6 +14,10 @@ using namespace cv;
 using namespace std;
 
 Mat hwnd2mat(HWND hwnd);
+Size standardRankSize;
+Size standardCardSize;
+//Mat rank2, rank3, rank4, rank5, rank6, rank7, rank8, rank9, rank10, rankJ, rankQ, rankK, rankA;
+vector<Mat> ranks;
 
 /*
 * Function: void CallBackFunc(int event, int x, int y, int flags, void* userdata)
@@ -33,3 +37,5 @@ Mat detectCard();
 void getApplicationView();
 std::pair<Mat, Mat> getCardCharacteristics(Mat aCard);
 void classifyCard(std::pair<Mat, Mat> cardCharacteristics);
+void classifyCard2(std::pair<Mat, Mat> cardCharacteristics);
+void loadTemplates();

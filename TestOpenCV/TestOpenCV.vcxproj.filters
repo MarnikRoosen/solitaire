@@ -13,6 +13,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Resource Files\template images">
+      <UniqueIdentifier>{c94e8ea7-4e7e-4bc9-a38d-ab293dfcda81}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -39,6 +42,57 @@
   <ItemGroup>
     <Image Include="..\x64\Debug\3ofspades.PNG">
       <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\2.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\3.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\4.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\5.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\6.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\7.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\8.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\9.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\10.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\ace.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\clubs.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\diamonds.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\hearts.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\jack.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\king.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\queen.png">
+      <Filter>Resource Files\template images</Filter>
+    </Image>
+    <Image Include="..\x64\Debug\cards\spades.png">
+      <Filter>Resource Files\template images</Filter>
     </Image>
   </ItemGroup>
 </Project>
