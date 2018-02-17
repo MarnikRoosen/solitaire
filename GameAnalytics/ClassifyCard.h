@@ -103,3 +103,13 @@ void generateTrainingData(cv::Mat trainingImage, String outputPreName);
 */
 
 void getApplicationView();
+
+/*
+* Function: String convertCharToCardName(char aName);
+* Description: This function will convert the chars from the classification to a full cardname
+* Parameters: char aName	= the char from the classification function
+* Return: The name of the card in String
+*/
+
+String convertCharToCardName(char aName);
+

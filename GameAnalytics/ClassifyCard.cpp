@@ -127,13 +127,58 @@ void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
 
 			kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);
 			float fltCurrentChar = (float)CurrentChar.at<float>(0, 0);
-			card += char(int(fltCurrentChar));
+			card += convertCharToCardName( char(int(fltCurrentChar)) );
 		}
-		std::cout << type << " = " << card << std::endl;
+		std::cout << card;
 		type = "suit";
 		src = cardCharacteristics.second;
 	}
 	
+}
+
+String convertCharToCardName(char aName)
+{
+	if (aName == 'C')
+	{
+		return " of clubs\n";
+	}
+	else if (aName == 'H')
+	{
+		return " of hearts\n";
+	}
+	else if (aName == 'D')
+	{
+		return " of diamonds\n";
+	}
+	else if (aName == 'S')
+	{
+		return " of spades\n";
+	}
+	if (aName == 'K')
+	{
+		return "King";
+	}
+	else if (aName == 'Q')
+	{
+		return "Queen";
+	}
+	else if (aName == 'J')
+	{
+		return "Jack";
+	}
+	else if (aName == 'A')
+	{
+		return "Ace";
+	}
+	else
+	{
+		stringstream ss;
+		string s;
+		char c = aName;
+		ss << c;
+		ss >> s;
+		return s;
+	}
 }
 
 std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard)
