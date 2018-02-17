@@ -27,13 +27,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GameAnalysis.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="GenerateTrainingData.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="ContourWithData.h">
+    <ClInclude Include="ClassifyCard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,10 +35,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="GameAnalysis.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="GenerateTrainingData.cpp">
+    <ClCompile Include="ClassifyCard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
