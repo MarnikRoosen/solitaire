@@ -11,7 +11,6 @@
 #include "opencv2/features2d.hpp"
 #include <string>
 
-const string basePath = "C:/Users/marni/source/repos/gameAnalysis/x64/Debug/";
 const int RESIZED_IMAGE_WIDTH = 20;
 const int RESIZED_IMAGE_HEIGHT = 30;
 const int MIN_CONTOUR_AREA = 100;
@@ -58,7 +57,7 @@ void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_imag
 	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
 	if (fsClassifications.isOpened() == false) {
 		std::cout << "error, unable to open training classifications file, trying to generate it\n\n";
-		Mat trainingImg = imread(basePath + type + "TrainingImg.png");
+		Mat trainingImg = imread("../GameAnalytics/trainingImages/" + type + "TrainingImg.png");
 		if (!trainingImg.data)	// check for invalid input
 		{
 			cout << "Could not open or find the image" << std::endl;
@@ -174,7 +173,7 @@ std::pair<Mat, Mat> getCardCharacteristics(Mat aCard)
 Mat detectCard(String cardName)
 {
 	String filename = cardName;	// load testimage
-	Mat src = imread(basePath + filename);
+	Mat src = imread("../GameAnalytics/testImages/" + filename);
 	if (!src.data)	// check for invalid input
 	{
 		cout << "Could not open or find the image" << std::endl;
