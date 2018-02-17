@@ -1,19 +1,9 @@
 // Screen capture source: https://stackoverflow.com/questions/26888605/opencv-capturing-desktop-screen-live
 // Mouse events source: https://opencv-srf.blogspot.be/2011/11/mouse-events.html
+// Suit-rank detection and training knn algorithm based on: https://github.com/MicrocontrollersAndMore/OpenCV_3_KNN_Character_Recognition_Cpp
 
 #include "stdafx.h"
 #include "ClassifyCard.h"
-#include <opencv2/opencv.hpp>
-#include "opencv2/core.hpp"
-#include "opencv2/features2d.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/features2d.hpp"
-#include <string>
-
-const int RESIZED_IMAGE_WIDTH = 20;
-const int RESIZED_IMAGE_HEIGHT = 30;
-const int MIN_CONTOUR_AREA = 100;
 
 int main(int argc, char** argv)
 {
@@ -64,7 +54,6 @@ void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_imag
 			exit(EXIT_FAILURE);
 		}
 		generateTrainingData(trainingImg, type);		// If training data hasn't been generated yet
-		Sleep(1000);
 		FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
 	}
 	if (fsClassifications.isOpened() == false)
@@ -125,11 +114,11 @@ void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
 
 			if (type == "suit")
 			{
-				cv::resize(ROI, ROIResized, cv::Size(RESIZED_IMAGE_HEIGHT, RESIZED_IMAGE_HEIGHT), 0, 0, CV_INTER_LINEAR);
+				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT), 0, 0, CV_INTER_LINEAR);
 			}
 			else
 			{
-				cv::resize(ROI, ROIResized, cv::Size(RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGHT));
+				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 			}
 			Mat ROIFloat;
 			ROIResized.convertTo(ROIFloat, CV_32FC1);
@@ -248,11 +237,11 @@ void generateTrainingData(cv::Mat trainingImage, String outputPreName) {
 			Mat ROIResized;
 			if (outputPreName == "suit")
 			{
-				cv::resize(ROI, ROIResized, cv::Size(RESIZED_IMAGE_HEIGHT, RESIZED_IMAGE_HEIGHT));
+				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 			}
 			else
 			{
-				cv::resize(ROI, ROIResized, cv::Size(RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGHT));
+				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 			}			imshow("ROIResized", ROIResized);
 			imshow("TrainingsNumbers", trainingNumbersImg);
 
