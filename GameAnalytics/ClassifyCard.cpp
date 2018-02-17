@@ -9,39 +9,39 @@ int main(int argc, char** argv)
 {
 	standardCardSize.width = 133;
 	standardCardSize.height = 177;
-	Mat card = detectCard("3ofspades.png");
-	std::pair<Mat, Mat> cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("4ofdiamonds.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("6ofclubs.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("6ofhearths.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("7ofspades.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("9ofspades.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("10ofdiamonds.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("kofspades.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
-	card = detectCard("qofhearts.png");
-	cardCharacteristics = getCardCharacteristics(card);
-	classifyCard(cardCharacteristics);
+	Mat card = detectCardFromImage("3ofspades.png");
+	std::pair<Mat, Mat> cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("4ofdiamonds.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("6ofclubs.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("6ofhearths.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("7ofspades.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("9ofspades.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("10ofdiamonds.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("kofspades.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
+	card = detectCardFromImage("qofhearts.png");
+	cardCharacteristics = segmentRankAndSuitFromCard(card);
+	classifyRankAndSuitOfCard(cardCharacteristics);
 	waitKey(0);
 	//getApplicationView();
 	return 0;
 }
 
-void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_images)
+void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
 {
 	Mat classificationInts;      // read in classification data
 	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
@@ -77,7 +77,7 @@ void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_imag
 	train_images = trainingImagesAsFlattenedFloats;
 }
 
-void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
+void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
 {
 	String type = "rank";
 	Mat src = cardCharacteristics.first;
@@ -85,7 +85,7 @@ void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
 	{
 		Mat classificationInts;      // read in classification data
 		Mat trainingImagesAsFlattenedFloats;	// read in trained images
-		getClassificationData(type, classificationInts, trainingImagesAsFlattenedFloats);
+		getTrainedData(type, classificationInts, trainingImagesAsFlattenedFloats);
 
 		Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
 		kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);
@@ -136,7 +136,7 @@ void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
 	
 }
 
-std::pair<Mat, Mat> getCardCharacteristics(Mat aCard)
+std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard)
 {
 	Mat card = aCard;
 	if (card.size() != standardCardSize)
@@ -159,7 +159,7 @@ std::pair<Mat, Mat> getCardCharacteristics(Mat aCard)
 	return cardCharacteristics;
 }
 
-Mat detectCard(String cardName)
+Mat detectCardFromImage(String cardName)
 {
 	String filename = cardName;	// load testimage
 	Mat src = imread("../GameAnalytics/testImages/" + filename);

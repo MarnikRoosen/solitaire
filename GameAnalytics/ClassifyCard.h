@@ -44,43 +44,43 @@ int main(int argc, char ** argv);
 void CallBackFunc(int event, int x, int y, int flags, void* userdata);
 
 /*
-* Function: Mat detectCard(String cardName);
+* Function: Mat detectCardFromImage(String cardName);
 * Description: This function will detect the top card from a given image
 * Parameters: String    = [cardName].png
 * Return: cloned copy of the card resized to standardCardSize
 */
 
-Mat detectCard(String cardName);
+Mat detectCardFromImage(String cardName);
 
 /*
-* Function: std::pair<Mat, Mat> getCardCharacteristics(Mat aCard);
+* Function: std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard);
 * Description: This function will get the rank and suit from the topleft corner of a given card
 * Parameters: Mat    = image of a card
 * Return: the rank-suit pair as images from the topleft corner of the card
 */
 
-std::pair<Mat, Mat> getCardCharacteristics(Mat aCard);
+std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard);
 
 /*
-* Function: void classifyCard(std::pair<Mat, Mat> cardCharacteristics);
+* Function: void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);
 * Description: This function will try to classify the rank and suit of the card and print it out to the terminal
 * Parameters: std::pair<Mat, Mat>    = rank-suit pair as images
 * Return: /
 */
 
-void classifyCard(std::pair<Mat, Mat> cardCharacteristics);
+void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);
 
 /*
-* Function: void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_images);
+* Function: void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
 * Description: This function will try to open the generated classification.xml and images.xml files so they can be used for classification,
 				if opening these files fails, the function will call generateTrainingData to regenerate these files
 * Parameters: String type		= "rank" or "suit" which indicates for which type of xmlfiles are being called
-			  Mat& class_ints	= reference of the classification data that can be used by classifyCard 
-			  Mat& train_images = reference of the images data of the classification that can be used by classifyCard
+			  Mat& class_ints	= reference of the classification data that can be used by classifyRankAndSuitOfCard 
+			  Mat& train_images = reference of the images data of the classification that can be used by classifyRankAndSuitOfCard
 * Return: /
 */
 
-void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_images);
+void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
 
 /*
 * Function: void generateTrainingData(cv::Mat trainingImage, String outputPreName);
@@ -88,8 +88,8 @@ void getClassificationData(String type, cv::Mat& class_ints, cv::Mat& train_imag
 				which are used to classify the rank and suit using the k-nearest neighbors algorithm
 * Parameters: String type		= "rank" or "suit" which indicates for which type the algorithm will train,
 									it's also used for saving the xml files accordingly
-			  Mat& class_ints	= reference of the classification data that can be used by classifyCard
-			  Mat& train_images = reference of the images data of the classification that can be used by classifyCard
+			  Mat& class_ints	= reference of the classification data that can be used by classifyRankAndSuitOfCard
+			  Mat& train_images = reference of the images data of the classification that can be used by classifyRankAndSuitOfCard
 * Return: /
 */
 
