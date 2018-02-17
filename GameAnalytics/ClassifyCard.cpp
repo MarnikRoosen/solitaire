@@ -5,43 +5,13 @@
 #include "stdafx.h"
 #include "ClassifyCard.h"
 
-int main(int argc, char** argv)
+ClassifyCard::ClassifyCard()
 {
 	standardCardSize.width = 133;
 	standardCardSize.height = 177;
-	Mat card = detectCardFromImage("3ofspades.png");
-	std::pair<Mat, Mat> cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("4ofdiamonds.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("6ofclubs.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("6ofhearths.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("7ofspades.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("9ofspades.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("10ofdiamonds.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("kofspades.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	card = detectCardFromImage("qofhearts.png");
-	cardCharacteristics = segmentRankAndSuitFromCard(card);
-	classifyRankAndSuitOfCard(cardCharacteristics);
-	waitKey(0);
-	//getApplicationView();
-	return 0;
 }
 
-void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
+void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
 {
 	Mat classificationInts;      // read in classification data
 	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
@@ -77,7 +47,7 @@ void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
 	train_images = trainingImagesAsFlattenedFloats;
 }
 
-void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
+void ClassifyCard::classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
 {
 	String type = "rank";
 	Mat src = cardCharacteristics.first;
@@ -136,7 +106,7 @@ void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
 	
 }
 
-String convertCharToCardName(char aName)
+String ClassifyCard::convertCharToCardName(char aName)
 {
 	if (aName == 'C')
 	{
@@ -181,7 +151,7 @@ String convertCharToCardName(char aName)
 	}
 }
 
-std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard)
+std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(Mat aCard)
 {
 	Mat card = aCard;
 	if (card.size() != standardCardSize)
@@ -204,7 +174,7 @@ std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard)
 	return cardCharacteristics;
 }
 
-Mat detectCardFromImage(String cardName)
+Mat ClassifyCard::detectCardFromImage(String cardName)
 {
 	String filename = cardName;	// load testimage
 	Mat src = imread("../GameAnalytics/testImages/" + filename);
@@ -231,7 +201,7 @@ Mat detectCardFromImage(String cardName)
 
 	for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
 	{
-		double a = contourArea(contours[i], false);  // Find the area of contour
+		int a = contourArea(contours[i], false);  // Find the area of contour
 		if (a > largest_area) {
 			largest_area = a;
 			largest_contour_index = i;                // Store the index of largest contour
@@ -242,7 +212,7 @@ Mat detectCardFromImage(String cardName)
 	// Get only the top card
 	Mat card = Mat(src, bounding_rect).clone();
 	Size cardSize = card.size();
-	int topCardHeight = cardSize.width * 1.33;
+	double topCardHeight = cardSize.width * 1.33;
 	Rect myROI(0, cardSize.height - topCardHeight, cardSize.width, topCardHeight);
 	Mat croppedRef(card, myROI);
 	Mat topCard;
@@ -253,7 +223,7 @@ Mat detectCardFromImage(String cardName)
 	return topCard;
 }
 
-void generateTrainingData(cv::Mat trainingImage, String outputPreName) {
+void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreName) {
 
 	// initialize variables
 	Mat grayImg, blurredImg, threshImg, threshImgCopy;
@@ -327,87 +297,4 @@ void generateTrainingData(cv::Mat trainingImage, String outputPreName) {
 
 	fsTrainingImages << outputPreName + "_images" << trainingImagesAsFlattenedFloats;
 	fsTrainingImages.release();
-}
-
-void getApplicationView()
-{
-	HWND hwndDesktop = GetDesktopWindow();	//returns a desktop window handler
-											//namedWindow("output", WINDOW_NORMAL);	//creates a resizable window
-	int key = 0;
-
-	while (key != 27)	//key = 27 -> error
-	{
-		Mat src = hwnd2mat(hwndDesktop);
-		namedWindow("My Window", WINDOW_NORMAL);
-		setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
-															//imshow("My Window", src);
-		waitKey(1);
-	}
-}
-
-Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
-{
-	HDC hwindowDC, hwindowCompatibleDC;
-
-	int height, width, srcheight, srcwidth;
-	HBITMAP hbwindow;
-	Mat src;
-	BITMAPINFOHEADER  bi;
-
-	hwindowDC = GetDC(hwnd);	//get device context
-	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	//creates a compatible memory device context for the device
-	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, coloroncolor deletes all eliminated lines of pixels
-
-	RECT windowsize;    // get the height and width of the screen
-	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
-
-	srcheight = windowsize.bottom;
-	srcwidth = windowsize.right;
-	height = windowsize.bottom / 1;  //possibility to resize the client window screen
-	width = windowsize.right / 1;
-
-	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
-
-	// create a bitmap
-	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
-	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
-	bi.biWidth = width;
-	bi.biHeight = -height;  //origin of the source is the top left corner, height is 'negative'
-	bi.biPlanes = 1;
-	bi.biBitCount = 32;
-	bi.biCompression = BI_RGB;
-	bi.biSizeImage = 0;
-	bi.biXPelsPerMeter = 0;
-	bi.biYPelsPerMeter = 0;
-	bi.biClrUsed = 0;
-	bi.biClrImportant = 0;
-
-	// use the previously created device context with the bitmap
-	SelectObject(hwindowCompatibleDC, hbwindow);
-	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
-	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
-
-	// avoid memory leak
-	DeleteObject(hbwindow);
-	DeleteDC(hwindowCompatibleDC);
-	ReleaseDC(hwnd, hwindowDC);
-
-	return src;
-}
-
-void CallBackFunc(int event, int x, int y, int flags, void* userdata)
-{
-	if (event == EVENT_LBUTTONDOWN)
-	{
-		cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
-	else if (event == EVENT_RBUTTONDOWN)
-	{
-		cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
-	else if (event == EVENT_MBUTTONDOWN)
-	{
-		cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
 }

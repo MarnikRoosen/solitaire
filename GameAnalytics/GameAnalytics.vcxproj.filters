@@ -30,12 +30,24 @@
     <ClInclude Include="ClassifyCard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GameAnalytics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayingBoard.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ClassifyCard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GameAnalytics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayingBoard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
