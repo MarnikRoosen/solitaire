@@ -4,10 +4,12 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/core/core.hpp"
 #include <opencv2/opencv.hpp>
+#include "GenerateTrainingData.h"
 #include <vector>
 #include <utility>
 #include <Windows.h>
 #include <iostream>
+#include "ContourWithData.h"
 #pragma comment(lib, "Gdi32.lib")
 #pragma comment(lib, "User32.lib")
 using namespace cv;
@@ -37,5 +39,3 @@ Mat detectCard();
 void getApplicationView();
 std::pair<Mat, Mat> getCardCharacteristics(Mat aCard);
 void classifyCard(std::pair<Mat, Mat> cardCharacteristics);
-void classifyCard2(std::pair<Mat, Mat> cardCharacteristics);
-void loadTemplates();

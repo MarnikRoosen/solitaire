@@ -15,209 +15,80 @@ const string basePath = "C:/Users/marni/source/repos/gameAnalysis/x64/Debug/";
 
 int main(int argc, char** argv)
 {
-	loadTemplates();
+	//generateData();
 	standardCardSize.width = 133;
 	standardCardSize.height = 177;
 	Mat card = detectCard();
 	std::pair<Mat, Mat> cardCharacteristics = getCardCharacteristics(card);
-	classifyCard2(cardCharacteristics);
+	classifyCard(cardCharacteristics);
 	//getApplicationView();
 	return 0;
 }
 
-void classifyCard2(std::pair<Mat, Mat> cardCharacteristics)
+void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
 {
-	String card;
-	Mat rank = cardCharacteristics.first;
-	cv::resize(rank, rank, cv::Size(rank.cols * 2, rank.rows * 2), cv::INTER_NEAREST);
-	cvtColor(rank, rank, COLOR_BGR2GRAY);
-	GaussianBlur(rank, rank, Size(1, 1), 0);
-	threshold(rank, rank, 120, 255, THRESH_BINARY_INV);
-
-	vector<vector<Point>> contours;
-	vector<Vec4i> hierarchy;
-	findContours(rank, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
-
-	Mat rank_rgb(rank.size(), CV_8UC3);
-	cv::cvtColor(rank, rank_rgb, CV_GRAY2RGB);
-	for (int i = 0; i< contours.size(); i++)
-	{
-		drawContours(rank_rgb, contours, i, Scalar(0, 0, 255));
+	Mat matClassificationInts;      // read in classification data
+	FileStorage fsClassifications("classifications.xml", FileStorage::READ);
+	if (fsClassifications.isOpened() == false) {
+		std::cout << "error, unable to open training classifications file, exiting program\n\n";
+		exit(EXIT_FAILURE);
 	}
-	imshow("contours rank", rank_rgb);
+	fsClassifications["classifications"] >> matClassificationInts;
+	fsClassifications.release();
+
+	Mat matTrainingImagesAsFlattenedFloats;	// read in trained images
+	FileStorage fsTrainingImages("images.xml", FileStorage::READ);
+	if (fsTrainingImages.isOpened() == false) {
+		std::cout << "error, unable to open training images file, exiting program\n\n";
+		exit(EXIT_FAILURE);
+	}
+	fsTrainingImages["images"] >> matTrainingImagesAsFlattenedFloats;
+	fsTrainingImages.release();
+
+	Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
+	kNearest->train(matTrainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, matClassificationInts);
+
+	// process the rank
+	String card;
+	Mat grayImg;
+	Mat blurredImg;
+	Mat threshImg;
+	Mat threshImgCopy;
+	Mat rank = cardCharacteristics.first;
+	//resize(rank, rank, cv::Size(rank.cols * 2, rank.rows * 2), INTER_NEAREST);
+	cvtColor(rank, grayImg, COLOR_BGR2GRAY);
+	cv::GaussianBlur(grayImg, blurredImg, Size(5, 5), 0);
+	adaptiveThreshold(blurredImg, threshImg, 255, ADAPTIVE_THRESH_GAUSSIAN_C, THRESH_BINARY_INV, 11, 2);
+	threshImgCopy = threshImg.clone();
+
+	vector<vector<Point> > contours;
+	vector<Vec4i> hierarchy;
+
+	cv::findContours(threshImgCopy, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
 	if (contours.size() > 1)
 	{
-		card += "10 of";
+		card = "10";
 	}
-
-	waitKey(0);
-
-}
-
-void classifyCard(std::pair<Mat, Mat> cardCharacteristics)
-{
-	double lowest_dist = 100;
-	int index_of_closest_match = 0;
-	for (int i = 0; i < ranks.size(); i++)
+	else
 	{
-		Mat rank_i = ranks.at(i);
-		// Detect the keyPoints and compute its descriptors using ORB Detector.
-		vector<KeyPoint> keyPoints1, keyPoints2;
-		Mat descriptors1, descriptors2;
-		Ptr<ORB> detector = ORB::create();
-		detector->detectAndCompute(cardCharacteristics.first, Mat(), keyPoints1, descriptors1);
-		detector->detectAndCompute(rank_i, Mat(), keyPoints2, descriptors2);
+		cv::rectangle(rank, boundingRect(contours[0]), cv::Scalar(0, 255, 0),2); 
+		cv::Mat matROI = threshImg(boundingRect(contours[0]));
+		cv::Mat matROIResized;
+		cv::resize(matROI, matROIResized, cv::Size(RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGHT));
 
-		/*
-		//-- Step 3: Matching descriptor vectors with a brute force matcher
-		BFMatcher bfmatcher(NORM_L2);
-		std::vector< DMatch > bfmatches;
-		bfmatcher.match(descriptors1, descriptors2, bfmatches);
+		imshow("resized", matROIResized);
+		Mat ROIFloat;
+		matROIResized.convertTo(ROIFloat, CV_32FC1);
+		Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);
+		Mat CurrentChar(0, 0, CV_32F);
 
-		//-- Draw matches
-		Mat bfimg_matches;
-		drawMatches(cardCharacteristics.first, keyPoints1, rank_i, keyPoints2, bfmatches, bfimg_matches);
-
-		//-- Show detected matches
-		imshow("bfMatches", bfimg_matches);
-		*/
-		waitKey(0);
-
-
-		// Match features.
-		FlannBasedMatcher matcher;
-		vector< DMatch > matches;
-		descriptors1.convertTo(descriptors1, CV_32F);
-		descriptors2.convertTo(descriptors2, CV_32F);
-		matcher.match(descriptors1, descriptors2, matches);
-		double max_dist = 0; double min_dist = 100;
-
-		//-- Quick calculation of max and min distances between keypoints
-		for (int i = 0; i < descriptors1.rows; i++)
-		{
-			double dist = matches[i].distance;
-			if (dist < min_dist) min_dist = dist;
-			if (dist > max_dist) max_dist = dist;
-		}
-		printf("-- Max dist : %f \n", max_dist);
-		printf("-- Min dist : %f \n", min_dist);
-		//-- Draw only "good" matches (i.e. whose distance is less than 2*min_dist,
-		//-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
-		//-- small)
-		//-- PS.- radiusMatch can also be used here.
-		std::vector< DMatch > good_matches;
-		for (int i = 0; i < descriptors1.rows; i++)
-		{
-			if (matches[i].distance <= max(2 * min_dist, 0.02))
-			{
-				good_matches.push_back(matches[i]);
-			}
-		}
-		//-- Draw only "good" matches
-		Mat img_matches;
-		drawMatches(cardCharacteristics.first, keyPoints1, rank_i, keyPoints2,
-			matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-			vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-		//-- Show detected matches
-		imshow("Good Matches", img_matches);
-		//-- Show detected matches
-		for (int i = 0; i < (int)good_matches.size(); i++)
-		{
-			printf("-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx);
-		}
-		if (lowest_dist > min_dist)
-		{
-			lowest_dist = min_dist;
-			index_of_closest_match = i;
-		}
-
+		kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);
+		float fltCurrentChar = (float)CurrentChar.at<float>(0, 0);
+		card += char(int(fltCurrentChar));
 	}
-	printf("Closest match has index %d  \n", index_of_closest_match);
-	waitKey(0);
-
-
-
-
-	/*for (int i = 0; i < ranks.size(); i++)
-	{
-	String filename = "3ofspades.png";
-	Mat ranki = ranks.at(0);
-	imshow("ranki", ranki);
-	resize(ranki, ranki, standardSize);
-	Mat first = cardCharacteristics.first;
-	resize(first, first, ranki.size());
-	imshow("first", first);
-	Mat diff_img;
-	waitKey(0);
-	compare(first, ranki, diff_img, cv::CMP_EQ);
-	int percentage = countNonZero(diff_img);
-	printf("Rankdiff %d \n", percentage);
-	}*/
-}
-
-void loadTemplates()
-{
-	String filename = "cards/2.png";
-	Mat rank2 = imread(basePath + filename);
-	ranks.push_back(rank2);
-
-	filename = "cards/3.png";
-	Mat rank3 = imread(basePath + filename);
-	ranks.push_back(rank3);
-
-	filename = "cards/4.png";
-	Mat rank4 = imread(basePath + filename);
-	ranks.push_back(rank4);
-
-	filename = "cards/5.png";
-	Mat rank5 = imread(basePath + filename);
-	ranks.push_back(rank5);
-
-	filename = "cards/6.png";
-	Mat rank6 = imread(basePath + filename);
-	ranks.push_back(rank6);
-
-	filename = "cards/7.png";
-	Mat rank7 = imread(basePath + filename);
-	//threshold(rank7, rank7, 120, 255, THRESH_BINARY_INV);
-	ranks.push_back(rank7);
-
-	filename = "cards/8.png";
-	Mat rank8 = imread(basePath + filename);
-	ranks.push_back(rank8);
-
-	filename = "cards/9.png";
-	Mat rank9 = imread(basePath + filename);
-	ranks.push_back(rank9);
-
-	filename = "cards/10.png";
-	Mat rank10 = imread(basePath + filename);
-	resize(rank10, rank10, Size(), 0.4, 0.4);	// Take the biggest number as standardsize
-	standardRankSize = rank10.size();
-	ranks.push_back(rank10);
-
-	filename = "cards/J.png";
-	Mat rankJ = imread(basePath + filename);
-	ranks.push_back(rankJ);
-
-	filename = "cards/Q.png";
-	Mat rankQ = imread(basePath + filename);
-	ranks.push_back(rankQ);
-
-	filename = "cards/K.png";
-	Mat rankK = imread(basePath + filename);
-	ranks.push_back(rankK);
-
-	filename = "cards/A.png";
-	Mat rankA = imread(basePath + filename);
-	ranks.push_back(rankA);
-
-	for (int i = 0; i < ranks.size(); i++)
-	{
-		cvtColor(ranks.at(i), ranks.at(i), COLOR_BGR2GRAY);
-		resize(ranks.at(i), ranks.at(i), standardRankSize);
-	}
+	std::cout << "\n\n" << "card rank = " << card << "\n\n";
+	cv::waitKey(0);
 }
 
 std::pair<Mat, Mat> getCardCharacteristics(Mat aCard)
@@ -247,7 +118,7 @@ std::pair<Mat, Mat> getCardCharacteristics(Mat aCard)
 
 Mat detectCard()
 {
-	String filename = "10ofdiamonds.png";	// load testimage
+	String filename = "kingofspades.png";	// load testimage
 	Mat src = imread(basePath + filename);
 	if (!src.data)	// check for invalid input
 	{
