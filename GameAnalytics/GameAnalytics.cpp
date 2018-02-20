@@ -27,17 +27,24 @@ GameAnalytics::GameAnalytics()
 
 void getApplicationView()
 {
-	HWND hwndDesktop = GetDesktopWindow();	//returns a desktop window handler
-											//namedWindow("output", WINDOW_NORMAL);	//creates a resizable window
+	HWND hwndDesktop = FindWindow(0, _T("Solitaire"));
+	if (hwndDesktop == NULL)
+	{
+		std::cout << "return" << endl;
+		return 0;
+	}
+	
 	int key = 0;
+
+	namedWindow("My Window", 1);
+	setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
 
 	while (key != 27)	//key = 27 -> error
 	{
-		Mat src = hwnd2mat(hwndDesktop);
-		namedWindow("My Window", WINDOW_NORMAL);
-		setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
-																			//imshow("My Window", src);
-		waitKey(1);
+	Mat src = hwnd2mat(hwndDesktop);
+		//setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
+		imshow("My Window", src);
+		key = waitKey(0);
 	}
 }
 
@@ -80,8 +87,10 @@ Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle f
 
 	// use the previously created device context with the bitmap
 	SelectObject(hwindowCompatibleDC, hbwindow);
+	PrintWindow(hwnd, hwindowCompatibleDC, PW_CLIENTONLY);
+
 	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	//StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 																									   // avoid memory leak
