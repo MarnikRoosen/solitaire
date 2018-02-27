@@ -24,6 +24,10 @@ const int RESIZED_TYPE_WIDTH = 20;
 const int RESIZED_TYPE_HEIGHT = 30;
 const int MIN_CONTOUR_AREA = 100;
 
+enum classifiers : char { ONE = '1', TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
+	SEVEN = '7', EIGHT = '8', NINE = '9', TEN, JACK = 'J', QUEEN = 'Q', KING = 'K', ACE = 'A',
+	CLUBS = 'C', SPADES = 'S', HEARTS = 'H', DIAMONDS = 'D', UNKNOWN, EMPTY};
+
 
 class ClassifyCard
 {
@@ -31,13 +35,13 @@ public:
 	ClassifyCard();
 
 	/*
-	* Function: Mat detectCardFromImage(String cardName);
+	* Function: Mat detectCardFromImageFile(String cardName);
 	* Description: This function will detect the top card from a given image
 	* Parameters: String    = [cardName].png
 	* Return: cloned copy of the card resized to standardCardSize
 	*/
 
-	Mat detectCardFromImage(String cardName);
+	Mat detectCardFromImageFile(String cardName);
 
 	/*
 	* Function: std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard);
@@ -55,16 +59,16 @@ public:
 	* Return: /
 	*/
 
-	void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);
+	std::pair<classifiers, classifiers> classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);
 
 	/*
-	* Function: void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
+	* Function: std::pair<classifiers, classifiers> getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
 	* Description: This function will try to open the generated classification.xml and images.xml files so they can be used for classification,
 	if opening these files fails, the function will call generateTrainingData to regenerate these files
 	* Parameters: String type		= "rank" or "suit" which indicates for which type of xmlfiles are being called
 	Mat& class_ints	= reference of the classification data that can be used by classifyRankAndSuitOfCard
 	Mat& train_images = reference of the images data of the classification that can be used by classifyRankAndSuitOfCard
-	* Return: /
+	* Return: pair of rank and suit
 	*/
 
 	void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
@@ -90,8 +94,9 @@ public:
 	*/
 
 	String convertCharToCardName(char aName);
+	Mat ClassifyCard::detectCardFromMat(cv::Mat anImage);
+
 
 private:
 	Size standardCardSize;
 };
-

@@ -23,11 +23,26 @@ using namespace std;
 
 Mat hwnd2mat(HWND hwnd);
 
+struct cardLocation
+{
+	int unknownCards;
+	int knownCards;
+	std::pair<classifiers, classifiers> topCard;
+};
 
 class GameAnalytics
 {
 public:
 	GameAnalytics();
+	void initializeVariables();
+	void updateBoard(ClassifyCard &cc);
+
+private:
+	std::vector<cv::Mat> topCards;
+	std::vector<std::pair<classifiers, classifiers>> playingCards;
+	std::pair<classifiers, classifiers> cardType;
+	std::vector<cardLocation> playingBoard;
+	std::set<std::pair<classifiers, classifiers>> playingBoard2;
 
 };
 

@@ -19,6 +19,16 @@ class PlayingBoard
 {
 public:
 	PlayingBoard();
+	void PlayingBoard::extractAndSortCards(Mat const & boardImage);
+	void extractCardsFromMat(std::vector<cv::Rect> &validRects, cv::Mat &resizedSrc);
 	~PlayingBoard();
+
+	std::vector<cv::Mat> & getPlayingCards();
+
+private:
+	std::vector<cv::Mat> cards;
+
 };
+
+bool compare_rect(const Rect & a, const Rect &b);
 

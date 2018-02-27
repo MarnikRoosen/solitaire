@@ -11,35 +11,95 @@ int main(int argc, char** argv)
 
 GameAnalytics::GameAnalytics()
 {
+	//getApplicationView();
 	PlayingBoard pb;
 	ClassifyCard cc;
-	vector<String> cards = { "3ofspades.png" , "4ofdiamonds.png","6ofclubs.png","6ofhearths.png","7ofspades.png", "9ofspades.png",
-		"10ofdiamonds.png", "kofspades.png" ,"qofhearts.png" };
-	for each (String cardName in cards)
+	initializeVariables();
+	String filename = "playingBoard.png";	// load testimage
+	Mat src = imread("../GameAnalytics/testImages/" + filename);
+	if (!src.data)	// check for invalid input
 	{
-		Mat card = cc.detectCardFromImage(cardName);
-		std::pair<Mat, Mat> cardCharacteristics = cc.segmentRankAndSuitFromCard(card);
-		cc.classifyRankAndSuitOfCard(cardCharacteristics);
+		cout << "Could not open or find the image" << std::endl;
+		exit(EXIT_FAILURE);
 	}
+
+	pb.extractAndSortCards(src);
+	topCards = pb.getPlayingCards();
+	updateBoard(cc);
+
 	waitKey(0);
+}
+
+void GameAnalytics::initializeVariables()
+{
+	playingCards.resize(13);
+	playingBoard.resize(13);
+	for (int i = 0; i < 7; i++)
+	{
+		cardLocation startupLocation;
+		std::pair<classifiers, classifiers> startupCard;
+		startupCard.first = UNKNOWN;
+		startupCard.second = UNKNOWN;
+		startupLocation.topCard = startupCard;
+		startupLocation.unknownCards = i;
+		playingBoard[i] = startupLocation;
+	}
+	playingBoard[8].unknownCards = 24;	
+	playingBoard[8].knownCards = 0;
+}
+
+void GameAnalytics::updateBoard(ClassifyCard &cc)
+{
+	std::vector<std::pair<classifiers, classifiers>> tempCards;
+	for (int i = 0; i < topCards.size(); i++)
+	{
+		if (topCards[i].empty())
+		{
+			cardType.first = EMPTY;
+			cardType.second = EMPTY;
+		}
+		else
+		{
+			Mat card = topCards.at(i);
+			std::pair<Mat, Mat> cardCharacteristics = cc.segmentRankAndSuitFromCard(card);
+			cardType = cc.classifyRankAndSuitOfCard(cardCharacteristics);
+		}
+
+		if (playingBoard[i].topCard != cardType)
+		{
+			tempCards.push_back(playingBoard[i].topCard);
+			playingBoard[i].topCard = cardType;
+		}
+		else
+		{
+			playingBoard[i].topCard = cardType;
+		}
+	}
 }
 
 
 void getApplicationView()
 {
-	HWND hwndDesktop = GetDesktopWindow();	//returns a desktop window handler
-											//namedWindow("output", WINDOW_NORMAL);	//creates a resizable window
+	HWND hwndDesktop = FindWindow(0, _T("Microsoft Solitaire Collection"));
+	if (hwndDesktop == NULL)
+	{
+		std::cout << "return" << endl;
+		exit(EXIT_FAILURE);
+	}
+
 	int key = 0;
+
+	namedWindow("My Window", 1);
+	setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
 
 	while (key != 27)	//key = 27 -> error
 	{
 		Mat src = hwnd2mat(hwndDesktop);
-		namedWindow("My Window", WINDOW_NORMAL);
-		setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
-																			//imshow("My Window", src);
-		waitKey(1);
+		imshow("My Window", src);
+		key = waitKey(0);
 	}
 }
+
 
 Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
@@ -80,8 +140,10 @@ Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle f
 
 	// use the previously created device context with the bitmap
 	SelectObject(hwindowCompatibleDC, hbwindow);
+	PrintWindow(hwnd, hwindowCompatibleDC, PW_CLIENTONLY);
+
 	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	//StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 																									   // avoid memory leak
