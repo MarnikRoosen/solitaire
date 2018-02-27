@@ -32,8 +32,7 @@ GameAnalytics::GameAnalytics()
 
 void GameAnalytics::initializeVariables()
 {
-	playingCards.resize(13);
-	playingBoard.resize(13);
+	playingBoard.resize(12);
 	for (int i = 0; i < 7; i++)
 	{
 		cardLocation startupLocation;
@@ -44,8 +43,8 @@ void GameAnalytics::initializeVariables()
 		startupLocation.unknownCards = i;
 		playingBoard[i] = startupLocation;
 	}
-	playingBoard[8].unknownCards = 24;	
-	playingBoard[8].knownCards = 0;
+	playingBoard[7].unknownCards = 23;	
+	playingBoard[7].knownCards = 0;
 }
 
 void GameAnalytics::updateBoard(ClassifyCard &cc)

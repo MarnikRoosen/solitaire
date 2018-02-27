@@ -39,10 +39,8 @@ public:
 
 private:
 	std::vector<cv::Mat> topCards;
-	std::vector<std::pair<classifiers, classifiers>> playingCards;
 	std::pair<classifiers, classifiers> cardType;
 	std::vector<cardLocation> playingBoard;
-	std::set<std::pair<classifiers, classifiers>> playingBoard2;
 
 };
 
