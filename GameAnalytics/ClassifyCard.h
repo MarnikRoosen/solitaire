@@ -26,7 +26,7 @@ const int MIN_CONTOUR_AREA = 100;
 
 enum classifiers : char { ONE = '1', TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
 	SEVEN = '7', EIGHT = '8', NINE = '9', TEN, JACK = 'J', QUEEN = 'Q', KING = 'K', ACE = 'A',
-	CLUBS = 'C', SPADES = 'S', HEARTS = 'H', DIAMONDS = 'D', UNKNOWN, EMPTY};
+	CLUBS = 'C', SPADES = 'S', HEARTS = 'H', DIAMONDS = 'D', UNKNOWN = '?', EMPTY = '/'};
 
 
 class ClassifyCard
@@ -93,7 +93,6 @@ public:
 	* Return: The name of the card in String
 	*/
 
-	String convertCharToCardName(char aName);
 	Mat ClassifyCard::detectCardFromMat(cv::Mat anImage);
 
 

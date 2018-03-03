@@ -37,6 +37,8 @@ public:
 	void initializeVariables();
 	void updateBoard(ClassifyCard &cc);
 
+	void printPlayingBoardState();
+
 private:
 	std::vector<cv::Mat> topCards;
 	std::pair<classifiers, classifiers> cardType;

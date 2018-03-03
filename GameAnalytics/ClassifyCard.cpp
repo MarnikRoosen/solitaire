@@ -66,7 +66,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);
 
 		// process the src
-		String card;
 		Mat grayImg, blurredImg, threshImg, threshImgCopy;
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
@@ -81,7 +80,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 
 		if (type == "rank" && contours.size() > 1)
 		{
-			card = "10";
 			cardType.first = TEN;
 		}
 		else
@@ -104,8 +102,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 			Mat CurrentChar(0, 0, CV_32F);
 			kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);
 			float fltCurrentChar = (float)CurrentChar.at<float>(0, 0);
-			card += convertCharToCardName( char(int(fltCurrentChar)) );
-
 			if (type == "suit")
 			{
 				cardType.second = classifiers(char(int(fltCurrentChar)));
@@ -116,56 +112,10 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 			}
 
 		}
-		std::cout << card;
 		type = "suit";
 		src = cardCharacteristics.second;
 	}
 	return cardType;	
-}
-
-String ClassifyCard::convertCharToCardName(char aName)
-{
-	if (aName == 'C')
-	{
-		return " of clubs\n";
-	}
-	else if (aName == 'H')
-	{
-		return " of hearts\n";
-	}
-	else if (aName == 'D')
-	{
-		return " of diamonds\n";
-	}
-	else if (aName == 'S')
-	{
-		return " of spades\n";
-	}
-	if (aName == 'K')
-	{
-		return "King";
-	}
-	else if (aName == 'Q')
-	{
-		return "Queen";
-	}
-	else if (aName == 'J')
-	{
-		return "Jack";
-	}
-	else if (aName == 'A')
-	{
-		return "Ace";
-	}
-	else
-	{
-		stringstream ss;
-		string s;
-		char c = aName;
-		ss << c;
-		ss >> s;
-		return s;
-	}
 }
 
 std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(Mat aCard)

@@ -11,7 +11,7 @@ int main(int argc, char** argv)
 
 GameAnalytics::GameAnalytics()
 {
-	//getApplicationView();
+	getApplicationView();
 	PlayingBoard pb;
 	ClassifyCard cc;
 	initializeVariables();
@@ -26,6 +26,7 @@ GameAnalytics::GameAnalytics()
 	pb.extractAndSortCards(src);
 	topCards = pb.getPlayingCards();
 	updateBoard(cc);
+	printPlayingBoardState();
 
 	waitKey(0);
 }
@@ -76,10 +77,27 @@ void GameAnalytics::updateBoard(ClassifyCard &cc)
 	}
 }
 
+void GameAnalytics::printPlayingBoardState()
+{
+	std::cout << "Bottomcards left to right:" << std::endl;
+	for (int i = 0; i < 7; i++)
+	{
+		std::cout << static_cast<char>(playingBoard.at(i).topCard.first) << " - " << static_cast<char>(playingBoard.at(i).topCard.second) << std::endl;
+	}
+	std::cout << "Deckcard:" << std::endl;
+	std::cout << static_cast<char>(playingBoard.at(7).topCard.first) << " - " << static_cast<char>(playingBoard.at(7).topCard.second) << std::endl;
+	std::cout << "Destination topcards left to right:" << std::endl;
+	for (int i = 8; i < playingBoard.size(); i++)
+	{
+		std::cout << static_cast<char>(playingBoard.at(i).topCard.first) << " - " << static_cast<char>(playingBoard.at(i).topCard.second) << std::endl;
+	}
+}
+
 
 void getApplicationView()
 {
 	HWND hwndDesktop = FindWindow(0, _T("Microsoft Solitaire Collection"));
+	//HWND hwndDesktop = GetDesktopWindow();
 	if (hwndDesktop == NULL)
 	{
 		std::cout << "return" << endl;
@@ -139,10 +157,10 @@ Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle f
 
 	// use the previously created device context with the bitmap
 	SelectObject(hwindowCompatibleDC, hbwindow);
-	PrintWindow(hwnd, hwindowCompatibleDC, PW_CLIENTONLY);
+	//PrintWindow(hwnd, hwindowCompatibleDC, PW_CLIENTONLY);
 
 	// copy from the window device context to the bitmap device context
-	//StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 																									   // avoid memory leak
