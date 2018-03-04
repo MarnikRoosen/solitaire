@@ -75,8 +75,6 @@ std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
 		playingCards.push_back(croppedCard.clone());
 	}
 
-
-	sort(validRects.begin(), validRects.end(), compare_rect);
 	extractCardsFromMatVector(playingCards);
 	return cards;
 }
@@ -88,29 +86,23 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 		Mat src = playingCards[i].clone();
 		Mat grayImg, blurredImg, threshImg;
 		vector<vector<Point>> contours, validContours;
-		vector<Rect> validRects;
 		vector<Vec4i> hierarchy;
 
-		cvtColor(src, grayImg, COLOR_BGR2GRAY);	// convert the image to gray
-		threshold(grayImg, threshImg, 120, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);	// convert the image to gray
+		cv::threshold(grayImg, threshImg, 215, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)		
 		findContours(threshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
-		for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
-		{
-			double a = contourArea(contours[i], false);  // Find the area of contour
-			if (a > 10000) {
-				Rect bounding_rect = boundingRect(contours[i]);
-				float aspectRatio = (float)bounding_rect.width / (float)bounding_rect.height;	// make sure the contours have an aspect ratio of an average card (to filter out navbar)
-				if (aspectRatio > 0.1 && aspectRatio < 10)
-				{
-					validRects.push_back(bounding_rect);
-					validContours.push_back(contours[i]);
-				}
-			}
-		}
+		
+		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
+		auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) {
+			double area = contourArea(c1, false);
+			Rect bounding_rect = boundingRect(c1);
+			float aspectRatio = (float)bounding_rect.width / (float)bounding_rect.height;	// make sure the contours have an aspect ratio of an average card (to filter out navbar)
+			return ((aspectRatio < 0.1) && (aspectRatio > 10) && (area < 10000)); });
+		contours.erase(new_end, contours.end());
 
-		if(validContours.size() > 0)
+		if(contours.size() > 0)
 		{
-			Rect bounding_rect = boundingRect(validContours[0]);
+			Rect bounding_rect = boundingRect(contours.at(0));
 			Mat card = Mat(src, bounding_rect).clone();
 
 			Size cardSize = card.size();
@@ -132,8 +124,8 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 			croppedRef.copyTo(topCard);	// Copy the data into new matrix
 										// Only use images that have at least 30% white pixels (to remove the deck image)
 			Mat checkImage;
-			cvtColor(topCard, checkImage, COLOR_BGR2GRAY);
-			threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
+			cv::cvtColor(topCard, checkImage, COLOR_BGR2GRAY);
+			cv::threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
 			int whitePixels = cv::countNonZero(checkImage);
 			if (whitePixels > checkImage.rows * checkImage.cols * 0.3)
 			{
@@ -156,13 +148,4 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 
 PlayingBoard::~PlayingBoard()
 {
-}
-
-std::vector<cv::Mat> & PlayingBoard::getPlayingCards()
-{
-	return cards;
-}
-
-bool compare_rect(const Rect & a, const Rect &b) {
-	return (a.y - b.y > 10) || ((abs(a.y - b.y) < 5) && b.x - a.x > 10);
 }

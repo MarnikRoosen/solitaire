@@ -23,12 +23,7 @@ public:
 	void extractCardsFromMatVector(std::vector<cv::Mat>& playingCards);
 	~PlayingBoard();
 
-	std::vector<cv::Mat> & getPlayingCards();
-
 private:
 	std::vector<cv::Mat> cards;
 
 };
-
-bool compare_rect(const Rect & a, const Rect &b);
-
