@@ -11,46 +11,6 @@ ClassifyCard::ClassifyCard()
 	standardCardSize.height = 177;
 }
 
-void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
-{
-	Mat classificationInts, trainingImagesAsFlattenedFloats;
-	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
-	
-	if (!fsClassifications.isOpened()) {
-
-		std::cout << "Unable to open training classifications file, trying to generate it\n\n";
-		Mat trainingImg = imread("../GameAnalytics/trainingImages/" + type + "TrainingImg.png");
-
-		if (!trainingImg.data)
-		{
-			std::cout << "Could not open or find the image" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-
-		generateTrainingData(trainingImg, type);		// If training data hasn't been generated yet
-		FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
-	}
-	if (!fsClassifications.isOpened())
-	{
-		cout << "Unable to open training classification file again, exiting program" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-
-	fsClassifications[type + "_classifications"] >> classificationInts;
-	fsClassifications.release();
-	class_ints = classificationInts;
-
-	FileStorage fsTrainingImages(type + "_images.xml", FileStorage::READ);
-
-	if (!fsTrainingImages.isOpened()) {
-		cout << "Unable to open training images file, exiting program" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	fsTrainingImages[type + "_images"] >> trainingImagesAsFlattenedFloats;
-	fsTrainingImages.release();
-	train_images = trainingImagesAsFlattenedFloats;
-}
-
 std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
 {
 	std::pair<classifiers, classifiers> cardType;
@@ -77,7 +37,10 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		vector<Vec4i> hierarchy;
 
 		cv::findContours(threshImgCopy, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
+		// Sort and remove objects that are too small
+		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
+		auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) -> bool { return (contourArea(c1, false) < 30.0); });
+		contours.erase(new_end, contours.end());
 		if (type == "rank" && contours.size() > 1)
 		{
 			cardType.first = TEN;
@@ -140,93 +103,44 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(Mat aCard)
 	return cardCharacteristics;
 }
 
-Mat ClassifyCard::detectCardFromImageFile(String cardName)
+void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
 {
-	String filename = cardName;	// load testimage
-	Mat src = imread("../GameAnalytics/testImages/" + filename);
-	if (!src.data)	// check for invalid input
+	Mat classificationInts, trainingImagesAsFlattenedFloats;
+	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
+
+	if (!fsClassifications.isOpened()) {
+
+		std::cout << "Unable to open training classifications file, trying to generate it\n\n";
+		Mat trainingImg = imread("../GameAnalytics/trainingImages/" + type + "TrainingImg.png");
+
+		if (!trainingImg.data)
+		{
+			std::cout << "Could not open or find the image" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		generateTrainingData(trainingImg, type);		// If training data hasn't been generated yet
+		FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
+	}
+	if (!fsClassifications.isOpened())
 	{
-		cout << "Could not open or find the image" << std::endl;
+		cout << "Unable to open training classification file again, exiting program" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	Mat grayImg, blurredImg, threshImg;
-	vector<vector<Point>> contours;
-	vector<Vec4i> hierarchy;
+	fsClassifications[type + "_classifications"] >> classificationInts;
+	fsClassifications.release();
+	class_ints = classificationInts;
 
-	cvtColor(src, grayImg, COLOR_BGR2GRAY);	// convert the image to gray
-	GaussianBlur(grayImg, blurredImg, Size(1, 1), 1000);	// apply gaussian blur to improve card detection
-	threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-	findContours(threshImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
+	FileStorage fsTrainingImages(type + "_images.xml", FileStorage::READ);
 
-	// find the largest contour
-	double largest_area = 0;
-	int largest_contour_index = 0;
-	Rect bounding_rect;
-
-	for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
-	{
-		double a = contourArea(contours[i], false);  // Find the area of contour
-		if (a > largest_area) {
-			largest_area = a;
-			largest_contour_index = i;                // Store the index of largest contour
-			bounding_rect = boundingRect(contours[i]); // Find the bounding rectangle for biggest contour
-		}
+	if (!fsTrainingImages.isOpened()) {
+		cout << "Unable to open training images file, exiting program" << std::endl;
+		exit(EXIT_FAILURE);
 	}
-
-	// Get only the top card
-	Mat card = Mat(src, bounding_rect).clone();
-	Size cardSize = card.size();
-	double topCardHeight = cardSize.width * 1.33;
-	Rect myROI(0, cardSize.height - (int) topCardHeight, cardSize.width, topCardHeight);
-	Mat croppedRef(card, myROI);
-	Mat topCard;
-	croppedRef.copyTo(topCard);	// Copy the data into new matrix
-	
-	waitKey(0);
-	return topCard;
-}
-
-Mat ClassifyCard::detectCardFromMat(cv::Mat anImage)
-{
-	Mat src = anImage.clone();
-
-	//imshow("original image", src);
-	Mat grayImg, blurredImg, threshImg;
-	vector<vector<Point>> contours;
-	vector<Vec4i> hierarchy;
-
-	cvtColor(src, grayImg, COLOR_BGR2GRAY);	// convert the image to gray
-	GaussianBlur(grayImg, blurredImg, Size(1, 1), 1000);	// apply gaussian blur to improve card detection
-	threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-	findContours(threshImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
-
-																								// find the largest contour
-	double largest_area = 0;
-	int largest_contour_index = 0;
-	Rect bounding_rect;
-
-	for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
-	{
-		double a = contourArea(contours[i], false);  // Find the area of contour
-		if (a > largest_area) {
-			largest_area = a;
-			largest_contour_index = i;                // Store the index of largest contour
-			bounding_rect = boundingRect(contours[i]); // Find the bounding rectangle for biggest contour
-		}
-	}
-
-	// Get only the top card
-	Mat card = Mat(src, bounding_rect).clone();
-	Size cardSize = card.size();
-	double topCardHeight = cardSize.width * 1.33;
-	Rect myROI(0, cardSize.height - topCardHeight, cardSize.width, topCardHeight);
-	Mat croppedRef(card, myROI);
-	Mat topCard;
-	croppedRef.copyTo(topCard);	// Copy the data into new matrix
-
-	waitKey(0);
-	return topCard;
+	fsTrainingImages[type + "_images"] >> trainingImagesAsFlattenedFloats;
+	fsTrainingImages.release();
+	train_images = trainingImagesAsFlattenedFloats;
 }
 
 void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreName) {

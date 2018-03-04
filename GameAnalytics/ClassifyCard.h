@@ -35,15 +35,6 @@ public:
 	ClassifyCard();
 
 	/*
-	* Function: Mat detectCardFromImageFile(String cardName);
-	* Description: This function will detect the top card from a given image
-	* Parameters: String    = [cardName].png
-	* Return: cloned copy of the card resized to standardCardSize
-	*/
-
-	Mat detectCardFromImageFile(String cardName);
-
-	/*
 	* Function: std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard);
 	* Description: This function will get the rank and suit from the topleft corner of a given card
 	* Parameters: Mat    = image of a card
@@ -92,8 +83,6 @@ public:
 	* Parameters: char aName	= the char from the classification function
 	* Return: The name of the card in String
 	*/
-
-	Mat ClassifyCard::detectCardFromMat(cv::Mat anImage);
 
 
 private:
