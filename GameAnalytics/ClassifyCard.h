@@ -24,8 +24,8 @@ const int RESIZED_TYPE_WIDTH = 20;
 const int RESIZED_TYPE_HEIGHT = 30;
 const int MIN_CONTOUR_AREA = 100;
 
-enum classifiers : char { ONE = '1', TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
-	SEVEN = '7', EIGHT = '8', NINE = '9', TEN, JACK = 'J', QUEEN = 'Q', KING = 'K', ACE = 'A',
+enum classifiers : char { ONE = 1, TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
+	SEVEN = '7', EIGHT = '8', NINE = '9', TEN , JACK = 'J', QUEEN = 'Q', KING = 'K', ACE = 'A',
 	CLUBS = 'C', SPADES = 'S', HEARTS = 'H', DIAMONDS = 'D', UNKNOWN = '?', EMPTY = '/'};
 
 

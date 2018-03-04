@@ -10,7 +10,7 @@ void PlayingBoard::extractAndSortCards(Mat const & boardImage)
 {
 	
 	Mat src = boardImage.clone();
-	imshow("board", src);
+	//imshow("board", src);
 	Mat grayImg, blurredImg, threshImg;
 	vector<vector<Point>> contours, validContours;
 	vector<Rect> validRects;
@@ -22,11 +22,11 @@ void PlayingBoard::extractAndSortCards(Mat const & boardImage)
 
 	for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
 	{
-		int a = contourArea(contours[i], false);  // Find the area of contour
+		double a = contourArea(contours[i], false);  // Find the area of contour
 		if (a > 10000) {
 			Rect bounding_rect = boundingRect(contours[i]);
 			float aspectRatio = (float) bounding_rect.width /  (float) bounding_rect.height;	// make sure the contours have an aspect ratio of an average card (to filter out navbar)
-			if (aspectRatio > 0.1 && aspectRatio < 10)
+			if (aspectRatio > 0.1 && aspectRatio < 10 && bounding_rect.width <= bounding_rect.height)
 			{
 				validRects.push_back(bounding_rect);
 				validContours.push_back(contours[i]);
@@ -47,8 +47,8 @@ void PlayingBoard::extractAndSortCards(Mat const & boardImage)
 	Rect outerEdgeRect = Rect(xmin, ymin, xmax - xmin, ymax - ymin);
 	Mat croppedOuterEdge(src, outerEdgeRect);
 	Size outerEdgeSize = croppedOuterEdge.size();
-	Rect topCardsRect = Rect(0, 0, outerEdgeSize.width, outerEdgeSize.width*0.2);
-	Rect bottomCardsRect = Rect(0, outerEdgeSize.width*0.2, outerEdgeSize.width, outerEdgeSize.height - outerEdgeSize.width*0.2 - 1);
+	Rect topCardsRect = Rect(0, 0, (int) outerEdgeSize.width, (int) outerEdgeSize.width*0.2);
+	Rect bottomCardsRect = Rect(0, (int) outerEdgeSize.width*0.2, (int) outerEdgeSize.width, (int) (outerEdgeSize.height - outerEdgeSize.width*0.2 - 1));
 	Mat croppedtopCards(croppedOuterEdge, topCardsRect);
 	Mat croppedbottomCards(croppedOuterEdge, bottomCardsRect);
 	Size topCardsSize = croppedtopCards.size();
@@ -59,16 +59,16 @@ void PlayingBoard::extractAndSortCards(Mat const & boardImage)
 	std::vector<cv::Mat> playingCards;
 	for (int i = 0; i < 7; i++)
 	{
-		Rect cardLocationRect = Rect(bottomCardsSize.width / 7 * i, 0, bottomCardsSize.width / 6.9 - 1, bottomCardsSize.height);
+		Rect cardLocationRect = Rect((int) bottomCardsSize.width / 7 * i, 0, (int) (bottomCardsSize.width / 6.9 - 1), bottomCardsSize.height);
 		Mat croppedCard(croppedbottomCards, cardLocationRect);
 		playingCards.push_back(croppedCard.clone());
 	}
-	Rect deckCardsRect = Rect(topCardsSize.width / 7, 0, topCardsSize.width / 5.5, topCardsSize.height);
+	Rect deckCardsRect = Rect(topCardsSize.width / 7, 0, topCardsSize.width / 5, topCardsSize.height);
 	Mat croppedCard(croppedtopCards, deckCardsRect);
 	playingCards.push_back(croppedCard.clone());
 	for (int i = 3; i < 7; i++)
 	{
-		Rect cardLocationRect = Rect(topCardsSize.width / 7 * i, 0, topCardsSize.width / 6.9 - 1, topCardsSize.height);
+		Rect cardLocationRect = Rect((int) (topCardsSize.width / 7 * i), 0, (int) (topCardsSize.width / 6.9 - 1), topCardsSize.height);
 		Mat croppedCard(croppedtopCards, cardLocationRect);
 		playingCards.push_back(croppedCard.clone());
 	}
@@ -94,7 +94,7 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 		findContours(threshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
 		for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
 		{
-			int a = contourArea(contours[i], false);  // Find the area of contour
+			double a = contourArea(contours[i], false);  // Find the area of contour
 			if (a > 10000) {
 				Rect bounding_rect = boundingRect(contours[i]);
 				float aspectRatio = (float)bounding_rect.width / (float)bounding_rect.height;	// make sure the contours have an aspect ratio of an average card (to filter out navbar)
@@ -105,6 +105,7 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 				}
 			}
 		}
+
 		if(validContours.size() > 0)
 		{
 			Rect bounding_rect = boundingRect(validContours[0]);
@@ -117,12 +118,12 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 			if (cardSize.width * 1.35 > cardSize.height)
 			{
 				topCardWidth = cardSize.height / 1.34;
-				myROI = Rect(cardSize.width - topCardWidth + 1, 0, topCardWidth - 1, cardSize.height);
+				myROI = Rect((int) (cardSize.width - topCardWidth + 1), 0, topCardWidth - 1, cardSize.height);
 			}
 			else
 			{
 				topCardHeight = cardSize.width * 1.33;
-				myROI = Rect(0, cardSize.height - topCardHeight, cardSize.width, topCardHeight);
+				myROI = Rect(0, (int) (cardSize.height - topCardHeight), cardSize.width, topCardHeight);
 			}
 			Mat croppedRef(card, myROI);
 			Mat topCard;
@@ -162,12 +163,12 @@ void PlayingBoard::extractCardsFromMat(std::vector<cv::Rect> &validRects, cv::Ma
 		Rect myROI;
 		if (cardSize.width * 1.35 > cardSize.height)
 		{
-			topCardWidth = cardSize.height / 1.34;
+			topCardWidth = (int) cardSize.height / 1.34;
 			myROI = Rect(cardSize.width - topCardWidth + 1, 0, topCardWidth - 1, cardSize.height);
 		}
 		else
 		{
-			topCardHeight = cardSize.width * 1.33;
+			topCardHeight = (int) cardSize.width * 1.33;
 			myROI = Rect(0, cardSize.height - topCardHeight, cardSize.width, topCardHeight);
 		}
 		Mat croppedRef(card, myROI);

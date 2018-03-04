@@ -136,7 +136,6 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(Mat aCard)
 	Mat croppedSuitRef(card, mySuitROI);
 	Mat suit;
 	croppedSuitRef.copyTo(suit);	// Copy the data into new matrix
-
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
 	return cardCharacteristics;
 }
@@ -161,13 +160,13 @@ Mat ClassifyCard::detectCardFromImageFile(String cardName)
 	findContours(threshImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
 
 	// find the largest contour
-	int largest_area = 0;
+	double largest_area = 0;
 	int largest_contour_index = 0;
 	Rect bounding_rect;
 
 	for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
 	{
-		int a = contourArea(contours[i], false);  // Find the area of contour
+		double a = contourArea(contours[i], false);  // Find the area of contour
 		if (a > largest_area) {
 			largest_area = a;
 			largest_contour_index = i;                // Store the index of largest contour
@@ -179,7 +178,7 @@ Mat ClassifyCard::detectCardFromImageFile(String cardName)
 	Mat card = Mat(src, bounding_rect).clone();
 	Size cardSize = card.size();
 	double topCardHeight = cardSize.width * 1.33;
-	Rect myROI(0, cardSize.height - topCardHeight, cardSize.width, topCardHeight);
+	Rect myROI(0, cardSize.height - (int) topCardHeight, cardSize.width, topCardHeight);
 	Mat croppedRef(card, myROI);
 	Mat topCard;
 	croppedRef.copyTo(topCard);	// Copy the data into new matrix
@@ -192,7 +191,7 @@ Mat ClassifyCard::detectCardFromMat(cv::Mat anImage)
 {
 	Mat src = anImage.clone();
 
-	imshow("original image", src);
+	//imshow("original image", src);
 	Mat grayImg, blurredImg, threshImg;
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
@@ -203,13 +202,13 @@ Mat ClassifyCard::detectCardFromMat(cv::Mat anImage)
 	findContours(threshImg, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
 
 																								// find the largest contour
-	int largest_area = 0;
+	double largest_area = 0;
 	int largest_contour_index = 0;
 	Rect bounding_rect;
 
 	for (int i = 0; i < contours.size(); i++) // Iterate through each contour. 
 	{
-		int a = contourArea(contours[i], false);  // Find the area of contour
+		double a = contourArea(contours[i], false);  // Find the area of contour
 		if (a > largest_area) {
 			largest_area = a;
 			largest_contour_index = i;                // Store the index of largest contour

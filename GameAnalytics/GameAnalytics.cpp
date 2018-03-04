@@ -2,121 +2,292 @@
 #include "GameAnalytics.h"
 #include "ClassifyCard.h"
 #include "PlayingBoard.h"
+#include <cstdio>
+#include <windows.h>
+#include <tlhelp32.h>
 
 int main(int argc, char** argv)
 {
 	GameAnalytics ga;
 }
 
-
 GameAnalytics::GameAnalytics()
 {
-	getApplicationView();
-	PlayingBoard pb;
-	ClassifyCard cc;
-	initializeVariables();
-	String filename = "playingBoard.png";	// load testimage
-	Mat src = imread("../GameAnalytics/testImages/" + filename);
-	if (!src.data)	// check for invalid input
+	PlayingBoard playingBoard;
+	ClassifyCard classifyCard;
+	bool init = true;
+	int key = 0;
+	while (key != 27)	//key = 27 -> error
 	{
-		cout << "Could not open or find the image" << std::endl;
-		exit(EXIT_FAILURE);
+		HWND hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
+		if (hwnd == NULL)
+		{
+			std::cout << "Cant find window" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		namedWindow("Microsoft Solitaire Collection", 1);
+		setWindowProperty("Microsoft Solitaire Collection", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
+		setMouseCallback("Microsoft Solitaire Collection", CallBackFunc, NULL);
+		Mat src = hwnd2mat(hwnd);
+		imshow("Microsoft Solitaire Collection", src);
+		playingBoard.extractAndSortCards(src);
+		extractedCardsFromPlayingBoard = playingBoard.getPlayingCards();
+		std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
+		for_each(extractedCardsFromPlayingBoard.begin(), extractedCardsFromPlayingBoard.end(), [&classifyCard, &classifiedCardsFromPlayingBoard](cv::Mat mat) {
+			std::pair<classifiers, classifiers> cardType;
+			if (mat.empty())
+			{
+				cardType.first = EMPTY;
+				cardType.second = EMPTY;
+			}
+			else
+			{
+				std::pair<Mat, Mat> cardCharacteristics = classifyCard.segmentRankAndSuitFromCard(mat);
+				cardType = classifyCard.classifyRankAndSuitOfCard(cardCharacteristics);
+			}
+			classifiedCardsFromPlayingBoard.push_back(cardType);
+		});
+		if (init)
+		{
+			initializeVariables(classifiedCardsFromPlayingBoard);
+			init = false;
+		}
+		else
+		{
+			updateBoard(classifiedCardsFromPlayingBoard);
+		}
+		key = waitKey(1000);
 	}
-
-	pb.extractAndSortCards(src);
-	topCards = pb.getPlayingCards();
-	updateBoard(cc);
-	printPlayingBoardState();
-
-	waitKey(0);
 }
 
-void GameAnalytics::initializeVariables()
+void GameAnalytics::initializeVariables(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard)
 {
 	playingBoard.resize(12);
 	for (int i = 0; i < 7; i++)
 	{
 		cardLocation startupLocation;
-		std::pair<classifiers, classifiers> startupCard;
-		startupCard.first = UNKNOWN;
-		startupCard.second = UNKNOWN;
-		startupLocation.topCard = startupCard;
+		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
+		{
+			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
+		}
 		startupLocation.unknownCards = i;
-		playingBoard[i] = startupLocation;
+		playingBoard.at(i) = startupLocation;
 	}
-	playingBoard[7].unknownCards = 23;	
-	playingBoard[7].knownCards = 0;
+	cardLocation startupLocation;
+	if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY || classifiedCardsFromPlayingBoard.at(7).second != EMPTY)
+	{
+		startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
+	}
+	startupLocation.unknownCards = 24;
+	playingBoard.at(7) = startupLocation;
+	for (int i = 8; i < playingBoard.size(); i++)
+	{
+		cardLocation startupLocation;
+		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
+		{
+			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
+		}
+		startupLocation.unknownCards = 0;
+		playingBoard.at(i) = startupLocation;
+	}
+	printPlayingBoardState();
 }
 
-void GameAnalytics::updateBoard(ClassifyCard &cc)
+void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard)
 {
-	std::vector<std::pair<classifiers, classifiers>> tempCards;
-	for (int i = 0; i < topCards.size(); i++)
+	int changedIndex1 = -1, changedIndex2 = -1;
+	for (int i = 0; i < playingBoard.size(); i++)
 	{
-		if (topCards[i].empty())
+		if (playingBoard.at(i).knownCards.empty())
 		{
-			cardType.first = EMPTY;
-			cardType.second = EMPTY;
+			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
+			{
+				if (changedIndex1 == -1)
+				{
+					changedIndex1 = i;
+				}
+				else
+				{
+					changedIndex2 = i;
+					break;
+				}
+			}
+		}
+		else if (playingBoard.at(i).knownCards.back() != classifiedCardsFromPlayingBoard.at(i))
+		{
+			if (changedIndex1 == -1)
+			{
+				changedIndex1 = i;
+			}
+			else
+			{
+				changedIndex2 = i;
+				break;
+			}
+		}
+	}
+
+	if (changedIndex1 == 7 && changedIndex2 == -1)	// only possible for the deckcards
+	{
+		auto result = std::find(playingBoard.at(changedIndex1).knownCards.begin(),
+			playingBoard.at(changedIndex1).knownCards.end(),
+			classifiedCardsFromPlayingBoard.at(changedIndex1));
+		if (result == playingBoard.at(changedIndex1).knownCards.end() && classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
+		{
+			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			--playingBoard.at(changedIndex1).unknownCards;
+			printPlayingBoardState();
+		}
+		return;
+	}
+
+	if (changedIndex1 == 7 || changedIndex2 == 7)	// move operation from deck to different location
+	{
+		// erase from deckcards and add to other location
+		if (changedIndex1 == 7)
+		{
+			int topCardIndex1 = std::distance(playingBoard.at(changedIndex1).knownCards.begin(),
+				std::find(playingBoard.at(changedIndex1).knownCards.begin(),
+					playingBoard.at(changedIndex1).knownCards.end(),
+					classifiedCardsFromPlayingBoard.at(changedIndex2)));
+			playingBoard.at(changedIndex1).knownCards.erase(playingBoard.at(changedIndex1).knownCards.begin() + topCardIndex1);
+			--playingBoard.at(changedIndex1).unknownCards;
+			playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
+			printPlayingBoardState();
+			return;
 		}
 		else
 		{
-			Mat card = topCards.at(i);
-			std::pair<Mat, Mat> cardCharacteristics = cc.segmentRankAndSuitFromCard(card);
-			cardType = cc.classifyRankAndSuitOfCard(cardCharacteristics);
+			int topCardIndex2 = std::distance(playingBoard.at(changedIndex2).knownCards.begin(),
+				std::find(playingBoard.at(changedIndex2).knownCards.begin(),
+					playingBoard.at(changedIndex2).knownCards.end(),
+					classifiedCardsFromPlayingBoard.at(changedIndex1)));
+			playingBoard.at(changedIndex2).knownCards.erase(playingBoard.at(changedIndex2).knownCards.begin() + topCardIndex2);
+			--playingBoard.at(changedIndex2).unknownCards;
+			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			printPlayingBoardState();
+			return;
+		}
+	}
+
+	if (changedIndex1 != -1 && changedIndex2 != -1)	// case: 2 cardlocations changed indicating a cardmove
+	{
+		// current topcard was in the list of previously known cards of changedIndex1
+		//	=> all cards that were below the current topcard are moved to changedIndex2
+		int topCardIndex1 = std::distance(playingBoard.at(changedIndex1).knownCards.begin(), 
+			std::find(playingBoard.at(changedIndex1).knownCards.begin(),
+			playingBoard.at(changedIndex1).knownCards.end(),
+			classifiedCardsFromPlayingBoard.at(changedIndex1)));
+		if (topCardIndex1 < playingBoard.at(changedIndex1).knownCards.size())
+		{
+			playingBoard.at(changedIndex2).knownCards.insert(
+				playingBoard.at(changedIndex2).knownCards.begin(),
+				playingBoard.at(changedIndex1).knownCards.begin() + topCardIndex1,
+				playingBoard.at(changedIndex1).knownCards.end());
+			playingBoard.at(changedIndex1).knownCards.erase(
+				playingBoard.at(changedIndex1).knownCards.begin() + topCardIndex1,
+				playingBoard.at(changedIndex1).knownCards.end());
+			printPlayingBoardState();
+			return;
 		}
 
-		if (playingBoard[i].topCard != cardType)
+		// current topcard was in the list of previously known cards of changedIndex2
+		//	=> all cards that were below the current topcard are moved to changedIndex1
+		int topCardIndex2 = std::distance(playingBoard.at(changedIndex2).knownCards.begin(),
+			std::find(playingBoard.at(changedIndex2).knownCards.begin(),
+				playingBoard.at(changedIndex2).knownCards.end(),
+				classifiedCardsFromPlayingBoard.at(changedIndex2)));
+		if (topCardIndex1 < playingBoard.at(changedIndex2).knownCards.size())
 		{
-			tempCards.push_back(playingBoard[i].topCard);
-			playingBoard[i].topCard = cardType;
+			playingBoard.at(changedIndex1).knownCards.insert(
+				playingBoard.at(changedIndex1).knownCards.begin(),
+				playingBoard.at(changedIndex2).knownCards.begin() + changedIndex2,
+				playingBoard.at(changedIndex2).knownCards.end());
+			playingBoard.at(changedIndex2).knownCards.erase(
+				playingBoard.at(changedIndex2).knownCards.begin() + changedIndex2,
+				playingBoard.at(changedIndex2).knownCards.end());
+			printPlayingBoardState();
+			return;
+		}
+
+		// current topcard isn't in the list of the previous known cards at that location
+		//	=> 1. it is a new card: check if the card ISN'T in BOTH lists
+		//	=> 2. it isn't a new card: check if the card IS in BOTH lists
+		std::vector<std::pair<classifiers, classifiers>> tempList;
+		tempList.reserve(playingBoard.at(changedIndex1).knownCards.size() + playingBoard.at(changedIndex2).knownCards.size());
+		tempList.insert(tempList.end(), playingBoard.at(changedIndex1).knownCards.begin(), playingBoard.at(changedIndex1).knownCards.end());
+		tempList.insert(tempList.end(), playingBoard.at(changedIndex2).knownCards.begin(), playingBoard.at(changedIndex2).knownCards.end());
+		auto result = std::find(tempList.begin(), tempList.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
+		if (result != tempList.end())	// changedIndex2 contains the new card
+		{
+			playingBoard.at(changedIndex1).knownCards.insert(
+				playingBoard.at(changedIndex1).knownCards.end(),
+				playingBoard.at(changedIndex2).knownCards.begin(),
+				playingBoard.at(changedIndex2).knownCards.end());
+			playingBoard.at(changedIndex2).knownCards.clear();
+			playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
+			--playingBoard.at(changedIndex2).unknownCards;
+			printPlayingBoardState();
+			return;
 		}
 		else
 		{
-			playingBoard[i].topCard = cardType;
+			playingBoard.at(changedIndex2).knownCards.insert(
+				playingBoard.at(changedIndex2).knownCards.end(),
+				playingBoard.at(changedIndex1).knownCards.begin(),
+				playingBoard.at(changedIndex1).knownCards.end());
+			playingBoard.at(changedIndex1).knownCards.clear();
+			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			--playingBoard.at(changedIndex1).unknownCards;
+			printPlayingBoardState();
+			return;
 		}
 	}
 }
 
 void GameAnalytics::printPlayingBoardState()
 {
-	std::cout << "Bottomcards left to right:" << std::endl;
-	for (int i = 0; i < 7; i++)
+	std::cout << "Deck: ";
+	if (playingBoard.at(7).knownCards.empty())
 	{
-		std::cout << static_cast<char>(playingBoard.at(i).topCard.first) << " - " << static_cast<char>(playingBoard.at(i).topCard.second) << std::endl;
+		std::cout << "// ";
 	}
-	std::cout << "Deckcard:" << std::endl;
-	std::cout << static_cast<char>(playingBoard.at(7).topCard.first) << " - " << static_cast<char>(playingBoard.at(7).topCard.second) << std::endl;
-	std::cout << "Destination topcards left to right:" << std::endl;
+	for (int i = 0; i < playingBoard.at(7).knownCards.size(); i++)
+	{
+		std::cout << static_cast<char>(playingBoard.at(7).knownCards.at(i).first) << static_cast<char>(playingBoard.at(7).knownCards.at(i).second) << " ";
+	}
+	std::cout << "     Hidden cards = " << playingBoard.at(7).unknownCards << std::endl;
+
+	std::cout << "Solved cards: " << std::endl;
 	for (int i = 8; i < playingBoard.size(); i++)
 	{
-		std::cout << static_cast<char>(playingBoard.at(i).topCard.first) << " - " << static_cast<char>(playingBoard.at(i).topCard.second) << std::endl;
+		std::cout << "   Position " << i - 8 << ": ";
+		if (playingBoard.at(i).knownCards.empty())
+		{
+			std::cout << "// ";
+		}
+		for (int j = 0; j < playingBoard.at(i).knownCards.size(); j++)
+		{
+			std::cout << static_cast<char>(playingBoard.at(i).knownCards.at(j).first) << static_cast<char>(playingBoard.at(i).knownCards.at(j).second) << " ";
+		}
+		std::cout << "     Hidden cards = " << playingBoard.at(i).unknownCards << std::endl;
+	}
+
+	std::cout << "Bottom cards: " << std::endl;
+	for (int i = 0; i < 7; i++)
+	{
+		std::cout << "   Position " << i << ": ";
+		if (playingBoard.at(i).knownCards.empty())
+		{
+			std::cout << "// ";
+		}
+		for (int j = 0; j < playingBoard.at(i).knownCards.size(); j++)
+		{
+			std::cout << static_cast<char>(playingBoard.at(i).knownCards.at(j).first) << static_cast<char>(playingBoard.at(i).knownCards.at(j).second) << " ";
+		}
+		std::cout << "     Hidden cards = " << playingBoard.at(i).unknownCards << std::endl;
 	}
 }
-
-
-void getApplicationView()
-{
-	HWND hwndDesktop = FindWindow(0, _T("Microsoft Solitaire Collection"));
-	//HWND hwndDesktop = GetDesktopWindow();
-	if (hwndDesktop == NULL)
-	{
-		std::cout << "return" << endl;
-		exit(EXIT_FAILURE);
-	}
-
-	int key = 0;
-
-	namedWindow("My Window", 1);
-	setMouseCallback("My Window", CallBackFunc, NULL);	//Function: void setMouseCallback(const string& winname, MouseCallback onMouse, void* userdata = 0)
-
-	while (key != 27)	//key = 27 -> error
-	{
-		Mat src = hwnd2mat(hwndDesktop);
-		imshow("My Window", src);
-		key = waitKey(0);
-	}
-}
-
 
 Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
