@@ -1,14 +1,16 @@
 #include "stdafx.h"
 #include "PlayingBoard.h"
+#include <cstdio>
+#include <ctime>
 
 PlayingBoard::PlayingBoard()
 {
 	cards.resize(12);
+
 }
 
-void PlayingBoard::extractAndSortCards(Mat const & boardImage)
+std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
 {
-	
 	Mat src = boardImage.clone();
 	//imshow("board", src);
 	Mat grayImg, blurredImg, threshImg;
@@ -76,7 +78,7 @@ void PlayingBoard::extractAndSortCards(Mat const & boardImage)
 
 	sort(validRects.begin(), validRects.end(), compare_rect);
 	extractCardsFromMatVector(playingCards);
-	//extractCardsFromMat(validRects, src);
+	return cards;
 }
 
 void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
@@ -143,47 +145,6 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 				cards[i] = empty;
 			}
 		}	
-		else
-		{
-			Mat empty;
-			cards[i] = empty;
-		}
-	}
-}
-
-
-void PlayingBoard::extractCardsFromMat(std::vector<cv::Rect> &validRects, cv::Mat &src)
-{
-	for (int i = 0; i < validRects.size(); i++)
-	{
-		Mat card = Mat(src, validRects[i]).clone();
-		Size cardSize = card.size();
-		int topCardWidth = cardSize.width;
-		int topCardHeight = cardSize.height;
-		Rect myROI;
-		if (cardSize.width * 1.35 > cardSize.height)
-		{
-			topCardWidth = (int) cardSize.height / 1.34;
-			myROI = Rect(cardSize.width - topCardWidth + 1, 0, topCardWidth - 1, cardSize.height);
-		}
-		else
-		{
-			topCardHeight = (int) cardSize.width * 1.33;
-			myROI = Rect(0, cardSize.height - topCardHeight, cardSize.width, topCardHeight);
-		}
-		Mat croppedRef(card, myROI);
-		Mat topCard;
-		croppedRef.copyTo(topCard);	// Copy the data into new matrix
-
-									// Only use images that have at least 30% white pixels (to remove the deck image)
-		Mat checkImage;
-		cvtColor(topCard, checkImage, COLOR_BGR2GRAY);
-		threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
-		int whitePixels = cv::countNonZero(checkImage);
-		if (whitePixels > checkImage.rows * checkImage.cols * 0.3)
-		{
-			cards[i] = topCard.clone();
-		}
 		else
 		{
 			Mat empty;

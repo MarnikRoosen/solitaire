@@ -19,9 +19,8 @@ class PlayingBoard
 {
 public:
 	PlayingBoard();
-	void PlayingBoard::extractAndSortCards(Mat const & boardImage);
+	std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage);
 	void extractCardsFromMatVector(std::vector<cv::Mat>& playingCards);
-	void extractCardsFromMat(std::vector<cv::Rect> &validRects, cv::Mat &resizedSrc);
 	~PlayingBoard();
 
 	std::vector<cv::Mat> & getPlayingCards();

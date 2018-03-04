@@ -17,22 +17,25 @@ GameAnalytics::GameAnalytics()
 	ClassifyCard classifyCard;
 	bool init = true;
 	int key = 0;
+	HWND hwnd;
+	namedWindow("Microsoft Solitaire Collection", 1);
+	setWindowProperty("Microsoft Solitaire Collection", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
+	setMouseCallback("Microsoft Solitaire Collection", CallBackFunc, NULL);
+	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
+	classifiedCardsFromPlayingBoard.reserve(12);
 	while (key != 27)	//key = 27 -> error
 	{
-		HWND hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
+		hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 		if (hwnd == NULL)
 		{
 			std::cout << "Cant find window" << std::endl;
 			exit(EXIT_FAILURE);
 		}
-		namedWindow("Microsoft Solitaire Collection", 1);
-		setWindowProperty("Microsoft Solitaire Collection", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
-		setMouseCallback("Microsoft Solitaire Collection", CallBackFunc, NULL);
 		Mat src = hwnd2mat(hwnd);
 		imshow("Microsoft Solitaire Collection", src);
-		playingBoard.extractAndSortCards(src);
-		extractedCardsFromPlayingBoard = playingBoard.getPlayingCards();
-		std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
+		extractedCardsFromPlayingBoard = playingBoard.extractAndSortCards(src); // -> average 50ms
+
+		classifiedCardsFromPlayingBoard.clear();
 		for_each(extractedCardsFromPlayingBoard.begin(), extractedCardsFromPlayingBoard.end(), [&classifyCard, &classifiedCardsFromPlayingBoard](cv::Mat mat) {
 			std::pair<classifiers, classifiers> cardType;
 			if (mat.empty())
@@ -46,7 +49,8 @@ GameAnalytics::GameAnalytics()
 				cardType = classifyCard.classifyRankAndSuitOfCard(cardCharacteristics);
 			}
 			classifiedCardsFromPlayingBoard.push_back(cardType);
-		});
+		});	// -> average 200ms
+
 		if (init)
 		{
 			initializeVariables(classifiedCardsFromPlayingBoard);
@@ -56,7 +60,7 @@ GameAnalytics::GameAnalytics()
 		{
 			updateBoard(classifiedCardsFromPlayingBoard);
 		}
-		key = waitKey(1000);
+		key = waitKey(300);
 	}
 }
 
