@@ -1,12 +1,9 @@
 #include "stdafx.h"
 #include "PlayingBoard.h"
-#include <cstdio>
-#include <ctime>
 
 PlayingBoard::PlayingBoard()
 {
 	cards.resize(12);
-
 }
 
 std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
@@ -124,7 +121,6 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 		}
 	}
 }
-
 
 Rect PlayingBoard::determineOuterRect(const std::vector<std::vector<cv::Point>> & contours)
 {

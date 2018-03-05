@@ -4,7 +4,6 @@
 #include "PlayingBoard.h"
 #include <cstdio>
 #include <windows.h>
-#include <tlhelp32.h>
 
 int main(int argc, char** argv)
 {
@@ -23,17 +22,31 @@ GameAnalytics::GameAnalytics()
 	setMouseCallback("Microsoft Solitaire Collection", CallBackFunc, NULL);
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	classifiedCardsFromPlayingBoard.reserve(12);
+	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
+	if (hwnd == NULL)
+	{
+		std::cout << "Cant find window" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
 	while (key != 27)	//key = 27 -> error
 	{
-		hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
-		if (hwnd == NULL)
-		{
-			std::cout << "Cant find window" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+		int nonZero;
+		Mat src1, src2, diff;
+		do {
+			src1 = hwnd2mat(hwnd);
+			cvtColor(src1, src1, COLOR_BGR2GRAY);
+			waitKey(10);
+			src2 = hwnd2mat(hwnd);
+			cvtColor(src2, src2, COLOR_BGR2GRAY);
+			diff;
+			cv::compare(src1, src2, diff, cv::CMP_NE);
+			nonZero = cv::countNonZero(diff);
+		} while (nonZero != 0);	// -> average 112ms for non-updated screen
+
 		Mat src = hwnd2mat(hwnd);
-		imshow("Microsoft Solitaire Collection", src);
-		extractedCardsFromPlayingBoard = playingBoard.extractAndSortCards(src); // -> average 50ms
+		imshow("Microsoft Solitaire Collection", src);	// -> average 20ms
+		extractedCardsFromPlayingBoard = playingBoard.extractAndSortCards(src); // -> average 38ms
 
 		classifiedCardsFromPlayingBoard.clear();
 		for_each(extractedCardsFromPlayingBoard.begin(), extractedCardsFromPlayingBoard.end(), [&classifyCard, &classifiedCardsFromPlayingBoard](cv::Mat mat) {
@@ -49,7 +62,7 @@ GameAnalytics::GameAnalytics()
 				cardType = classifyCard.classifyRankAndSuitOfCard(cardCharacteristics);
 			}
 			classifiedCardsFromPlayingBoard.push_back(cardType);
-		});	// -> average 200ms
+		});	// -> average 550ms
 
 		if (init)
 		{
@@ -60,7 +73,8 @@ GameAnalytics::GameAnalytics()
 		{
 			updateBoard(classifiedCardsFromPlayingBoard);
 		}
-		key = waitKey(600);
+
+		key = waitKey(10);
 	}
 }
 
@@ -103,7 +117,8 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 	int changedIndex1 = -1, changedIndex2 = -1;
 	for (int i = 0; i < playingBoard.size(); i++)
 	{
-		if (playingBoard.at(i).knownCards.empty())	// adding card to an empty location or first shuffle of the deck
+		if (i == 7) { continue; }
+		if (playingBoard.at(i).knownCards.empty())	// adding card to an empty location
 		{
 			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
 			{
@@ -118,6 +133,12 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 			}
 		}
 		if (changedIndex2 != -1) { break; }
+	}
+	// 1.1 Handle deckcards separately! We don't have the an ordered list for deckcards (meaning the previous topcard is unknown), so we can't compare them!
+	//		-> If no or only 1 other location has changed, then the deckcards must have changed as well (only deckcards can change alone by shuffling through them)
+	if ((changedIndex1 == -1 && changedIndex2 == -1) || (changedIndex1 != -1 && changedIndex2 == -1))
+	{
+		changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
 	}
 
 
@@ -230,19 +251,11 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 	{
 		std::cout << "Error with previous boardstate! Card at index " << changedIndex1 << " should have been: " <<
 			static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).first) << static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).second) << std::endl;
-		if (playingBoard.at(changedIndex1).knownCards.empty())
+		if (!playingBoard.at(changedIndex1).knownCards.empty())
 		{
-			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			playingBoard.at(changedIndex1).knownCards.pop_back();
 		}
-		else
-		{
-			auto inList = std::find(playingBoard.at(changedIndex1).knownCards.begin(), playingBoard.at(changedIndex1).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
-			if (inList != playingBoard.at(changedIndex1).knownCards.end())
-			{
-				inList++;
-				playingBoard.at(changedIndex1).knownCards.erase(inList, playingBoard.at(changedIndex1).knownCards.end());
-			}
-		}
+		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		printPlayingBoardState();
 	}
 }
@@ -289,6 +302,7 @@ void GameAnalytics::printPlayingBoardState()
 		}
 		std::cout << "     Hidden cards = " << playingBoard.at(i).unknownCards << std::endl;
 	}
+	std::cout << std::endl;
 }
 
 Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
@@ -307,10 +321,10 @@ Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle f
 	RECT windowsize;    // get the height and width of the screen
 	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
 
-	srcheight = windowsize.bottom;
-	srcwidth = windowsize.right;
-	height = windowsize.bottom / 1;  //possibility to resize the client window screen
-	width = windowsize.right / 1;
+	srcheight = 1080;
+	srcwidth = 1920;
+	height = 1080;  //possibility to resize the client window screen
+	width = 1920;
 
 	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
 

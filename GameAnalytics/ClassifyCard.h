@@ -24,7 +24,7 @@ const int RESIZED_TYPE_WIDTH = 40;
 const int RESIZED_TYPE_HEIGHT = 50;
 const int MIN_CONTOUR_AREA = 100;
 
-enum classifiers : char { ONE = 1, TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
+enum classifiers : char { TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
 	SEVEN = '7', EIGHT = '8', NINE = '9', TEN , JACK = 'J', QUEEN = 'Q', KING = 'K', ACE = 'A',
 	CLUBS = 'C', SPADES = 'S', HEARTS = 'H', DIAMONDS = 'D', UNKNOWN = '?', EMPTY = '/'};
 
@@ -41,7 +41,7 @@ public:
 	* Return: the rank-suit pair as images from the topleft corner of the card
 	*/
 
-	std::pair<Mat, Mat> segmentRankAndSuitFromCard(Mat aCard);
+	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 
 	/*
 	* Function: void classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);

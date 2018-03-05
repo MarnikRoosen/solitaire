@@ -4,6 +4,8 @@
 
 #include "stdafx.h"
 #include "ClassifyCard.h"
+#include <chrono>
+typedef std::chrono::high_resolution_clock Clock;
 
 ClassifyCard::ClassifyCard()
 {
@@ -16,6 +18,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 	std::pair<classifiers, classifiers> cardType;
 	String type = "rank";
 	Mat src = cardCharacteristics.first;
+	Mat blurredImg, grayImg;
 	for (int i = 0; i < 2; i++)
 	{
 		Mat classificationInts;      // read in classification data
@@ -26,34 +29,22 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);
 
 		// process the src
-		Mat grayImg, blurredImg, threshImg, threshImgCopy;
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
-		threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY_INV);
-		threshImgCopy = threshImg.clone();
-
+		threshold(blurredImg, src, 130, 255, THRESH_BINARY_INV);
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
-		cv::findContours(threshImgCopy, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+		cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
 		// Sort and remove objects that are too small
 		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
-		auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) -> bool { return (contourArea(c1, false) < 15.0); });
-		contours.erase(new_end, contours.end());
-		if (type == "rank" && contours.size() > 1)
+		if (type == "rank" && contours.size() > 1 && contourArea(contours.at(1), false) > 15.0)
 		{
 			cardType.first = TEN;
 		}
 		else
 		{
-			cv::Mat ROI;
-			contours.size() != 0 ? (ROI = threshImg(boundingRect(contours.at(0)))) : (ROI = threshImg);
-			if (contours.size() == 0)
-			{
-				imshow("error src", src);
-				imshow("error thresh", threshImgCopy);
-
-			}
-
+			cv::Mat ROI = src(boundingRect(contours.at(0)));
 			if (type == "suit")
 			{
 				cv::resize(ROI, ROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
@@ -85,24 +76,20 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 	return cardType;	
 }
 
-std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(Mat aCard)
+std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 {
-	Mat card = aCard.clone();
+	Mat card;
 	if (card.size() != standardCardSize)
 	{
-		resize(card, card, standardCardSize);
+		resize(aCard, card, standardCardSize);
 	}
 
 	// Get the rank and suit from the resized card
 	Rect myRankROI(2, 4, 25, 23);
-	Mat croppedRankRef(card, myRankROI);
-	Mat rank;
-	croppedRankRef.copyTo(rank);	// Copy the data into new matrix
-
+	Mat rank(card, myRankROI);
 	Rect mySuitROI(6, 27, 17, 18);
-	Mat croppedSuitRef(card, mySuitROI);
-	Mat suit;
-	croppedSuitRef.copyTo(suit);	// Copy the data into new matrix
+	Mat suit(card, mySuitROI);
+
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
 	return cardCharacteristics;
 }

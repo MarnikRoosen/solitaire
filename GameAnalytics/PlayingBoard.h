@@ -26,5 +26,6 @@ public:
 
 private:
 	std::vector<cv::Mat> cards;
+	Mat outOfMoves;
 
 };
