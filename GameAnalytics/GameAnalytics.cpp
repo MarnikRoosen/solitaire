@@ -19,7 +19,7 @@ GameAnalytics::GameAnalytics()
 	int key = 0;
 	HWND hwnd;
 	namedWindow("Microsoft Solitaire Collection", 1);
-	setWindowProperty("Microsoft Solitaire Collection", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
+	//setWindowProperty("Microsoft Solitaire Collection", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
 	setMouseCallback("Microsoft Solitaire Collection", CallBackFunc, NULL);
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	classifiedCardsFromPlayingBoard.reserve(12);
@@ -60,7 +60,7 @@ GameAnalytics::GameAnalytics()
 		{
 			updateBoard(classifiedCardsFromPlayingBoard);
 		}
-		key = waitKey(300);
+		key = waitKey(600);
 	}
 }
 
@@ -102,7 +102,7 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 	int changedIndex1 = -1, changedIndex2 = -1;
 	for (int i = 0; i < playingBoard.size(); i++)
 	{
-		if (playingBoard.at(i).knownCards.empty())
+		if (playingBoard.at(i).knownCards.empty())	// case used for deckcards
 		{
 			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
 			{
@@ -117,16 +117,19 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 				}
 			}
 		}
-		else if (playingBoard.at(i).knownCards.back() != classifiedCardsFromPlayingBoard.at(i))
+		else
 		{
-			if (changedIndex1 == -1)
+			if (playingBoard.at(i).knownCards.back() != classifiedCardsFromPlayingBoard.at(i))
 			{
-				changedIndex1 = i;
-			}
-			else
-			{
-				changedIndex2 = i;
-				break;
+				if (changedIndex1 == -1)
+				{
+					changedIndex1 = i;
+				}
+				else
+				{
+					changedIndex2 = i;
+					break;
+				}
 			}
 		}
 	}
@@ -136,10 +139,13 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 		auto result = std::find(playingBoard.at(changedIndex1).knownCards.begin(),
 			playingBoard.at(changedIndex1).knownCards.end(),
 			classifiedCardsFromPlayingBoard.at(changedIndex1));
-		if (result == playingBoard.at(changedIndex1).knownCards.end() && classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
+		if (result == playingBoard.at(changedIndex1).knownCards.end())
 		{
-			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
-			--playingBoard.at(changedIndex1).unknownCards;
+			if (classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
+			{
+				playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+				--playingBoard.at(changedIndex1).unknownCards;
+			}
 			printPlayingBoardState();
 		}
 		return;
@@ -157,8 +163,15 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 			{
 				playingBoard.at(changedIndex1).knownCards.erase(result);
 			}
-			--playingBoard.at(changedIndex1).unknownCards;
-			playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
+			if (classifiedCardsFromPlayingBoard.at(changedIndex2).first != EMPTY)
+			{
+				playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
+				--playingBoard.at(changedIndex1).unknownCards;
+			}
+			else
+			{
+				assert(playingBoard.at(changedIndex2).unknownCards == 0);
+			}
 			printPlayingBoardState();
 			return;
 		}
@@ -172,7 +185,15 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 				playingBoard.at(changedIndex2).knownCards.erase(result);
 			}
 			--playingBoard.at(changedIndex2).unknownCards;
-			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			if (classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
+			{
+				playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+				--playingBoard.at(changedIndex2).unknownCards;
+			}
+			else
+			{
+				assert(playingBoard.at(changedIndex1).unknownCards == 0);
+			}
 			printPlayingBoardState();
 			return;
 		}
@@ -222,8 +243,15 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 					playingBoard.at(changedIndex1).knownCards.begin(),
 					playingBoard.at(changedIndex1).knownCards.end());
 				playingBoard.at(changedIndex1).knownCards.clear();
-				playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
-				--playingBoard.at(changedIndex1).unknownCards;
+				if (classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
+				{
+					playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+					--playingBoard.at(changedIndex1).unknownCards;
+				}
+				else
+				{
+					assert(playingBoard.at(changedIndex1).unknownCards == 0);
+				}
 				printPlayingBoardState();
 				return;
 			}
@@ -235,8 +263,15 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 					playingBoard.at(changedIndex2).knownCards.begin(),
 					playingBoard.at(changedIndex2).knownCards.end());
 				playingBoard.at(changedIndex2).knownCards.clear();
-				playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
-				--playingBoard.at(changedIndex2).unknownCards;
+				if (classifiedCardsFromPlayingBoard.at(changedIndex2).first != EMPTY)
+				{
+					playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
+					--playingBoard.at(changedIndex2).unknownCards;
+				}
+				else
+				{
+					assert(playingBoard.at(changedIndex2).unknownCards == 0);
+				}
 				printPlayingBoardState();
 				return;
 			}

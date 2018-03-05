@@ -32,10 +32,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY_INV);
 		threshImgCopy = threshImg.clone();
 
-
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
-
 		cv::findContours(threshImgCopy, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 		// Sort and remove objects that are too small
 		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });

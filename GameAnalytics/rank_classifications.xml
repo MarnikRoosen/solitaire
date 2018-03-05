@@ -1,11 +1,11 @@
 <?xml version="1.0"?>
 <opencv_storage>
 <rank_classifications type_id="opencv-matrix">
-  <rows>58</rows>
+  <rows>57</rows>
   <cols>1</cols>
   <dt>i</dt>
   <data>
     75 74 65 81 57 56 55 54 53 52 51 50 49 75 74 65 81 55 54 53 52 49 57
-    56 51 50 75 65 57 56 54 52 81 75 74 65 57 56 55 54 53 52 51 50 81 75
-    74 65 81 55 53 52 57 56 54 51 50 49</data></rank_classifications>
+    56 51 50 75 65 57 56 54 52 81 75 74 65 57 56 54 53 52 51 50 81 75 74
+    65 81 55 53 52 57 56 54 51 50 49</data></rank_classifications>
 </opencv_storage>

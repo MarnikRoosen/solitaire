@@ -21,6 +21,7 @@ public:
 	PlayingBoard();
 	std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage);
 	void extractCardsFromMatVector(std::vector<cv::Mat>& playingCards);
+	Rect determineOuterRect(const std::vector<std::vector<cv::Point>>& contours);
 	~PlayingBoard();
 
 private:
