@@ -37,7 +37,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		cv::findContours(threshImgCopy, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 		// Sort and remove objects that are too small
 		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
-		auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) -> bool { return (contourArea(c1, false) < 30.0); });
+		auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) -> bool { return (contourArea(c1, false) < 15.0); });
 		contours.erase(new_end, contours.end());
 		if (type == "rank" && contours.size() > 1)
 		{
@@ -45,20 +45,26 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		}
 		else
 		{
-			cv::Mat ROI = threshImg(boundingRect(contours[0]));
-			cv::Mat ROIResized;
+			cv::Mat ROI;
+			contours.size() != 0 ? (ROI = threshImg(boundingRect(contours.at(0)))) : (ROI = threshImg);
+			if (contours.size() == 0)
+			{
+				imshow("error src", src);
+				imshow("error thresh", threshImgCopy);
+
+			}
 
 			if (type == "suit")
 			{
-				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
+				cv::resize(ROI, ROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 			}
 			else
 			{
-				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
+				cv::resize(ROI, ROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 			}
 
 			Mat ROIFloat;
-			ROIResized.convertTo(ROIFloat, CV_32FC1);
+			ROI.convertTo(ROIFloat, CV_32FC1);
 			Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);
 			Mat CurrentChar(0, 0, CV_32F);
 			kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);

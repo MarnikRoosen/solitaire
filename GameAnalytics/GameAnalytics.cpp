@@ -98,102 +98,62 @@ void GameAnalytics::initializeVariables(std::vector<std::pair<classifiers, class
 }
 
 void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard)
-{
+{	
+	// 1. checking which cardlocations have changed
 	int changedIndex1 = -1, changedIndex2 = -1;
 	for (int i = 0; i < playingBoard.size(); i++)
 	{
-		if (playingBoard.at(i).knownCards.empty())	// case used for deckcards
+		if (playingBoard.at(i).knownCards.empty())	// adding card to an empty location or first shuffle of the deck
 		{
-			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
+			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
 			{
-				if (changedIndex1 == -1)
-				{
-					changedIndex1 = i;
-				}
-				else
-				{
-					changedIndex2 = i;
-					break;
-				}
+				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
 			}
 		}
 		else
 		{
 			if (playingBoard.at(i).knownCards.back() != classifiedCardsFromPlayingBoard.at(i))
 			{
-				if (changedIndex1 == -1)
-				{
-					changedIndex1 = i;
-				}
-				else
-				{
-					changedIndex2 = i;
-					break;
-				}
+				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
 			}
 		}
+		if (changedIndex2 != -1) { break; }
 	}
 
-	if (changedIndex1 == 7 && changedIndex2 == -1)	// only possible for the deckcards
+
+	// 2. only one cardlocation has changed (shuffle deck)
+	//	-> check that the new (non-empty) card isn't already in the known list
+	if (changedIndex1 == 7 && changedIndex2 == -1)
 	{
-		auto result = std::find(playingBoard.at(changedIndex1).knownCards.begin(),
+		auto result = std::find(
+			playingBoard.at(changedIndex1).knownCards.begin(),
 			playingBoard.at(changedIndex1).knownCards.end(),
 			classifiedCardsFromPlayingBoard.at(changedIndex1));
-		if (result == playingBoard.at(changedIndex1).knownCards.end())
+		if (result == playingBoard.at(changedIndex1).knownCards.end() && classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
 		{
-			if (classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
-			{
-				playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
-				--playingBoard.at(changedIndex1).unknownCards;
-			}
+			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			--playingBoard.at(changedIndex1).unknownCards;
 			printPlayingBoardState();
 		}
 		return;
 	}
 
-	if (changedIndex1 == 7 || changedIndex2 == 7)	// move operation from deck to different location
+
+	// 3. two cardlocations have changed (move operation)
+	//  3.1. movement from deckcards to the playingboard
+	//		-> erase from deckcards and add to other location
+	if (changedIndex1 == 7 || changedIndex2 == 7)
 	{
-		// erase from deckcards and add to other location
-		if (changedIndex1 == 7)
+		int tempIndex;
+		changedIndex1 == 7 ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
+		auto result = std::find(
+			playingBoard.at(7).knownCards.begin(),
+			playingBoard.at(7).knownCards.end(),
+			classifiedCardsFromPlayingBoard.at(tempIndex));
+		if (result != playingBoard.at(7).knownCards.end())
 		{
-			auto result = std::find(playingBoard.at(changedIndex1).knownCards.begin(),
-				playingBoard.at(changedIndex1).knownCards.end(),
-				classifiedCardsFromPlayingBoard.at(changedIndex2));
-			if (result != playingBoard.at(changedIndex1).knownCards.end())
-			{
-				playingBoard.at(changedIndex1).knownCards.erase(result);
-			}
-			if (classifiedCardsFromPlayingBoard.at(changedIndex2).first != EMPTY)
-			{
-				playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
-				--playingBoard.at(changedIndex1).unknownCards;
-			}
-			else
-			{
-				assert(playingBoard.at(changedIndex2).unknownCards == 0);
-			}
-			printPlayingBoardState();
-			return;
-		}
-		else
-		{
-			auto result = std::find(playingBoard.at(changedIndex2).knownCards.begin(),
-				playingBoard.at(changedIndex2).knownCards.end(),
-				classifiedCardsFromPlayingBoard.at(changedIndex1));
-			if (result != playingBoard.at(changedIndex2).knownCards.end())
-			{
-				playingBoard.at(changedIndex2).knownCards.erase(result);
-			}
-			--playingBoard.at(changedIndex2).unknownCards;
-			if (classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
-			{
-				playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
-				--playingBoard.at(changedIndex2).unknownCards;
-			}
-			else
-			{
-				assert(playingBoard.at(changedIndex1).unknownCards == 0);
-			}
+			playingBoard.at(7).knownCards.erase(result);
+			playingBoard.at(tempIndex).knownCards.push_back(classifiedCardsFromPlayingBoard.at(tempIndex));
 			printPlayingBoardState();
 			return;
 		}
@@ -203,10 +163,9 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 	{
 		auto inList1 = std::find(playingBoard.at(changedIndex1).knownCards.begin(), playingBoard.at(changedIndex1).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
 		auto inList2 = std::find(playingBoard.at(changedIndex2).knownCards.begin(), playingBoard.at(changedIndex2).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex2));
-		if (inList1 == playingBoard.at(changedIndex1).knownCards.end() && inList2 != playingBoard.at(changedIndex2).knownCards.end())
+		if (inList1 != playingBoard.at(changedIndex1).knownCards.end() && inList2 == playingBoard.at(changedIndex2).knownCards.end())
 		{
 			inList1++;
-			assert(inList1 != playingBoard.at(changedIndex1).knownCards.end());	// else, the last card would be the topcard (so the cardlocation hasn't changed)
 			playingBoard.at(changedIndex2).knownCards.insert(
 				playingBoard.at(changedIndex2).knownCards.end(),
 				inList1,
@@ -217,10 +176,9 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 			printPlayingBoardState();
 			return;
 		}
-		if (inList1 != playingBoard.at(changedIndex1).knownCards.end() && inList2 == playingBoard.at(changedIndex2).knownCards.end())
+		if (inList1 == playingBoard.at(changedIndex1).knownCards.end() && inList2 != playingBoard.at(changedIndex2).knownCards.end())
 		{
 			inList2++;
-			assert(inList2 != playingBoard.at(changedIndex2).knownCards.end());	// else, the last card would be the topcard (so the cardlocation hasn't changed)
 			playingBoard.at(changedIndex1).knownCards.insert(
 				playingBoard.at(changedIndex1).knownCards.end(),
 				inList2,
@@ -237,7 +195,6 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 			auto inList2 = std::find(playingBoard.at(changedIndex2).knownCards.begin(), playingBoard.at(changedIndex2).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
 			if (inList1 != playingBoard.at(changedIndex1).knownCards.end() && inList2 == playingBoard.at(changedIndex2).knownCards.end())
 			{
-				assert(!playingBoard.at(changedIndex1).knownCards.empty());
 				playingBoard.at(changedIndex2).knownCards.insert(
 					playingBoard.at(changedIndex2).knownCards.end(),
 					playingBoard.at(changedIndex1).knownCards.begin(),
@@ -248,16 +205,11 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 					playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 					--playingBoard.at(changedIndex1).unknownCards;
 				}
-				else
-				{
-					assert(playingBoard.at(changedIndex1).unknownCards == 0);
-				}
 				printPlayingBoardState();
 				return;
 			}
 			if (inList1 == playingBoard.at(changedIndex1).knownCards.end() && inList2 != playingBoard.at(changedIndex2).knownCards.end())
 			{
-				assert(!playingBoard.at(changedIndex2).knownCards.empty());
 				playingBoard.at(changedIndex1).knownCards.insert(
 					playingBoard.at(changedIndex1).knownCards.end(),
 					playingBoard.at(changedIndex2).knownCards.begin(),
@@ -268,14 +220,30 @@ void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>>
 					playingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
 					--playingBoard.at(changedIndex2).unknownCards;
 				}
-				else
-				{
-					assert(playingBoard.at(changedIndex2).unknownCards == 0);
-				}
 				printPlayingBoardState();
 				return;
 			}
 		}
+	}
+
+	if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)
+	{
+		std::cout << "Error with previous boardstate! Card at index " << changedIndex1 << " should have been: " <<
+			static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).first) << static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).second) << std::endl;
+		if (playingBoard.at(changedIndex1).knownCards.empty())
+		{
+			playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+		}
+		else
+		{
+			auto inList = std::find(playingBoard.at(changedIndex1).knownCards.begin(), playingBoard.at(changedIndex1).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
+			if (inList != playingBoard.at(changedIndex1).knownCards.end())
+			{
+				inList++;
+				playingBoard.at(changedIndex1).knownCards.erase(inList, playingBoard.at(changedIndex1).knownCards.end());
+			}
+		}
+		printPlayingBoardState();
 	}
 }
 

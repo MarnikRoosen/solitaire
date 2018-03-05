@@ -41,7 +41,7 @@ std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
 	std::vector<cv::Mat> playingCards;
 	for (int i = 0; i < 7; i++)
 	{
-		Rect cardLocationRect = Rect((int) bottomCardsSize.width / 7 * i, 0, (int) (bottomCardsSize.width / 6.9 - 1), bottomCardsSize.height);
+		Rect cardLocationRect = Rect((int) bottomCardsSize.width / 7 * i, 0, (int) (bottomCardsSize.width / 6.9 - 3), bottomCardsSize.height);
 		Mat croppedCard(croppedbottomCards, cardLocationRect);
 		playingCards.push_back(croppedCard.clone());
 	}
@@ -50,7 +50,7 @@ std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
 	playingCards.push_back(croppedCard.clone());
 	for (int i = 3; i < 7; i++)
 	{
-		Rect cardLocationRect = Rect((int) (topCardsSize.width / 7 * i), 0, (int) (topCardsSize.width / 6.9 - 1), topCardsSize.height);
+		Rect cardLocationRect = Rect((int) (topCardsSize.width / 7 * i), 0, (int) (topCardsSize.width / 6.9 - 3), topCardsSize.height);
 		Mat croppedCard(croppedtopCards, cardLocationRect);
 		playingCards.push_back(croppedCard.clone());
 	}
