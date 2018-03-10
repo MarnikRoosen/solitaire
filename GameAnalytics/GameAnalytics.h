@@ -31,17 +31,26 @@ class GameAnalytics
 {
 public:
 	GameAnalytics();
-	void initializeVariables(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
+
+	void convertImagesToClassifiedCards(ClassifyCard & cc);
+	void waitForStableImage();
+	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
+	bool cardMoveBetweenTableauAndFoundations(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex2);
+	void updateDeck(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
+	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int &changedIndex1, int &changedIndex2);
 	Mat hwnd2mat(const HWND & hwnd);
 	void printPlayingBoardState();
 
 private:
-	std::vector<cv::Mat> extractedCardsFromPlayingBoard;
+	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
+	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	std::vector<cardLocation> playingBoard;
 	HWND hwnd;
 	std::vector<bool> knownCards;
 	std::vector<std::pair<classifiers, classifiers>> tempPlayingBoard;
+	std::pair<classifiers, classifiers> cardType;
+	std::pair<Mat, Mat> cardCharacteristics;
 };
 
 
