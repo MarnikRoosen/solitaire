@@ -2,6 +2,7 @@
 #include "GameAnalytics.h"
 #include "ClassifyCard.h"
 #include "PlayingBoard.h"
+#include "ClicksHooks.h"
 #include <cstdio>
 #include <windows.h>
 #include "shcore.h"
@@ -13,7 +14,12 @@ typedef std::chrono::high_resolution_clock Clock;
 
 int main(int argc, char** argv)
 {
+
 	GameAnalytics ga;
+
+	//register clicks
+	ClicksHooks::Instance().InstallHook();
+	return ClicksHooks::Instance().Messsages();
 }
 
 GameAnalytics::GameAnalytics()

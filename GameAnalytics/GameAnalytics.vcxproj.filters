@@ -36,6 +36,9 @@
     <ClInclude Include="PlayingBoard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ClicksHooks.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -48,6 +51,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PlayingBoard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ClicksHooks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

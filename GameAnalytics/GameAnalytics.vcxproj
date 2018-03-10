@@ -171,6 +171,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ClicksHooks.h" />
     <ClInclude Include="GameAnalytics.h" />
     <ClInclude Include="PlayingBoard.h" />
     <ClInclude Include="stdafx.h" />
@@ -178,6 +179,7 @@
     <ClInclude Include="ClassifyCard.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClicksHooks.cpp" />
     <ClCompile Include="GameAnalytics.cpp" />
     <ClCompile Include="PlayingBoard.cpp" />
     <ClCompile Include="stdafx.cpp">
