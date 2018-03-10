@@ -4,6 +4,12 @@
 #include "PlayingBoard.h"
 #include <cstdio>
 #include <windows.h>
+#include "shcore.h"
+#pragma comment(lib, "shcore.lib")
+#include <iostream>
+#include <chrono>
+typedef std::chrono::high_resolution_clock Clock;
+
 
 int main(int argc, char** argv)
 {
@@ -16,23 +22,23 @@ GameAnalytics::GameAnalytics()
 	ClassifyCard classifyCard;
 	bool init = true;
 	int key = 0;
-	HWND hwnd;
-	namedWindow("Microsoft Solitaire Collection", 1);
-	//setWindowProperty("Microsoft Solitaire Collection", WND_PROP_FULLSCREEN, WINDOW_FULLSCREEN);
-	setMouseCallback("Microsoft Solitaire Collection", CallBackFunc, NULL);
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	classifiedCardsFromPlayingBoard.reserve(12);
-	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
+	HWND hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 	if (hwnd == NULL)
 	{
 		std::cout << "Cant find window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	int nonZero;
+	Mat src1, src2, diff, src;
+	std::pair<classifiers, classifiers> cardType;
+	std::pair<Mat, Mat> cardCharacteristics;
 
 	while (key != 27)	//key = 27 -> error
 	{
-		int nonZero;
-		Mat src1, src2, diff;
+		auto t1 = Clock::now();
+
 		do {
 			src1 = hwnd2mat(hwnd);
 			cvtColor(src1, src1, COLOR_BGR2GRAY);
@@ -44,13 +50,12 @@ GameAnalytics::GameAnalytics()
 			nonZero = cv::countNonZero(diff);
 		} while (nonZero != 0);	// -> average 112ms for non-updated screen
 
-		Mat src = hwnd2mat(hwnd);
-		imshow("Microsoft Solitaire Collection", src);	// -> average 20ms
+		src = hwnd2mat(hwnd);
 		extractedCardsFromPlayingBoard = playingBoard.extractAndSortCards(src); // -> average 38ms
 
 		classifiedCardsFromPlayingBoard.clear();
-		for_each(extractedCardsFromPlayingBoard.begin(), extractedCardsFromPlayingBoard.end(), [&classifyCard, &classifiedCardsFromPlayingBoard](cv::Mat mat) {
-			std::pair<classifiers, classifiers> cardType;
+		for_each(extractedCardsFromPlayingBoard.begin(), extractedCardsFromPlayingBoard.end(),
+			[&classifyCard, &classifiedCardsFromPlayingBoard, &cardType, &cardCharacteristics](cv::Mat mat) {
 			if (mat.empty())
 			{
 				cardType.first = EMPTY;
@@ -58,7 +63,7 @@ GameAnalytics::GameAnalytics()
 			}
 			else
 			{
-				std::pair<Mat, Mat> cardCharacteristics = classifyCard.segmentRankAndSuitFromCard(mat);
+				cardCharacteristics = classifyCard.segmentRankAndSuitFromCard(mat);
 				cardType = classifyCard.classifyRankAndSuitOfCard(cardCharacteristics);
 			}
 			classifiedCardsFromPlayingBoard.push_back(cardType);
@@ -74,11 +79,13 @@ GameAnalytics::GameAnalytics()
 			updateBoard(classifiedCardsFromPlayingBoard);
 		}
 
-		key = waitKey(10);
+		auto t2 = Clock::now();
+		std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << " nanoseconds" << std::endl;
+		key = waitKey(10);	// -> average 800ms total loop
 	}
 }
 
-void GameAnalytics::initializeVariables(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard)
+void GameAnalytics::initializeVariables(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {
 	playingBoard.resize(12);
 	for (int i = 0; i < 7; i++)
@@ -111,7 +118,7 @@ void GameAnalytics::initializeVariables(std::vector<std::pair<classifiers, class
 	printPlayingBoardState();
 }
 
-void GameAnalytics::updateBoard(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard)
+void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {	
 	// 1. checking which cardlocations have changed
 	int changedIndex1 = -1, changedIndex2 = -1;
@@ -305,8 +312,9 @@ void GameAnalytics::printPlayingBoardState()
 	std::cout << std::endl;
 }
 
-Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
+Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
+	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 	HDC hwindowDC, hwindowCompatibleDC;
 
 	int height, width, srcheight, srcwidth;
@@ -316,16 +324,13 @@ Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle f
 
 	hwindowDC = GetDC(hwnd);	//get device context
 	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	//creates a compatible memory device context for the device
-	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, coloroncolor deletes all eliminated lines of pixels
-
+	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, color on color deletes all eliminated lines of pixels
 	RECT windowsize;    // get the height and width of the screen
 	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
-
-	srcheight = 1080;
-	srcwidth = 1920;
-	height = 1080;  //possibility to resize the client window screen
-	width = 1920;
-
+	srcheight = windowsize.bottom;
+	srcwidth = windowsize.right;
+	height = srcheight * 1;  //possibility to resize the client window screen
+	width = srcwidth * 1;
 	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
 
 										// create a bitmap
@@ -358,18 +363,4 @@ Mat hwnd2mat(HWND hwnd)	//Mat = n-dimensional dense array class, HWND = handle f
 	return src;
 }
 
-void CallBackFunc(int event, int x, int y, int flags, void* userdata)
-{
-	if (event == EVENT_LBUTTONDOWN)
-	{
-		cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
-	else if (event == EVENT_RBUTTONDOWN)
-	{
-		cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
-	else if (event == EVENT_MBUTTONDOWN)
-	{
-		cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-	}
-}
+

@@ -12,4 +12,5 @@
 
 
 
-// TODO: reference additional headers your program requires here
+// Additional header required to call GetDpiForMonitor, use enumerations and other API calls
+#include <ShellScalingApi.h>

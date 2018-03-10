@@ -89,7 +89,6 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 	Mat rank(card, myRankROI);
 	Rect mySuitROI(6, 27, 17, 18);
 	Mat suit(card, mySuitROI);
-
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
 	return cardCharacteristics;
 }

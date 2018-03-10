@@ -21,8 +21,6 @@
 using namespace cv;
 using namespace std;
 
-Mat hwnd2mat(HWND hwnd);
-
 struct cardLocation
 {
 	int unknownCards;
@@ -33,9 +31,9 @@ class GameAnalytics
 {
 public:
 	GameAnalytics();
-	void initializeVariables(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard);
-	void updateBoard(std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard);
-
+	void initializeVariables(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
+	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
+	Mat hwnd2mat(const HWND & hwnd);
 	void printPlayingBoardState();
 
 private:
@@ -45,8 +43,5 @@ private:
 	std::vector<bool> knownCards;
 	std::vector<std::pair<classifiers, classifiers>> tempPlayingBoard;
 };
-
-void CallBackFunc(int event, int x, int y, int flags, void* userdata);
-
 
 
