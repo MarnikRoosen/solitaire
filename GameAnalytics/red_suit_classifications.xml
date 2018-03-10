@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<opencv_storage>
+<red_suit_classifications type_id="opencv-matrix">
+  <rows>12</rows>
+  <cols>1</cols>
+  <dt>i</dt>
+  <data>
+    68 68 68 68 68 72 72 72 72 72 72 68</data></red_suit_classifications>
+</opencv_storage>

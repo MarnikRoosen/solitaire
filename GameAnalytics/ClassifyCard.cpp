@@ -17,24 +17,24 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 {
 	std::pair<classifiers, classifiers> cardType;
 	String type = "rank";
-	String suitColor = "black";
 	Mat src = cardCharacteristics.first;
-
-	Mat3b hsv;
-	cvtColor(src, hsv, COLOR_BGR2HSV);
-	Mat1b mask1, mask2;
-	inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
-	inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
-	Mat1b mask = mask1 | mask2;
-	int nonZero = countNonZero(mask);
-	if (nonZero > 0)	// red!
-	{
-		suitColor = "red";
-	}
-
 	Mat blurredImg, grayImg;
 	for (int i = 0; i < 2; i++)
 	{
+	if (type == "black_suit" || type == "red_suit")
+	{
+		Mat3b hsv;
+		cvtColor(src, hsv, COLOR_BGR2HSV);
+		Mat1b mask1, mask2;
+		inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
+		inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
+		Mat1b mask = mask1 | mask2;
+		int nonZero = countNonZero(mask);
+		if (nonZero > 0)	// red!
+		{
+			type = "red_suit";
+		}
+	}
 		Mat classificationInts;      // read in classification data
 		Mat trainingImagesAsFlattenedFloats;	// read in trained images
 		getTrainedData(type, classificationInts, trainingImagesAsFlattenedFloats);
@@ -59,7 +59,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		else
 		{
 			cv::Mat ROI = src(boundingRect(contours.at(0)));
-			if (type == "suit")
+			if (type == "black_suit" || type == "red_suit")
 			{
 				cv::resize(ROI, ROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 			}
@@ -74,7 +74,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 			Mat CurrentChar(0, 0, CV_32F);
 			kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);
 			float fltCurrentChar = (float)CurrentChar.at<float>(0, 0);
-			if (type == "suit")
+			if (type == "black_suit" || type == "red_suit")
 			{
 				cardType.second = classifiers(char(int(fltCurrentChar)));
 			}
@@ -84,7 +84,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 			}
 
 		}
-		type = "suit";
+		type = "black_suit";
 		src = cardCharacteristics.second;
 	}
 	return cardType;	
@@ -110,8 +110,8 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
 {
 	Mat classificationInts, trainingImagesAsFlattenedFloats;
-	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
 
+	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);	// type = rank, black_suit or red_suit
 	if (!fsClassifications.isOpened()) {
 
 		std::cout << "Unable to open training classifications file, trying to generate it\n\n";
@@ -174,7 +174,7 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 
 			Mat ROI = threshImg(boundingRect);
 			Mat ROIResized;
-			if (outputPreName == "suit")
+			if (outputPreName == "black_suit" || outputPreName == "red_suit")
 			{
 				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 			}

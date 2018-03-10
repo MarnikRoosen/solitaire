@@ -18,8 +18,8 @@ int main(int argc, char** argv)
 	GameAnalytics ga;
 
 	//register clicks
-	ClicksHooks::Instance().InstallHook();
-	return ClicksHooks::Instance().Messsages();
+	//ClicksHooks::Instance().InstallHook();
+	//return ClicksHooks::Instance().Messsages();
 }
 
 GameAnalytics::GameAnalytics()
@@ -59,6 +59,7 @@ GameAnalytics::GameAnalytics()
 		src = hwnd2mat(hwnd);
 		extractedCardsFromPlayingBoard = playingBoard.extractAndSortCards(src); // -> average 38ms
 
+		auto t3 = Clock::now();
 		classifiedCardsFromPlayingBoard.clear();
 		for_each(extractedCardsFromPlayingBoard.begin(), extractedCardsFromPlayingBoard.end(),
 			[&classifyCard, &classifiedCardsFromPlayingBoard, &cardType, &cardCharacteristics](cv::Mat mat) {
@@ -74,6 +75,7 @@ GameAnalytics::GameAnalytics()
 			}
 			classifiedCardsFromPlayingBoard.push_back(cardType);
 		});	// -> average 550ms
+		auto t4 = Clock::now();
 
 		if (init)
 		{
@@ -86,8 +88,8 @@ GameAnalytics::GameAnalytics()
 		}
 
 		auto t2 = Clock::now();
-		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << " nanoseconds" << std::endl;
-		key = waitKey(10);	// -> average 800ms total loop
+		std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t4 - t3).count() << std::endl;
+		key = waitKey(10);	// -> average 800ms total loop VS 258 ms using red/black filter!
 	}
 }
 
