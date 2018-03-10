@@ -80,7 +80,7 @@ GameAnalytics::GameAnalytics()
 		}
 
 		auto t2 = Clock::now();
-		std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << " nanoseconds" << std::endl;
+		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << " nanoseconds" << std::endl;
 		key = waitKey(10);	// -> average 800ms total loop
 	}
 }

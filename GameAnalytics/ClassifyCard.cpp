@@ -17,7 +17,21 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 {
 	std::pair<classifiers, classifiers> cardType;
 	String type = "rank";
+	String suitColor = "black";
 	Mat src = cardCharacteristics.first;
+
+	Mat3b hsv;
+	cvtColor(src, hsv, COLOR_BGR2HSV);
+	Mat1b mask1, mask2;
+	inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
+	inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
+	Mat1b mask = mask1 | mask2;
+	int nonZero = countNonZero(mask);
+	if (nonZero > 0)	// red!
+	{
+		suitColor = "red";
+	}
+
 	Mat blurredImg, grayImg;
 	for (int i = 0; i < 2; i++)
 	{
