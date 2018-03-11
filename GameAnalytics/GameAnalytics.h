@@ -27,11 +27,15 @@ struct cardLocation
 	std::vector<std::pair<classifiers, classifiers>> knownCards;
 };
 
+class PlayingBoard;
+class ClassifyCard;
+
 class GameAnalytics
 {
 public:
 	GameAnalytics();
 
+	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
 	void convertImagesToClassifiedCards(ClassifyCard & cc);
 	void waitForStableImage();
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
@@ -51,6 +55,7 @@ private:
 	std::vector<std::pair<classifiers, classifiers>> tempPlayingBoard;
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
+	bool init = true;
 };
 
 

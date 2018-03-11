@@ -15,17 +15,20 @@
 using namespace std;
 using namespace cv;
 
+enum playingBoardState { playing, outOfMoves, inMenu, newGame, closeBrowser, undo };
+
 class PlayingBoard
 {
 public:
 	PlayingBoard();
-	std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage);
+	void extractAndSortCards(Mat const & boardImage);
 	void extractCardsFromMatVector(std::vector<cv::Mat>& playingCards);
 	Rect determineOuterRect(const std::vector<std::vector<cv::Point>>& contours);
 	~PlayingBoard();
+	const playingBoardState & getState();
+	const std::vector<cv::Mat> & PlayingBoard::getCards();
 
 private:
 	std::vector<cv::Mat> cards;
-	Mat outOfMoves;
-
+	playingBoardState state;
 };

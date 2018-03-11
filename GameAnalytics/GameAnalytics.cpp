@@ -17,7 +17,6 @@ int main(int argc, char** argv)
 
 	GameAnalytics ga;
 
-	//register clicks
 	//ClicksHooks::Instance().InstallHook();
 	//return ClicksHooks::Instance().Messsages();
 }
@@ -27,7 +26,6 @@ GameAnalytics::GameAnalytics()
 	PlayingBoard playingBoard;
 	ClassifyCard classifyCard;
 	Mat src;
-	bool init = true;
 	int key = 0;
 	classifiedCardsFromPlayingBoard.reserve(12);
 
@@ -43,23 +41,43 @@ GameAnalytics::GameAnalytics()
 		waitForStableImage();
 
 		src = hwnd2mat(hwnd);
-		extractedImagesFromPlayingBoard = playingBoard.extractAndSortCards(src); // -> average 38ms
-		convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
-
-		if (init)
+		playingBoard.extractAndSortCards(src); // -> average 38ms
+		
+		switch (playingBoard.getState())
 		{
-			initializePlayingBoard(classifiedCardsFromPlayingBoard);
-			init = false;
-		}
-		else
-		{
-			updateBoard(classifiedCardsFromPlayingBoard);
+			case outOfMoves:
+				std::cout << "Out of moves" << std::endl;
+				Sleep(1000);
+				break;
+			case playing:
+				handlePlayingState(playingBoard, classifyCard);
+				break;
+			default:
+				handlePlayingState(playingBoard, classifyCard);
+				break;
 		}
 
 		//auto t2 = Clock::now();
 		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 		key = waitKey(10);	// -> average d680ms and 240ms
 	}
+}
+
+void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
+{
+	extractedImagesFromPlayingBoard = playingBoard.getCards();
+	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
+
+	if (init)
+	{
+		initializePlayingBoard(classifiedCardsFromPlayingBoard);
+		init = false;
+	}
+	else
+	{
+		updateBoard(classifiedCardsFromPlayingBoard);
+	}
+	return;
 }
 
 void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
@@ -386,5 +404,3 @@ Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array
 
 	return src;
 }
-
-

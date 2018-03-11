@@ -67,7 +67,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 			{
 				cv::resize(ROI, ROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 			}
-
 			Mat ROIFloat;
 			ROI.convertTo(ROIFloat, CV_32FC1);
 			Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);
@@ -86,6 +85,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std:
 		}
 		type = "black_suit";
 		src = cardCharacteristics.second;
+
 	}
 	return cardType;	
 }
@@ -97,11 +97,10 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 	{
 		resize(aCard, card, standardCardSize);
 	}
-
 	// Get the rank and suit from the resized card
-	Rect myRankROI(2, 4, 25, 23);
+	Rect myRankROI(2, 3, 25, 25);
 	Mat rank(card, myRankROI);
-	Rect mySuitROI(6, 27, 17, 18);
+	Rect mySuitROI(4, 26, 20, 20);
 	Mat suit(card, mySuitROI);
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
 	return cardCharacteristics;

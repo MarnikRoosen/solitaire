@@ -4,11 +4,32 @@
 PlayingBoard::PlayingBoard()
 {
 	cards.resize(12);
+	state = playing;
 }
 
-std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
+PlayingBoard::~PlayingBoard()
+{
+}
+
+void PlayingBoard::extractAndSortCards(Mat const & boardImage)
 {
 	Mat src = boardImage.clone();
+	
+	Size imageSize = src.size();
+	Rect middle = Rect(0, imageSize.height / 3, imageSize.width, imageSize.height / 3);
+	Mat croppedSrc(src, middle);
+	cvtColor(croppedSrc, croppedSrc, COLOR_BGR2GRAY);
+	threshold(croppedSrc, croppedSrc, 240, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+	int nonZero = cv::countNonZero(croppedSrc);
+	if (nonZero > croppedSrc.rows * croppedSrc.cols * 0.7)
+	{
+		state = outOfMoves;
+		return;
+	}
+	else
+	{
+		state = playing;
+	}
 	Mat adaptedImg;
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
@@ -28,13 +49,12 @@ std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
 	Rect outerEdgeRect = determineOuterRect(contours);
 	Mat croppedOuterEdge(src, outerEdgeRect);
 	Size outerEdgeSize = croppedOuterEdge.size();
-	Rect topCardsRect = Rect(0, 0, (int) outerEdgeSize.width, (int) outerEdgeSize.width*0.2);
-	Rect bottomCardsRect = Rect(0, (int) outerEdgeSize.width*0.2, (int) outerEdgeSize.width, (int) (outerEdgeSize.height - outerEdgeSize.width*0.2 - 1));
+	Rect topCardsRect = Rect(0, 0, (int) outerEdgeSize.width, (int) outerEdgeSize.width*0.18);
+	Rect bottomCardsRect = Rect(0, (int) outerEdgeSize.width*0.18, (int) outerEdgeSize.width, (int) (outerEdgeSize.height - outerEdgeSize.width*0.18 - 1));
 	Mat croppedtopCards(croppedOuterEdge, topCardsRect);
 	Mat croppedbottomCards(croppedOuterEdge, bottomCardsRect);
 	Size topCardsSize = croppedtopCards.size();
 	Size bottomCardsSize = croppedbottomCards.size();
-
 	std::vector<cv::Mat> playingCards;
 	for (int i = 0; i < 7; i++)
 	{
@@ -53,7 +73,6 @@ std::vector<cv::Mat> & PlayingBoard::extractAndSortCards(Mat const & boardImage)
 	}
 
 	extractCardsFromMatVector(playingCards);
-	return cards;
 }
 
 void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
@@ -66,9 +85,8 @@ void PlayingBoard::extractCardsFromMatVector(std::vector<cv::Mat> &playingCards)
 		vector<Vec4i> hierarchy;
 
 		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);	// convert the image to gray
-		cv::threshold(grayImg, threshImg, 215, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)		
+		cv::threshold(grayImg, threshImg, 200, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)		
 		findContours(threshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
-
 		auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) {
 			double area = contourArea(c1, false);	// make sure the contourArea is big enough to be a card
 			Rect bounding_rect = boundingRect(c1);
@@ -137,10 +155,15 @@ Rect PlayingBoard::determineOuterRect(const std::vector<std::vector<cv::Point>> 
 		if (ymin > tempRect.y) { ymin = tempRect.y; }
 		if (ymax < tempRect.y + tempRect.height) { ymax = tempRect.y + tempRect.height; }
 	}
-	return Rect(xmin, ymin, xmax - xmin, ymax - ymin);
+	return Rect(xmin * 0.99, ymin * 0.99, (xmax - xmin) * 1.02, (ymax - ymin) * 1.02);	// adding small extra margin
 }
 
-
-PlayingBoard::~PlayingBoard()
+const playingBoardState & PlayingBoard::getState()
 {
+	return state;
+}
+
+const std::vector<cv::Mat> & PlayingBoard::getCards()
+{
+	return cards;
 }
