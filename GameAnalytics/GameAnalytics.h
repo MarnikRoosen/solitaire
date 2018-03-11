@@ -23,6 +23,7 @@
 #include <string>
 #include <cstdio>
 #include <chrono>
+#include <numeric>
 
 typedef std::chrono::high_resolution_clock Clock;
 using namespace cv;
@@ -63,6 +64,8 @@ private:
 	bool init = true;
 	int key = 0;
 	HWND hwnd;
+	std::chrono::time_point<std::chrono::steady_clock> averageThinkTime1;
+	std::vector<long long> averageThinkDurations;
 };
 
 

@@ -23,6 +23,7 @@ GameAnalytics::GameAnalytics()
 		exit(EXIT_FAILURE);
 	}
 
+	averageThinkTime1 = Clock::now();
 	while (key != 27)	//key = 27 -> error
 	{
 		waitForStableImage();
@@ -43,7 +44,6 @@ GameAnalytics::GameAnalytics()
 				break;
 		}
 
-		//auto t2 = Clock::now();
 		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 		key = waitKey(10);	// -> average d680ms and 240ms
 	}
@@ -337,6 +337,13 @@ void GameAnalytics::printPlayingBoardState()
 		}
 		std::cout << "     Hidden cards = " << playingBoard.at(i).unknownCards << std::endl;
 	}
+
+	auto averageThinkTime2 = Clock::now();
+	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - averageThinkTime1).count());
+	averageThinkTime1 = Clock::now();
+	std::cout << "Last move thinktime = " << averageThinkDurations.back() << "ms" << std::endl;
+	std::cout << "Average thinktime = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
+	std::cout << "Amount of moves = " << averageThinkDurations.size() << " moves" << std::endl;
 	std::cout << std::endl;
 }
 
