@@ -1,7 +1,14 @@
 #pragma once
+#pragma comment(lib, "Gdi32.lib")
+#pragma comment(lib, "User32.lib")
+#pragma comment(lib, "shcore.lib")
 
 #include "stdafx.h"
+#include "shcore.h"
 #include "ClassifyCard.h"
+#include "PlayingBoard.h"
+#include "ClicksHooks.h"
+
 #include "opencv2/imgproc.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/core.hpp"
@@ -14,10 +21,10 @@
 #include <Windows.h>
 #include <iostream>
 #include <string>
+#include <cstdio>
+#include <chrono>
 
-#pragma comment(lib, "Gdi32.lib")
-#pragma comment(lib, "User32.lib")
-
+typedef std::chrono::high_resolution_clock Clock;
 using namespace cv;
 using namespace std;
 
@@ -34,28 +41,28 @@ class GameAnalytics
 {
 public:
 	GameAnalytics();
-
 	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
 	void convertImagesToClassifiedCards(ClassifyCard & cc);
 	void waitForStableImage();
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
-	bool cardMoveBetweenTableauAndFoundations(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex2);
 	void updateDeck(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int &changedIndex1, int &changedIndex2);
-	Mat hwnd2mat(const HWND & hwnd);
 	void printPlayingBoardState();
+	bool cardMoveBetweenTableauAndFoundations(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex2);
+	Mat hwnd2mat(const HWND & hwnd);
 
 private:
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	std::vector<cardLocation> playingBoard;
-	HWND hwnd;
 	std::vector<bool> knownCards;
 	std::vector<std::pair<classifiers, classifiers>> tempPlayingBoard;
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
 	bool init = true;
+	int key = 0;
+	HWND hwnd;
 };
 
 

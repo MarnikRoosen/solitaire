@@ -1,11 +1,5 @@
-// Screen capture source: https://stackoverflow.com/questions/26888605/opencv-capturing-desktop-screen-live
-// Mouse events source: https://opencv-srf.blogspot.be/2011/11/mouse-events.html
-// Suit-rank detection and training knn algorithm based on: https://github.com/MicrocontrollersAndMore/OpenCV_3_KNN_Character_Recognition_Cpp
-
 #include "stdafx.h"
 #include "ClassifyCard.h"
-#include <chrono>
-typedef std::chrono::high_resolution_clock Clock;
 
 ClassifyCard::ClassifyCard()
 {

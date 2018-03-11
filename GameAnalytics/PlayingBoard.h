@@ -21,10 +21,12 @@ class PlayingBoard
 {
 public:
 	PlayingBoard();
-	void extractAndSortCards(Mat const & boardImage);
-	void extractCardsFromMatVector(std::vector<cv::Mat>& playingCards);
-	Rect determineOuterRect(const std::vector<std::vector<cv::Point>>& contours);
 	~PlayingBoard();
+	std::vector<cv::Mat> PlayingBoard::extractCardRegions(cv::Mat &src, std::vector<std::vector<cv::Point>> &contours);
+	Rect determineOuterRect(const std::vector<std::vector<cv::Point>>& contours);
+	void findCardsFromBoardImage(Mat const & boardImage);
+	void extractCards(std::vector<cv::Mat>& playingCards);
+	bool checkForOutOfMovesState(cv::Mat &src);
 	const playingBoardState & getState();
 	const std::vector<cv::Mat> & PlayingBoard::getCards();
 

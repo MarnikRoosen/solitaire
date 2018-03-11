@@ -1,24 +1,12 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
-#include "ClassifyCard.h"
-#include "PlayingBoard.h"
-#include "ClicksHooks.h"
-#include <cstdio>
-#include <windows.h>
-#include "shcore.h"
-#pragma comment(lib, "shcore.lib")
-#include <iostream>
-#include <chrono>
-typedef std::chrono::high_resolution_clock Clock;
-
 
 int main(int argc, char** argv)
 {
-
 	GameAnalytics ga;
 
-	//ClicksHooks::Instance().InstallHook();
-	//return ClicksHooks::Instance().Messsages();
+	// ClicksHooks::Instance().InstallHook();
+	// return ClicksHooks::Instance().Messsages();
 }
 
 GameAnalytics::GameAnalytics()
@@ -26,7 +14,6 @@ GameAnalytics::GameAnalytics()
 	PlayingBoard playingBoard;
 	ClassifyCard classifyCard;
 	Mat src;
-	int key = 0;
 	classifiedCardsFromPlayingBoard.reserve(12);
 
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
@@ -39,9 +26,8 @@ GameAnalytics::GameAnalytics()
 	while (key != 27)	//key = 27 -> error
 	{
 		waitForStableImage();
-
 		src = hwnd2mat(hwnd);
-		playingBoard.extractAndSortCards(src); // -> average 38ms
+		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 		
 		switch (playingBoard.getState())
 		{
