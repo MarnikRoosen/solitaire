@@ -112,7 +112,6 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		waitKey(0);
 		contours.erase(new_end, contours.end());
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
-
 		if ( contours.size() > 0 )
 		{
 			Mat card = Mat(playingCards[i], boundingRect(contours.at(0))).clone();

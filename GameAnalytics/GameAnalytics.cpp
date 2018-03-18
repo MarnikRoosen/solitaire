@@ -95,7 +95,7 @@ void GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated scr
 	do {
 		src1 = hwnd2mat(hwnd);
 		cvtColor(src1, src1, COLOR_BGR2GRAY);
-		waitKey(10);
+		waitKey(100);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, src2, COLOR_BGR2GRAY);
 		diff;
@@ -142,13 +142,6 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	int changedIndex1 = -1, changedIndex2 = -1;
 	findChangedCardLocations(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2);
 
-	// check for a changed deck card
-	if ((changedIndex1 == -1 && changedIndex2 == -1) || (changedIndex1 != -1 && changedIndex2 == -1))
-	{
-		changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
-	}
-
-
 	// only one card location changed = shuffled deck
 	if (changedIndex1 == 7 && changedIndex2 == -1)
 	{
@@ -193,6 +186,14 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		if (!playingBoard.at(changedIndex1).knownCards.empty())
 		{
 			playingBoard.at(changedIndex1).knownCards.pop_back();
+		}
+		else if (classifiedCardsFromPlayingBoard.at(changedIndex1).first == EMPTY)
+		{
+			return;
+		}
+		else
+		{
+			--playingBoard.at(changedIndex1).unknownCards;
 		}
 		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		printPlayingBoardState();
@@ -267,12 +268,18 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 {
 	for (int i = 0; i < playingBoard.size(); i++)
 	{
-		if (i == 7) { continue; }
 		if (playingBoard.at(i).knownCards.empty())	// adding card to an empty location
 		{
 			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
 			{
 				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
+			}
+		}
+		else if (i == 7)
+		{
+			if (playingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7) && classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
+			{
+				changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
 			}
 		}
 		else
@@ -282,7 +289,7 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
 			}
 		}
-		if (changedIndex2 != -1) { break; }
+		if (changedIndex2 != -1) { return; }
 	}
 }
 
@@ -296,6 +303,12 @@ void GameAnalytics::updateDeck(int changedIndex1, const std::vector<std::pair<cl
 	{
 		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		--playingBoard.at(changedIndex1).unknownCards;
+		printPlayingBoardState();
+	}
+	else
+	{
+		playingBoard.at(changedIndex1).knownCards.erase(result);
+		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		printPlayingBoardState();
 	}
 }
