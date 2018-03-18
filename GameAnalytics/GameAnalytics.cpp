@@ -4,9 +4,6 @@
 int main(int argc, char** argv)
 {
 	GameAnalytics ga;
-
-	// ClicksHooks::Instance().InstallHook();
-	// return ClicksHooks::Instance().Messsages();
 }
 
 GameAnalytics::GameAnalytics()
@@ -23,15 +20,19 @@ GameAnalytics::GameAnalytics()
 		exit(EXIT_FAILURE);
 	}
 
+	ClicksHooks::Instance().InstallHook();
+	
 	averageThinkTime1 = Clock::now();
 	while (key != 27)	//key = 27 -> error
 	{
-		waitForStableImage();
-		src = hwnd2mat(hwnd);
-		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-		
-		switch (playingBoard.getState())
+		if (WM_LBUTTONDOWN)
 		{
+			waitForStableImage();
+			src = hwnd2mat(hwnd);
+			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+
+			switch (playingBoard.getState())
+			{
 			case outOfMoves:
 				std::cout << "Out of moves" << std::endl;
 				Sleep(1000);
@@ -42,11 +43,16 @@ GameAnalytics::GameAnalytics()
 			default:
 				handlePlayingState(playingBoard, classifyCard);
 				break;
+			}
 		}
 
+
+		
 		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 		key = waitKey(10);	// -> average d680ms and 240ms
 	}
+
+	ClicksHooks::Instance().UninstallHook();
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
@@ -349,7 +355,7 @@ void GameAnalytics::printPlayingBoardState()
 
 Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
-	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+	//SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 	HDC hwindowDC, hwindowCompatibleDC;
 
 	int height, width, srcheight, srcwidth;
@@ -362,8 +368,10 @@ Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array
 	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, color on color deletes all eliminated lines of pixels
 	RECT windowsize;    // get the height and width of the screen
 	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
-	srcheight = windowsize.bottom;
-	srcwidth = windowsize.right;
+	//srcheight = windowsize.bottom;
+	//srcwidth = windowsize.right;
+	srcheight = 768;
+	srcwidth = 1366;
 	height = srcheight * 1;  //possibility to resize the client window screen
 	width = srcwidth * 1;
 	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels

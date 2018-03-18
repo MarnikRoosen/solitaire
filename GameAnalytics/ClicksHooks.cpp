@@ -14,17 +14,18 @@ ClicksHooks::~ClicksHooks()
 }
 
 
-int ClicksHooks::Messsages() {
+/* int ClicksHooks::Messsages() {
 	while (msg.message != WM_QUIT) { //while we do not close our application
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
 		Sleep(1);
-	}
+	} 
 	UninstallHook(); //if we close, let's uninstall our hook
 	return (int)msg.wParam; //return the messages
 }
+*/
 
 void ClicksHooks::InstallHook() {
 	/*
@@ -37,7 +38,7 @@ void ClicksHooks::InstallHook() {
 	If it return NULL, a NULL value is 0 and 0 is false.
 	*/
 	if (!(hook = SetWindowsHookEx(WH_MOUSE_LL, MyMouseCallback, NULL, 0))) {
-		printf_s("Error: %x \n", GetLastError());
+		//printf_s("Error: %x \n", GetLastError());
 	}
 }
 
@@ -68,18 +69,19 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam) {
 		switch (wParam) {
 
 		case WM_LBUTTONUP: {
-			printf_s("LEFT CLICK UP: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("LEFT CLICK UP: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			std::cout << "Left click X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl; 
 		}break;
 		case WM_LBUTTONDOWN: {
-			printf_s("LEFT CLICK DOWN: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("LEFT CLICK DOWN: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 		}break;
 
 		case WM_RBUTTONUP: {
-			printf_s("RIGHT CLICK UP: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("RIGHT CLICK UP: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 		}break;
 
 		case WM_RBUTTONDOWN: {
-			printf_s("RIGHT CLICK DOWN: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("RIGHT CLICK DOWN: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 		}break;
 
 

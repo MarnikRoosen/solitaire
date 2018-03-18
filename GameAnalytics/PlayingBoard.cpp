@@ -38,7 +38,11 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 
 std::vector<cv::Mat> PlayingBoard::extractCardRegions(cv::Mat &src, std::vector<std::vector<cv::Point>> &contours)
 {
-	Mat croppedOuterEdge(src, determineOuterRect(contours));
+	Rect rect;
+
+	rect = determineOuterRect(contours);
+
+	Mat croppedOuterEdge(src, rect);
 	Size outerEdgeSize = croppedOuterEdge.size();
 	Mat croppedtopCards(croppedOuterEdge, Rect(0, 0, (int) outerEdgeSize.width, (int) outerEdgeSize.width*0.18));
 	Mat croppedbottomCards(croppedOuterEdge, Rect(0, (int) outerEdgeSize.width * 0.18, (int) outerEdgeSize.width, (int) (outerEdgeSize.height - outerEdgeSize.width * 0.18 - 1)));
@@ -96,11 +100,16 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		cv::cvtColor(playingCards.at(i), adaptedSrc, COLOR_BGR2GRAY);
 		cv::threshold(adaptedSrc, adaptedSrc, 200, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
+
 		auto new_end = std::remove_if(contours.begin(), contours.end(), [] (const std::vector<cv::Point> & c1) {
 			double area = contourArea(c1, false);
 			Rect bounding_rect = boundingRect(c1);
 			float aspectRatio = (float) bounding_rect.width / (float) bounding_rect.height;
-			return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
+			//return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
+			return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 15000)); });
+		//drawContours(adaptedSrc, contours, -1, cv::Scalar(255, 0, 0));
+		imshow("adaptedsrc", adaptedSrc);
+		waitKey(0);
 		contours.erase(new_end, contours.end());
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
 
