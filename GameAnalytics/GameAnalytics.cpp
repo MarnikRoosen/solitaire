@@ -46,7 +46,6 @@ GameAnalytics::GameAnalytics()
 			}
 		}
 
-
 		
 		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 		key = waitKey(10);	// -> average d680ms and 240ms
