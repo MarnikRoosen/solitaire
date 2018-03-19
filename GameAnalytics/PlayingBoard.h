@@ -12,6 +12,9 @@
 #include <iostream>
 #include <string>
 
+#define standardWidth 1280
+#define standardHeight 720
+
 using namespace std;
 using namespace cv;
 
@@ -22,11 +25,12 @@ class PlayingBoard
 public:
 	PlayingBoard();
 	~PlayingBoard();
-	std::vector<cv::Mat> PlayingBoard::extractCardRegions(cv::Mat &src, std::vector<std::vector<cv::Point>> &contours);
 	Rect determineOuterRect(const std::vector<std::vector<cv::Point>>& contours);
 	void findCardsFromBoardImage(Mat const & boardImage);
+	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);
+	std::vector<cv::Mat> extractCardRegions(const cv::Mat & src);
 	void extractCards(std::vector<cv::Mat>& playingCards);
-	bool checkForOutOfMovesState(cv::Mat &src);
+	bool checkForOutOfMovesState(const cv::Mat &src);
 	const playingBoardState & getState();
 	const std::vector<cv::Mat> & PlayingBoard::getCards();
 
