@@ -105,11 +105,9 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			double area = contourArea(c1, false);
 			Rect bounding_rect = boundingRect(c1);
 			float aspectRatio = (float) bounding_rect.width / (float) bounding_rect.height;
-			//return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
-			return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 15000)); });
+			return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
+			//return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 15000)); });
 		//drawContours(adaptedSrc, contours, -1, cv::Scalar(255, 0, 0));
-		imshow("adaptedsrc", adaptedSrc);
-		waitKey(0);
 		contours.erase(new_end, contours.end());
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
 		if ( contours.size() > 0 )

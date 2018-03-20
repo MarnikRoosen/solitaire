@@ -1,10 +1,10 @@
 #pragma once
 #pragma comment(lib, "Gdi32.lib")
 #pragma comment(lib, "User32.lib")
-//#pragma comment(lib, "shcore.lib")
+#pragma comment(lib, "shcore.lib")
 
 #include "stdafx.h"
-//#include "shcore.h"
+#include "shcore.h"
 #include "ClassifyCard.h"
 #include "PlayingBoard.h"
 #include "ClicksHooks.h"
