@@ -12,8 +12,10 @@
 #include <iostream>
 #include <string>
 
-#define standardWidth 1280
-#define standardHeight 720
+#define standardBoardWidth 1280
+#define standardBoardHeight 720
+#define standardCardWidth 100
+#define standardCardHeight 133
 
 using namespace std;
 using namespace cv;

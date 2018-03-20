@@ -15,7 +15,7 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 {
 	cv::Mat adaptedSrc, src, hsv, mask;
 	resizeBoardImage(boardImage, src);
-	cv::Rect ROI = Rect(standardWidth * 0.17, standardHeight * 0.07, standardWidth * 0.67, standardHeight * 0.90);
+	cv::Rect ROI = Rect(standardBoardWidth * 0.17, standardBoardHeight * 0.07, standardBoardWidth * 0.67, standardBoardHeight * 0.90);
 	cv::Mat croppedSrc = src(ROI);
 	cv::cvtColor(croppedSrc, hsv, COLOR_BGR2HSV);
 	blur(hsv, hsv, Size(10, 10));
@@ -37,24 +37,24 @@ void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardIm
 	int width = boardImage.cols, 
 		height = boardImage.rows;
 
-	cv::Mat targetImage = cv::Mat::zeros(standardHeight, standardWidth, boardImage.type());
+	cv::Mat targetImage = cv::Mat::zeros(standardBoardHeight, standardBoardWidth, boardImage.type());
 
-	int max_dim = (width >= height) ? width : height;
-	float scale = ((float)standardWidth) / max_dim;
 	cv::Rect roi;
 	if (width >= height)
 	{
-		roi.width = standardWidth;
+		float scale = ((float)standardBoardWidth) / width;
+		roi.width = standardBoardWidth;
 		roi.x = 0;
-		roi.height = height * scale;
-		roi.y = (standardHeight - roi.height) / 2;
+		roi.height = height * scale - 1;
+		roi.y = (standardBoardHeight - roi.height) / 2;
 	}
 	else
 	{
+		float scale = ((float)standardBoardHeight) / height;
 		roi.y = 0;
-		roi.height = standardWidth;
-		roi.width = width * scale;
-		roi.x = (standardWidth - roi.width) / 2;
+		roi.height = standardBoardHeight;
+		roi.width = width * scale - 1;
+		roi.x = (standardBoardWidth - roi.width) / 2;
 	}
 
 	cv::resize(boardImage, targetImage(roi), roi.size());
@@ -119,7 +119,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		vector<Vec4i> hierarchy;
 
 		cv::cvtColor(playingCards.at(i), adaptedSrc, COLOR_BGR2GRAY);
-		cv::threshold(adaptedSrc, adaptedSrc, 200, 255, THRESH_BINARY);
+		cv::threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
 		auto new_end = std::remove_if(contours.begin(), contours.end(), [] (const std::vector<cv::Point> & c1) {
@@ -136,42 +136,60 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			Size cardSize = card.size();
 			Rect myROI;
 
-			(cardSize.width * 1.35 > cardSize.height) ?	// card height is 33% longer than card width -> extract the topcard from a stack
-				(myROI = Rect((int) (cardSize.width - cardSize.height / 1.34 + 1), 0, (int) cardSize.height / 1.34 - 1, cardSize.height)) :
-				(myROI = Rect(0, (int) (cardSize.height - cardSize.width * 1.33), cardSize.width, (int) cardSize.width * 1.33));
+			if (cardSize.width * 1.35 > cardSize.height)	// card height is 33% longer than card width -> extract the topcard from a stack
+			{
+				myROI.y = 0;
+				myROI.height = cardSize.height;
+				myROI.x = cardSize.width - cardSize.height / 1.34 + 1;
+				myROI.width = cardSize.width - myROI.x;
+			}
+			else
+			{
+				myROI.x = 0;
+				myROI.y = cardSize.height - cardSize.width * 1.32 - 1;
+				myROI.height = cardSize.height - myROI.y;
+				myROI.width = cardSize.width;
+			}
+
 
 			Mat croppedRef(card, myROI);
-			Mat checkImage;
-			cv::cvtColor(croppedRef, checkImage, COLOR_BGR2GRAY);
+			Mat checkImage, resizedCardImage;
+
+			int width = croppedRef.cols,
+				height = croppedRef.rows;
+			cv::Mat targetImage = cv::Mat::zeros(standardCardHeight, standardCardWidth, croppedRef.type());
+			cv::Rect roi;
+			if (width >= height)
+			{
+				float scale = ((float)standardCardWidth) / width;
+				roi.width = standardCardWidth;
+				roi.x = 0;
+				roi.height = height * scale;
+				roi.y = 0;
+			}
+			else
+			{
+				float scale = ((float)standardCardHeight) / height;
+				roi.y = 0;
+				roi.height = standardCardHeight;
+				roi.width = width * scale;
+				roi.x = 0;
+			}
+			cv::resize(croppedRef, targetImage(roi), roi.size());
+			resizedCardImage = targetImage.clone();
+
+			cv::cvtColor(resizedCardImage, checkImage, COLOR_BGR2GRAY);
 			cv::threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
 
 			if (cv::countNonZero(checkImage) > checkImage.rows * checkImage.cols * 0.3)
 			{
-				cards.at(i) = croppedRef.clone();
+				cards.at(i) = resizedCardImage.clone();
 				continue;
 			}
 		}
 		Mat empty;
 		cards.at(i) = empty;
 	}
-}
-
-Rect PlayingBoard::determineOuterRect(const std::vector<std::vector<cv::Point>> & contours)
-{
-	Rect tempRect = boundingRect(contours.at(0));
-	int xmin = tempRect.x;
-	int xmax = tempRect.x + tempRect.width;
-	int ymin = tempRect.y;
-	int ymax = tempRect.y + tempRect.height;
-	for (int i = 1; i < contours.size(); i++)
-	{
-		tempRect = boundingRect(contours.at(i));
-		if (xmin > tempRect.x) { xmin = tempRect.x; }
-		if (xmax < tempRect.x + tempRect.width) { xmax = tempRect.x + tempRect.width; }
-		if (ymin > tempRect.y) { ymin = tempRect.y; }
-		if (ymax < tempRect.y + tempRect.height) { ymax = tempRect.y + tempRect.height; }
-	}
-	return Rect(xmin * 0.99, ymin * 0.99, (xmax - xmin) * 1.02, (ymax - ymin) * 1.02);	// adding small extra margin
 }
 
 const playingBoardState & PlayingBoard::getState()
