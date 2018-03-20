@@ -28,7 +28,7 @@ GameAnalytics::GameAnalytics()
 			waitForStableImage();
 			src = hwnd2mat(hwnd);
 			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-			/*
+			
 			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 1000; i++)
 			{
@@ -36,7 +36,7 @@ GameAnalytics::GameAnalytics()
 			}
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-			*/
+			
 			switch (playingBoard.getState())
 			{
 			case outOfMoves:
@@ -88,7 +88,9 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		else
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
+			cc.classifyRankAndSuitOfCard2(cardCharacteristics);
 			cardType = cc.classifyRankAndSuitOfCard(cardCharacteristics);
+
 		}
 		classifiedCardsFromPlayingBoard.push_back(cardType);
 	});

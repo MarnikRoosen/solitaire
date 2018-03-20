@@ -22,7 +22,6 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 
 	Scalar lo(72, 184, 105); // mean - var for low	(hsv mean, var: 75.5889 199.844 122.861 0.621726 13.5166 8.62088)
 	Scalar hi(76, 215, 140); // mean + var for high
-
 	inRange(hsv, lo, hi, mask);
 	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 

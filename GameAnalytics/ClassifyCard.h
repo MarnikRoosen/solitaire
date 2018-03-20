@@ -38,6 +38,7 @@ class ClassifyCard
 {
 public:
 	ClassifyCard();
+	void classifyRankAndSuitOfCard2(std::pair<Mat, Mat> cardCharacteristics);
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);
 	void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);

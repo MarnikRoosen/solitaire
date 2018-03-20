@@ -7,6 +7,49 @@ ClassifyCard::ClassifyCard()
 	standardCardSize.height = 177;
 }
 
+void ClassifyCard::classifyRankAndSuitOfCard2(std::pair<Mat, Mat> cardCharacteristics)
+{
+	RNG rng(12345);
+	cv::Mat grayImg, blurredImg;
+	cv::Mat src = cardCharacteristics.first.clone();
+	// process the src
+	cvtColor(src, grayImg, COLOR_BGR2GRAY);
+	cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
+	threshold(blurredImg, src, 130, 255, THRESH_BINARY_INV);
+	vector<vector<Point> > contours, approxContours;
+	vector<Point> approxContour;
+	vector<Vec4i> hierarchy;
+	cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+	/// Get the moments
+	vector<Moments> mu(contours.size());
+	for (int i = 0; i < contours.size(); i++)
+	{
+		mu[i] = moments(contours[i], false);
+	}
+
+	///  Get the mass centers:
+	vector<Point2f> mc(contours.size());
+	for (int i = 0; i < contours.size(); i++)
+	{
+		mc[i] = Point2f(mu[i].m10 / mu[i].m00, mu[i].m01 / mu[i].m00);
+	}
+
+	/// Draw contours
+	Mat drawing = Mat::zeros(src.size(), CV_8UC3);
+	for (int i = 0; i< contours.size(); i++)
+	{
+		drawContours(drawing, contours, i, Scalar(255,0,0));
+		circle(drawing, mc[i], 1, Scalar(0, 255, 0), -1, 8, 0);
+	}
+
+	double len = arcLength(contours.at(0), true);
+	approxPolyDP(contours.at(0), approxContour, 0.02 * len, true);
+	approxContours.push_back(approxContour);
+	drawContours(drawing, approxContours, -1, Scalar(0, 0, 255));
+}
+
+
 std::pair<classifiers, classifiers> ClassifyCard::classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics)
 {
 	std::pair<classifiers, classifiers> cardType;
