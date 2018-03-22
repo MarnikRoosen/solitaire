@@ -21,10 +21,10 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	blur(hsv, hsv, Size(10, 10));
 
 	//removing low intensities
-	/*Scalar lo_int(0, 2, 0);
+	Scalar lo_int(0, 2, 0);
 	Scalar hi_int(180, 255, 125);
 	inRange(hsv, lo_int, hi_int, mask);
-	croppedSrc.setTo(Scalar(0, 0, 0), mask);*/
+	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 
 	//removing green
 	Scalar lo(72, 184, 105); //(hsv mean, var: 75.5889 199.844 122.861 0.621726 13.5166 8.62088)
