@@ -38,11 +38,16 @@ class ClassifyCard
 {
 public:
 	ClassifyCard();
+	std::pair<classifiers, classifiers> classifyCardUsingShape(std::pair<Mat, Mat> cardCharacteristics);
+	void generateMoments();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
-	std::pair<classifiers, classifiers> classifyRankAndSuitOfCard(std::pair<Mat, Mat> cardCharacteristics);
+	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);
+	classifiers classifyTypeWithKnn(const Mat & type, String typeName);
 	void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
 
 private:
 	Size standardCardSize;
+	vector<std::pair<classifiers, cv::Mat>> rankImages;
+	vector<std::pair<classifiers, cv::Mat>> suitImages;
 };

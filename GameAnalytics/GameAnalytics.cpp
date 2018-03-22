@@ -25,9 +25,11 @@ GameAnalytics::GameAnalytics()
 	averageThinkTime1 = Clock::now();
 	while (key != 27)	//key = 27 -> error
 	{
+		//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			waitForStableImage();
 			src = hwnd2mat(hwnd);
-
+			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+			/*
 			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 1000; i++)
 			{
@@ -35,9 +37,7 @@ GameAnalytics::GameAnalytics()
 			}
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-
-			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-
+			*/
 			switch (playingBoard.getState())
 			{
 			case outOfMoves:
@@ -50,11 +50,13 @@ GameAnalytics::GameAnalytics()
 			default:
 				handlePlayingState(playingBoard, classifyCard);
 				break;
-		}
-
+			}
+			//std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 		
-		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-		key = waitKey(10);	// -> average d680ms and 240ms
+			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
+			key = waitKey(10);	// -> average d680ms and 240ms
+	
 	}
 
 	ClicksHooks::Instance().UninstallHook();
@@ -89,7 +91,9 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		else
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
-			cardType = cc.classifyRankAndSuitOfCard(cardCharacteristics);
+			cardType = cc.classifyCardUsingShape(cardCharacteristics);
+			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
+
 		}
 		classifiedCardsFromPlayingBoard.push_back(cardType);
 	});

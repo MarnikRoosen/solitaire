@@ -261,3 +261,4 @@ __pycache__/
 *.pyc
 /TestOpenCV/card.png
 /TestOpenCV/ranki.png
+/GameAnalytics/specialGameStates/playingState.png

@@ -38,6 +38,7 @@ void ClicksHooks::InstallHook() {
 	If it return NULL, a NULL value is 0 and 0 is false.
 	*/
 	if (!(hook = SetWindowsHookEx(WH_MOUSE_LL, MyMouseCallback, NULL, 0))) {
+		std::cout << "Error:" << GetLastError() << std::endl;
 		//printf_s("Error: %x \n", GetLastError());
 	}
 }
@@ -50,44 +51,28 @@ void ClicksHooks::UninstallHook() {
 }
 
 LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam) {
-	MSLLHOOKSTRUCT * pMouseStruct = (MSLLHOOKSTRUCT *)lParam; // WH_MOUSE_LL struct
-															  /*
-															  nCode, this parameters will determine how to process a message
-															  This callback in this case only have information when it is 0 (HC_ACTION): wParam and lParam contain info
 
-															  wParam is about WINDOWS MESSAGE, in this case MOUSE messages.
-															  lParam is information contained in the structure MSLLHOOKSTRUCT
-															  */
+	if (nCode == 0) {
 
-	if (nCode == 0) { // we have information in wParam/lParam ? If yes, let's check it:
-					  /*if (pMouseStruct != NULL) { // Mouse struct contain information?
-					  printf_s("Mouse Coordinates: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
-					  }
-
-					  */
+		MSLLHOOKSTRUCT * pMouseStruct = (MSLLHOOKSTRUCT *)lParam;
 
 		switch (wParam) {
 
-		case WM_LBUTTONUP: {
-			//printf_s("LEFT CLICK UP: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
-			std::cout << "Left click X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl; 
-		}break;
-		case WM_LBUTTONDOWN: {
-			//printf_s("LEFT CLICK DOWN: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
-		}break;
+		case WM_LBUTTONUP:
+			std::cout << "LEFT UP X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl; 
+			break;
+		case WM_LBUTTONDOWN:			
+			std::cout << "LEFT DOWN X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl;
+			break;
 
-		case WM_RBUTTONUP: {
-			//printf_s("RIGHT CLICK UP: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
-		}break;
+		case WM_RBUTTONUP:
+			std::cout << "RIGHT UP X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl;
+			break;
 
-		case WM_RBUTTONDOWN: {
-			//printf_s("RIGHT CLICK DOWN: x = %i and y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
-		}break;
-
-
-
+		case WM_RBUTTONDOWN:
+			std::cout << "RIGHT DOWN X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl;
+			break;
 		}
-
 	}
 
 	/*
