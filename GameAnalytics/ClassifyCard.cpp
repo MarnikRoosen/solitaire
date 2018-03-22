@@ -83,9 +83,9 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardUsingShape(std::pa
 					best_int = i;
 				}
 			}
-			if (best > 0.05)
+			if (best > 0.05 || list.at(best_int).first == '6' || list.at(best_int).first == '9')
 			{
-				//std::cout << static_cast<char>(list.at(best_int).first) << " with " << best << ", not good enough! Trying again w/ knn --- ";
+			//	std::cout << static_cast<char>(list.at(best_int).first) << " with " << best << ", not good enough! Trying again w/ knn --- ";
 				if (type == "black_suit" || type == "red_suit")
 				{
 					cardType.second = classifyTypeWithKnn(cardCharacteristics.second, type);

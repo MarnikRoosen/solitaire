@@ -53,11 +53,11 @@ GameAnalytics::GameAnalytics()
 			}
 			//std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-		}
-
 		
-		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-		key = waitKey(10);	// -> average d680ms and 240ms
+			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
+			key = waitKey(10);	// -> average d680ms and 240ms
+	
+	}
 
 	ClicksHooks::Instance().UninstallHook();
 }
@@ -105,7 +105,7 @@ void GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated scr
 	do {
 		src1 = hwnd2mat(hwnd);
 		cvtColor(src1, src1, COLOR_BGR2GRAY);
-		waitKey(300);
+		waitKey(100);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, src2, COLOR_BGR2GRAY);
 		diff;
@@ -184,12 +184,6 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		if (cardMoveBetweenTableauAndFoundations(changedIndex1, classifiedCardsFromPlayingBoard, changedIndex2))
 		{
 			printPlayingBoardState();
-			return;
-		}
-		else
-		{
-			std::cout << "NEW GAME!" << std::endl;
-			initializePlayingBoard(classifiedCardsFromPlayingBoard);
 			return;
 		}
 	}
