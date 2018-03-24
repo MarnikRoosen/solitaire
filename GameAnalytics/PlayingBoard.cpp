@@ -27,10 +27,12 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 
 	//removing green
-	Scalar lo(72, 184, 105); // (hsv mean, var: 75.5889 199.844 122.861 0.621726 13.5166 8.62088)
+	Scalar lo(72, 184, 105); //(hsv mean, var: 75.5889 199.844 122.861 0.621726 13.5166 8.62088)
 	Scalar hi(76, 215, 140);
 	inRange(hsv, lo, hi, mask);
 	croppedSrc.setTo(Scalar(0, 0, 0), mask);
+
+	if (checkForOutOfMovesState(boardImage)) { return; }
 
 	// filter out the cardregions, followed by the cards
 	extractCards( extractCardRegions( croppedSrc ) );
@@ -95,9 +97,8 @@ std::vector<cv::Mat> PlayingBoard::extractCardRegions(const cv::Mat &src)
 	return playingCards;
 }
 
-boardState PlayingBoard::identifyGameState(const cv::Mat &src)
+bool PlayingBoard::checkForOutOfMovesState(const cv::Mat &src)
 {
-	// check for out of moves state
 	Size imageSize = src.size();
 	Rect middle = Rect(0, imageSize.height / 3, imageSize.width, imageSize.height / 3);
 	Mat croppedSrc(src, middle);
@@ -105,11 +106,13 @@ boardState PlayingBoard::identifyGameState(const cv::Mat &src)
 	threshold(croppedSrc, croppedSrc, 240, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
 	if (cv::countNonZero(croppedSrc) > croppedSrc.rows * croppedSrc.cols * 0.7)
 	{
-		return outOfMoves;
+		state = outOfMoves;
+		return true;
 	}
 	else
 	{
-		return playing;
+		state = playing;
+		return false;
 	}
 }
 
@@ -125,6 +128,13 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		cv::threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
+		auto new_end = std::remove_if(contours.begin(), contours.end(), [] (const std::vector<cv::Point> & c1) {
+			double area = contourArea(c1, false);
+			Rect bounding_rect = boundingRect(c1);
+			float aspectRatio = (float) bounding_rect.width / (float) bounding_rect.height;
+			return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
+
+		contours.erase(new_end, contours.end());
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
 		if ( contours.size() > 0 )
 		{
@@ -132,8 +142,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			Size cardSize = card.size();
 			Rect myROI;
 
-			// extract the card from the image
-			if (cardSize.width * 1.35 > cardSize.height)
+			if (cardSize.width * 1.35 > cardSize.height)	// card height is 33% longer than card width -> extract the topcard from a stack
 			{
 				myROI.y = 0;
 				myROI.height = cardSize.height;
@@ -147,20 +156,11 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 				myROI.height = cardSize.height - myROI.y;
 				myROI.width = cardSize.width;
 			}
+
+
 			Mat croppedRef(card, myROI);
+			Mat checkImage, resizedCardImage;
 
-			// check that the image isn't 'empty' (meaning no card at that location)
-			Mat checkImage;
-			cv::cvtColor(croppedRef, checkImage, COLOR_BGR2GRAY);
-			cv::threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
-			if (cv::countNonZero(checkImage) < checkImage.rows * checkImage.cols * 0.3)
-			{
-				Mat empty;
-				cards.at(i) = empty;
-				continue;
-			}
-
-			// resize the card to a standard size
 			int width = croppedRef.cols,
 				height = croppedRef.rows;
 			cv::Mat targetImage = cv::Mat::zeros(standardCardHeight, standardCardWidth, croppedRef.type());
@@ -182,17 +182,71 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 				roi.x = 0;
 			}
 			cv::resize(croppedRef, targetImage(roi), roi.size());
-			cards.at(i) = targetImage.clone();
+			resizedCardImage = targetImage.clone();
+
+			cv::cvtColor(resizedCardImage, checkImage, COLOR_BGR2GRAY);
+			cv::threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
+
+			if (cv::countNonZero(checkImage) > checkImage.rows * checkImage.cols * 0.3)
+			{
+				cards.at(i) = resizedCardImage.clone();
+				continue;
+			}
 		}
-		else
-		{
-			Mat empty;
-			cards.at(i) = empty;
-		}
+		Mat empty;
+		cards.at(i) = empty;
 	}
+}
+
+const playingBoardState & PlayingBoard::getState()
+{
+	return state;
 }
 
 const std::vector<cv::Mat> & PlayingBoard::getCards()
 {
 	return cards;
 }
+
+/*
+Mat im_hsv, dist;
+void pick_color(int e, int x, int y, int s, void *)
+{
+	if (e == 1)
+	{
+		int r = 3;
+		int off[9 * 2] = { 0,0, -r,-r, -r,0, -r,r, 0,r, r,r, r,0, r,-r, 0,-r };
+		for (int i = 0; i<9; i++)
+		{
+			Vec3b p = im_hsv.at<Vec3b>(y + off[2 * i], x + off[2 * i + 1]);
+			cerr << int(p[0]) << " " << int(p[1]) << " " << int(p[2]) << endl;
+			dist.push_back(p);
+		}
+	}
+}
+
+int main(int argc, char** argv)
+{
+	namedWindow("blue");
+	setMouseCallback("blue", pick_color);
+
+	String c_in = "."; // check a whole folder.
+	if (argc>1) c_in = argv[1]; // or an image
+	vector<String> fn;
+	glob(c_in, fn, true);
+	for (size_t i = 0; i<fn.size(); i++)
+	{
+		Mat im_bgr = imread(fn[i]);
+		if (im_bgr.empty()) continue;
+		cvtColor(im_bgr, im_hsv, COLOR_BGR2HSV);
+		imshow("blue", im_bgr);
+		int k = waitKey() & 0xff;
+		if (k == 27) break; // esc.
+	}
+	Scalar m, v;
+	meanStdDev(dist, m, v);
+	cerr << "mean, var: " << endl;
+	cerr << m[0] << " " << m[1] << " " << m[2] << " " << v[0] << " " << v[1] << " " << v[2] << endl;
+	waitKey(0);
+	return 0;
+}*/
