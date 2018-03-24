@@ -20,6 +20,7 @@
 #include <iostream>
 #include <string>
 #include <chrono>
+#include <memory>
 
 typedef std::chrono::high_resolution_clock Clock;
 
@@ -38,7 +39,7 @@ class ClassifyCard
 {
 public:
 	ClassifyCard();
-	std::pair<classifiers, classifiers> classifyCardUsingShape(std::pair<Mat, Mat> cardCharacteristics);
+	std::pair<classifiers, classifiers> classifyCard(std::pair<Mat, Mat> cardCharacteristics);
 	void generateMoments();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);
@@ -48,8 +49,10 @@ public:
 
 private:
 	Size standardCardSize;
-	vector<std::pair<classifiers, cv::Mat>> rankImages;
-	vector<std::pair<classifiers, cv::Mat>> suitImages;
+	vector<std::pair<classifiers, std::vector<double>>> rankHuMoments;
+	vector<std::pair<classifiers, std::vector<double>>> red_suitHuMoments;
+	vector<std::pair<classifiers, std::vector<double>>> black_suitHuMoments;
+
 };
 
 inline bool fileExists(const std::string& name) {

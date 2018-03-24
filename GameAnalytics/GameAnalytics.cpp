@@ -30,14 +30,14 @@ GameAnalytics::GameAnalytics()
 			src = hwnd2mat(hwnd);
 			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 			
-			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 1000; i++)
 			{
 				playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 			}
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-			
+			*/
 			switch (playingBoard.getState())
 			{
 			case outOfMoves:
@@ -103,12 +103,12 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 100; i++)
 			{
-			cardType = cc.classifyCardUsingShape(cardCharacteristics);
+			cardType = cc.classifyCard(cardCharacteristics);
 			}
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 			*/
-			cardType = cc.classifyCardUsingShape(cardCharacteristics);
+			cardType = cc.classifyCard(cardCharacteristics);
 
 
 			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
