@@ -88,12 +88,12 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardUsingShape(std::pa
 			//	std::cout << static_cast<char>(list.at(best_int).first) << " with " << best << ", not good enough! Trying again w/ knn --- ";
 				if (type == "black_suit" || type == "red_suit")
 				{
-					cardType.second = classifyTypeWithKnn(cardCharacteristics.second, type);
+					cardType.second = classifyTypeWithKnn(resizedROI, type);
 				//	std::cout << "Actual type was " << static_cast<char>(cardType.second) << std::endl;
 				}
 				else
 				{
-					cardType.first = classifyTypeWithKnn(cardCharacteristics.first, type);
+					cardType.first = classifyTypeWithKnn(resizedROI, type);
 				//	std::cout << "Actual type was " << static_cast<char>(cardType.first) << std::endl;
 				}
 			}
@@ -235,8 +235,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, String type)
 {
 	Mat src = image.clone();
-	Mat blurredImg, grayImg;
-
 	String name = "../GameAnalytics/knnData/trained_" + type + ".yml";
 	if (!fileExists(name))
 	{
@@ -244,47 +242,13 @@ classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, String type)
 	}
 	Ptr<ml::KNearest>  kNearest = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_" + type + ".yml");
 
-	// process the src
-	cvtColor(src, grayImg, COLOR_BGR2GRAY);
-	cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
-	threshold(blurredImg, src, 130, 255, THRESH_BINARY_INV);
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
-	cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-	// Sort and remove objects that are too small
-	std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
-	if (type == "rank" && contours.size() > 1 && contourArea(contours.at(1), false) > 15.0)
-	{
-		return TEN;
-	}
-	else
-	{
-		cv::Mat ROI = src(boundingRect(contours.at(0)));
-		cv::Mat resizedROI;
-		if (type == "black_suit" || type == "red_suit")
-		{
-			cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-		}
-		else
-		{
-			cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
-		}
-		Mat ROIFloat;
-		resizedROI.convertTo(ROIFloat, CV_32FC1);
-		Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);
-		Mat CurrentChar(0, 0, CV_32F);
-		kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);
-		float fltCurrentChar = (float)CurrentChar.at<float>(0, 0);
-		if (type == "black_suit" || type == "red_suit")
-		{
-			return classifiers(char(int(fltCurrentChar)));
-		}
-		else
-		{
-			return classifiers(char(int(fltCurrentChar)));
-		}
-	}
+	Mat ROIFloat;
+	src.convertTo(ROIFloat, CV_32FC1);
+	Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);
+	Mat CurrentChar(0, 0, CV_32F);
+	kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);
+	float fltCurrentChar = (float)CurrentChar.at<float>(0, 0);
+	return classifiers(char(int(fltCurrentChar)));
 }
 
 std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
