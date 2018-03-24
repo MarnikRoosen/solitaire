@@ -16,22 +16,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 	Mat src = cardCharacteristics.first;
 	Mat blurredImg, grayImg;
 	for (int i = 0; i < 2; i++)
-	{
-		if (type == "black_suit" || type == "red_suit")
-		{
-			Mat3b hsv;
-			cvtColor(src, hsv, COLOR_BGR2HSV);
-			Mat1b mask1, mask2;
-			inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
-			inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
-			Mat1b mask = mask1 | mask2;
-			int nonZero = countNonZero(mask);
-			if (nonZero > 0)	// red!
-			{
-				type = "red_suit";
-			}
-		}
-		
+	{		
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
@@ -51,90 +36,55 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			cv::Mat ROI = src(boundingRect(contours.at(0)));
 			cv::Mat resizedROI;
 			vector<std::pair<classifiers, std::vector<double>>> list;
-			if (type == "black_suit" || type == "red_suit")
-			{
-				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-				list = suitHuMoments;
-			}
-			else
+			if (type == "rank")
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 				list = rankHuMoments;
 			}
+			else
+			{
+				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
+				list = suitHuMoments;
+			}
+
 			threshold(resizedROI, resizedROI, 130, 255, THRESH_BINARY);
 			cv::findContours(resizedROI, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-			double best = 100;
-			int best_int = 0;
-			for (int i = 0; i < list.size(); i++)
+			double huMomentsA[7];
+			HuMoments(moments(contours.at(0)), huMomentsA);
+			double lowestValue = DBL_MAX;
+			int indexOfLowestValue = classifyTypeWithShape(list, huMomentsA, lowestValue);
+			
+			if (lowestValue > 0.05 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
 			{
-				double ma[7];
-				int j, sma, smb;
-				double eps = 1.e-5;
-				double mmm;
-				double result = 0;
-				bool anyA = false, anyB = false;
-
-				HuMoments(moments(contours.at(0)), ma);
-
-				for (j = 0; j < 7; j++)
+				if (type == "rank")
 				{
-					double ama = fabs(ma[j]);
-					double amb = fabs(list.at(i).second.at(j));
-
-						if (ama > 0)
-							anyA = true;
-						if (amb > 0)
-							anyB = true;
-
-						if (ma[j] > 0)
-							sma = 1;
-						else if (ma[j] < 0)
-							sma = -1;
-						else
-							sma = 0;
-						if (list.at(i).second.at(j) > 0)
-							smb = 1;
-						else if (list.at(i).second.at(j) < 0)
-							smb = -1;
-						else
-							smb = 0;
-
-						if (ama > eps && amb > eps)
-						{
-							ama = 1. / (sma * log10(ama));
-							amb = 1. / (smb * log10(amb));
-							result += fabs(-ama + amb);
-						}
-					}
-				if (best > result)
-				{
-					best = result;
-					best_int = i;
-				}
-			}
-			if (best > 0.05 || list.at(best_int).first == '6' || list.at(best_int).first == '9')
-			{
-			//	std::cout << static_cast<char>(list.at(best_int).first) << " with " << best << ", not good enough! Trying again w/ knn --- ";
-				if (type == "black_suit" || type == "red_suit")
-				{
-					cardType.second = classifyTypeWithKnn(resizedROI, type);
-				//	std::cout << "Actual type was " << static_cast<char>(cardType.second) << std::endl;
+					cardType.first = classifyTypeWithKnn(resizedROI, type);
 				}
 				else
 				{
-					cardType.first = classifyTypeWithKnn(resizedROI, type);
-				//	std::cout << "Actual type was " << static_cast<char>(cardType.first) << std::endl;
+					Mat3b hsv;
+					cvtColor(cardCharacteristics.first, hsv, COLOR_BGR2HSV);
+					Mat1b mask1, mask2;
+					inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
+					inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
+					Mat1b mask = mask1 | mask2;
+					int nonZero = countNonZero(mask);
+					if (nonZero > 0)	// red!
+					{
+						type = "red_suit";
+					}
+					cardType.second = classifyTypeWithKnn(resizedROI, type);
 				}
 			}
 			else
 			{
-				if (type == "black_suit" || type == "red_suit")
+				if (type == "rank")
 				{
-					cardType.second = list.at(best_int).first;
+					cardType.first = list.at(indexOfLowestValue).first;
 				}
 				else
 				{
-					cardType.first = list.at(best_int).first;
+					cardType.second = list.at(indexOfLowestValue).first;
 				}
 			}
 		}
@@ -142,6 +92,63 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		src = cardCharacteristics.second;
 	}
 	return cardType;
+}
+
+int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vector<double>>> &list, double  huMomentsA[7], double &lowestValue)
+{
+	// source: https://github.com/opencv/opencv/blob/master/modules/imgproc/src/matchcontours.cpp
+	
+	int indexOfLowestValue = 0;
+	for (int i = 0; i < list.size(); i++)
+	{
+		int signHuMomentA, signHuMomentB;
+		double eps = 1.e-5;
+		double result = 0;
+		bool anyA = false, anyB = false;
+
+		for (int j = 0; j < 7; j++)
+		{
+			double ama = fabs(huMomentsA[j]);
+			double amb = fabs(list.at(i).second.at(j));
+
+			if (ama > 0)
+				anyA = true;
+			if (amb > 0)
+				anyB = true;
+
+			if (huMomentsA[j] > 0)
+				signHuMomentA = 1;
+			else if (huMomentsA[j] < 0)
+				signHuMomentA = -1;
+			else
+				signHuMomentA = 0;
+			if (list.at(i).second.at(j) > 0)
+				signHuMomentB = 1;
+			else if (list.at(i).second.at(j) < 0)
+				signHuMomentB = -1;
+			else
+				signHuMomentB = 0;
+
+			if (ama > eps && amb > eps)
+			{
+				ama = 1. / (signHuMomentA * log10(ama));
+				amb = 1. / (signHuMomentB * log10(amb));
+				result += fabs(-ama + amb);	// subtract 1/mB from 1/mA
+			}
+			if (anyA != anyB)
+				result = DBL_MAX;
+			//If anyA and anyB are both true, the result is correct.
+			//If anyA and anyB are both false, the distance is 0, perfect match.
+			//If only one is true, then it's a false 0 and return large error.
+		}
+
+		if (lowestValue > result)
+		{
+			lowestValue = result;
+			indexOfLowestValue = i;
+		}
+	}
+	return indexOfLowestValue;
 }
 
 void ClassifyCard::generateMoments()

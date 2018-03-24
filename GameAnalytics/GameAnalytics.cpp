@@ -65,13 +65,13 @@ GameAnalytics::GameAnalytics()
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
 	extractedImagesFromPlayingBoard = playingBoard.getCards();
-	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+	/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	for (int i = 0; i < 1000; i++)
 	{
 		convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 	}
 	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-	std::cout << "Classification" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
+	std::cout << "Classification" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;*/
 	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 
 	if (init)

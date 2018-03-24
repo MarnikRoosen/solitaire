@@ -40,6 +40,7 @@ class ClassifyCard
 public:
 	ClassifyCard();
 	std::pair<classifiers, classifiers> classifyCard(std::pair<Mat, Mat> cardCharacteristics);
+	int classifyTypeWithShape(vector<std::pair<classifiers, std::vector<double>>>& list, double huMomentsA[7], double & lowestValue);
 	void generateMoments();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);
