@@ -130,7 +130,6 @@ void ClassifyCard::generateMoments()
 		}
 		pair.first = classifiers(char(rankClassifiersList.at(i).at(0)));
 		pair.second = src.clone();
-		//copyMakeBorder(src, pair.second, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(0, 0, 0));
 		rankImages.push_back(pair);
 	}
 	for (int i = 0; i < suitClassifiersList.size(); i++)
@@ -144,7 +143,6 @@ void ClassifyCard::generateMoments()
 		}
 		pair.first = classifiers(char(suitClassifiersList.at(i).at(0)));
 		pair.second = src.clone();
-		//copyMakeBorder(src, pair.second, 1, 1, 1, 1, BORDER_CONSTANT, Scalar(0, 0, 0));
 		suitImages.push_back(pair);
 	}
 }
@@ -172,12 +170,12 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 			type = "red_suit";
 		}
 	}
-		Mat classificationInts;      // read in classification data
-		Mat trainingImagesAsFlattenedFloats;	// read in trained images
-		getTrainedData(type, classificationInts, trainingImagesAsFlattenedFloats);
-
-		Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
-		kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);
+	String name = "../GameAnalytics/knnData/trained_" + type + ".yml";
+	if (!fileExists(name))
+	{
+		getTrainedData(type);
+	}
+	Ptr<ml::KNearest>  kNearest = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_" + type + ".yml");
 
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
@@ -238,12 +236,13 @@ classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, String type)
 {
 	Mat src = image.clone();
 	Mat blurredImg, grayImg;
-	Mat classificationInts;      // read in classification data
-	Mat trainingImagesAsFlattenedFloats;	// read in trained images
-	getTrainedData(type, classificationInts, trainingImagesAsFlattenedFloats);
-	
-	Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
-	kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);
+
+	String name = "../GameAnalytics/knnData/trained_" + type + ".yml";
+	if (!fileExists(name))
+	{
+		getTrainedData(type);
+	}
+	Ptr<ml::KNearest>  kNearest = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_" + type + ".yml");
 
 	// process the src
 	cvtColor(src, grayImg, COLOR_BGR2GRAY);
@@ -304,15 +303,15 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 	return cardCharacteristics;
 }
 
-void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images)
+void ClassifyCard::getTrainedData(String type)
 {
 	Mat classificationInts, trainingImagesAsFlattenedFloats;
 
-	FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);	// type = rank, black_suit or red_suit
+	FileStorage fsClassifications("../GameAnalytics/knnData/" + type + "_classifications.xml", FileStorage::READ);	// type = rank, black_suit or red_suit
 	if (!fsClassifications.isOpened()) {
 
 		std::cout << "Unable to open training classifications file, trying to generate it\n\n";
-		Mat trainingImg = imread("../GameAnalytics/trainingImages/" + type + "TrainingImg.png");
+		Mat trainingImg = imread("../GameAnalytics/knnData/" + type + "TrainingImg.png");
 
 		if (!trainingImg.data)
 		{
@@ -321,7 +320,7 @@ void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& tra
 		}
 
 		generateTrainingData(trainingImg, type);		// If training data hasn't been generated yet
-		FileStorage fsClassifications(type + "_classifications.xml", FileStorage::READ);
+		FileStorage fsClassifications("../GameAnalytics/knnData/" + type + "_classifications.xml", FileStorage::READ);
 	}
 	if (!fsClassifications.isOpened())
 	{
@@ -331,9 +330,8 @@ void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& tra
 
 	fsClassifications[type + "_classifications"] >> classificationInts;
 	fsClassifications.release();
-	class_ints = classificationInts;
 
-	FileStorage fsTrainingImages(type + "_images.xml", FileStorage::READ);
+	FileStorage fsTrainingImages("../GameAnalytics/knnData/" + type + "_images.xml", FileStorage::READ);
 
 	if (!fsTrainingImages.isOpened()) {
 		cout << "Unable to open training images file, exiting program" << std::endl;
@@ -341,7 +339,10 @@ void ClassifyCard::getTrainedData(String type, cv::Mat& class_ints, cv::Mat& tra
 	}
 	fsTrainingImages[type + "_images"] >> trainingImagesAsFlattenedFloats;
 	fsTrainingImages.release();
-	train_images = trainingImagesAsFlattenedFloats;
+
+	Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
+	kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);
+	kNearest->save("../GameAnalytics/knnData/trained_" + type + ".yml");
 }
 
 void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreName) {
@@ -400,7 +401,7 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 
 	// save classifications to xml file
 
-	FileStorage fsClassifications(outputPreName + "_classifications.xml", FileStorage::WRITE);
+	FileStorage fsClassifications("../GameAnalytics/knnData/" + outputPreName + "_classifications.xml", FileStorage::WRITE);
 	if (fsClassifications.isOpened() == false) {
 		std::cout << "error, unable to open training classifications file, exiting program\n\n";
 		exit(EXIT_FAILURE);
@@ -409,7 +410,7 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 	fsClassifications << outputPreName + "_classifications" << classificationInts;
 	fsClassifications.release();
 
-	FileStorage fsTrainingImages(outputPreName + "_images.xml", FileStorage::WRITE);
+	FileStorage fsTrainingImages("../GameAnalytics/knnData/" + outputPreName + "_images.xml", FileStorage::WRITE);
 
 	if (fsTrainingImages.isOpened() == false) {
 		std::cout << "error, unable to open training images file, exiting program\n\n";

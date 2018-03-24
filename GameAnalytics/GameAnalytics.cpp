@@ -64,7 +64,7 @@ GameAnalytics::GameAnalytics()
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
-	extractedImagesFromPlayingBoard = playingBoard.getCards();
+	extractedImagesFromPlayingBoard = playingBoard.getCards();	
 	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 
 	if (init)
@@ -91,7 +91,19 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		else
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
+
+			
+			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+			for (int i = 0; i < 100; i++)
+			{
 			cardType = cc.classifyCardUsingShape(cardCharacteristics);
+			}
+			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
+			*/
+			cardType = cc.classifyCardUsingShape(cardCharacteristics);
+
+
 			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
 
 		}

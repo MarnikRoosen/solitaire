@@ -43,7 +43,7 @@ public:
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);
 	classifiers classifyTypeWithKnn(const Mat & type, String typeName);
-	void getTrainedData(String type, cv::Mat& class_ints, cv::Mat& train_images);
+	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
 
 private:
@@ -51,3 +51,8 @@ private:
 	vector<std::pair<classifiers, cv::Mat>> rankImages;
 	vector<std::pair<classifiers, cv::Mat>> suitImages;
 };
+
+inline bool fileExists(const std::string& name) {
+	ifstream f(name.c_str());
+	return f.good();
+}
