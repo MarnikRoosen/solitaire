@@ -21,8 +21,8 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	blur(hsv, hsv, Size(10, 10));
 
 	//removing low intensities
-	Scalar lo_int(0, 2, 0);
-	Scalar hi_int(180, 255, 125);
+	Scalar lo_int(0, 0, 0);
+	Scalar hi_int(180, 255, 80);
 	inRange(hsv, lo_int, hi_int, mask);
 	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 
@@ -128,14 +128,13 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		cv::threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
-		auto new_end = std::remove_if(contours.begin(), contours.end(), [] (const std::vector<cv::Point> & c1) {
-			double area = contourArea(c1, false);
-			Rect bounding_rect = boundingRect(c1);
-			float aspectRatio = (float) bounding_rect.width / (float) bounding_rect.height;
-			return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
-
-		contours.erase(new_end, contours.end());
-		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
+		if (contours.size() > 1)	// exceptional cases in which small noisefragments would be visible
+		{
+			auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point> & c1) { return (contourArea(c1, false) < 10000); });
+			contours.erase(new_end, contours.end());
+			std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
+		}
+		
 		if ( contours.size() > 0 )
 		{
 			Mat card = Mat(playingCards[i], boundingRect(contours.at(0))).clone();
@@ -156,7 +155,6 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 				myROI.height = cardSize.height - myROI.y;
 				myROI.width = cardSize.width;
 			}
-
 
 			Mat croppedRef(card, myROI);
 			Mat checkImage, resizedCardImage;

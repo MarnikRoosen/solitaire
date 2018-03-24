@@ -21,7 +21,8 @@ GameAnalytics::GameAnalytics()
 	}
 
 	//ClicksHooks::Instance().InstallHook();
-	
+	int i = 0;
+
 	averageThinkTime1 = Clock::now();
 	while (key != 27)	//key = 27 -> error
 	{
@@ -51,11 +52,15 @@ GameAnalytics::GameAnalytics()
 				handlePlayingState(playingBoard, classifyCard);
 				break;
 			}
-			//std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
+			i++;
+			if (i == 1000)
+			{
+				std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+				std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - averageThinkTime1).count() << std::endl;
+			}
+			
 		
 			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-			key = waitKey(10);	// -> average d680ms and 240ms
 	
 	}
 
@@ -65,13 +70,6 @@ GameAnalytics::GameAnalytics()
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
 	extractedImagesFromPlayingBoard = playingBoard.getCards();
-	/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-	for (int i = 0; i < 1000; i++)
-	{
-		convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
-	}
-	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-	std::cout << "Classification" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;*/
 	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 
 	if (init)
@@ -98,16 +96,6 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		else
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
-
-			
-			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			for (int i = 0; i < 100; i++)
-			{
-			cardType = cc.classifyCard(cardCharacteristics);
-			}
-			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-			*/
 			cardType = cc.classifyCard(cardCharacteristics);
 
 

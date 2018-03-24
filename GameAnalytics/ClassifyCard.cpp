@@ -25,6 +25,13 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		vector<Vec4i> hierarchy;
 		cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
+		if (contours.empty())
+		{
+			cardType.first = EMPTY;
+			cardType.second = EMPTY;
+			return cardType;
+		}
+
 		// Sort and remove objects that are too small
 		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
 		if (type == "rank" && contours.size() > 1 && contourArea(contours.at(1), false) > 15.0)
@@ -54,11 +61,13 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			double lowestValue = DBL_MAX;
 			int indexOfLowestValue = classifyTypeWithShape(list, huMomentsA, lowestValue);
 			
-			if (lowestValue > 0.05 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
+			if (lowestValue > 0.2 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
 			{
 				if (type == "rank")
 				{
 					cardType.first = classifyTypeWithKnn(resizedROI, type);
+					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: "
+					//	<< static_cast<char>(cardType.first) << std::endl;
 				}
 				else
 				{
@@ -74,7 +83,10 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 						type = "red_suit";
 					}
 					cardType.second = classifyTypeWithKnn(resizedROI, type);
+					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
+					//	<< static_cast<char>(cardType.second) << std::endl;
 				}
+
 			}
 			else
 			{
@@ -163,7 +175,6 @@ void ClassifyCard::generateMoments()
 			std::cerr << "Could not open or find the image" << std::endl;
 			exit(EXIT_FAILURE);
 		}
-
 		cv::Mat grayImg, blurredImg, threshImg;
 		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
