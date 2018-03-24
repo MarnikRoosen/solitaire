@@ -44,7 +44,7 @@ public:
 	GameAnalytics();
 	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
 	void convertImagesToClassifiedCards(ClassifyCard & cc);
-	void waitForStableImage();
+	void waitForStableImage(HWND & hwnd);
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateDeck(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
@@ -54,18 +54,14 @@ public:
 	Mat hwnd2mat(const HWND & hwnd);
 
 private:
-	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
-	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
+	std::vector<cv::Mat> extractedCardImages;
+	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromImages;
 	std::vector<cardLocation> playingBoard;
-	std::vector<bool> knownCards;
-	std::vector<std::pair<classifiers, classifiers>> tempPlayingBoard;
-	std::pair<classifiers, classifiers> cardType;
-	std::pair<Mat, Mat> cardCharacteristics;
+	std::chrono::time_point<std::chrono::steady_clock> startOfGameTimer;
+	std::vector<long long> averageThinkTimings;
 	bool init = true;
-	int key = 0;
-	HWND hwnd;
-	std::chrono::time_point<std::chrono::steady_clock> averageThinkTime1;
-	std::vector<long long> averageThinkDurations;
+	Mat boardImage;
+
 };
 
 

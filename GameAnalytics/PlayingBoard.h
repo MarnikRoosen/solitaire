@@ -14,13 +14,13 @@
 
 #define standardBoardWidth 1280
 #define standardBoardHeight 720
-#define standardCardWidth 100
-#define standardCardHeight 133
+#define standardCardWidth 200
+#define standardCardHeight 266
 
 using namespace std;
 using namespace cv;
 
-enum playingBoardState { playing, outOfMoves, inMenu, newGame, closeBrowser, undo };
+enum boardState { playing, outOfMoves, inMenu, newGame, closeBrowser, undo };
 
 class PlayingBoard
 {
@@ -32,11 +32,10 @@ public:
 	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);
 	std::vector<cv::Mat> extractCardRegions(const cv::Mat & src);
 	void extractCards(std::vector<cv::Mat>& playingCards);
-	bool checkForOutOfMovesState(const cv::Mat &src);
-	const playingBoardState & getState();
+	boardState identifyGameState(const cv::Mat &src);
 	const std::vector<cv::Mat> & PlayingBoard::getCards();
 
 private:
 	std::vector<cv::Mat> cards;
-	playingBoardState state;
+	boardState state;
 };

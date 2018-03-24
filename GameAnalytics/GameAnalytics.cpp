@@ -10,26 +10,24 @@ GameAnalytics::GameAnalytics()
 {
 	PlayingBoard playingBoard;
 	ClassifyCard classifyCard;
-	Mat src;
-	classifiedCardsFromPlayingBoard.reserve(12);
+	int key = 0;
+	classifiedCardsFromImages.reserve(12);
 
-	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
+	HWND hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 	if (hwnd == NULL)
 	{
-		std::cout << "Cant find window" << std::endl;
+		std::cerr << "'Microsoft Solitaire Collection - Firefox Developer Edition' window not found! \n";
 		exit(EXIT_FAILURE);
 	}
 
 	//ClicksHooks::Instance().InstallHook();
 	
-	averageThinkTime1 = Clock::now();
-	while (key != 27)	//key = 27 -> error
+	startOfGameTimer = Clock::now();
+	while (key != 27)	// key = 27 -> error
 	{
-		//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			waitForStableImage();
-			src = hwnd2mat(hwnd);
-			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-			/*
+		waitForStableImage(hwnd);
+		boardImage = hwnd2mat(hwnd);
+		/*
 			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 1000; i++)
 			{
@@ -38,51 +36,47 @@ GameAnalytics::GameAnalytics()
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 			*/
-			switch (playingBoard.getState())
-			{
-			case outOfMoves:
-				std::cout << "Out of moves" << std::endl;
-				Sleep(1000);
-				break;
-			case playing:
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-			default:
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-			}
-			//std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-		
-			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-			key = waitKey(10);	// -> average d680ms and 240ms
-	
+		switch (playingBoard.identifyGameState(boardImage))
+		{
+		case outOfMoves:
+			std::cout << "Out of moves" << std::endl;
+			Sleep(1000);
+			break;
+		case playing:
+			handlePlayingState(playingBoard, classifyCard);
+			break;
+		default:
+			std::cerr << "Game state was not identified" << std::endl;
+			exit(EXIT_FAILURE);
+			break;
+		}
+		key = waitKey(10);	// -> average d680ms and 240ms
 	}
-
-	ClicksHooks::Instance().UninstallHook();
+	//ClicksHooks::Instance().UninstallHook();
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
-	extractedImagesFromPlayingBoard = playingBoard.getCards();	
-	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
-
+	playingBoard.findCardsFromBoardImage(boardImage);
+	extractedCardImages = playingBoard.getCards();	
+	convertImagesToClassifiedCards(classifyCard);
 	if (init)
 	{
-		initializePlayingBoard(classifiedCardsFromPlayingBoard);
+		initializePlayingBoard(classifiedCardsFromImages);
 		init = false;
 	}
 	else
 	{
-		updateBoard(classifiedCardsFromPlayingBoard);
+		updateBoard(classifiedCardsFromImages);
 	}
-	return;
 }
 
 void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 {
-	classifiedCardsFromPlayingBoard.clear();
-	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [&cc, this](cv::Mat mat) {
+	std::pair<cv::Mat, cv::Mat> cardCharacteristics;
+	std::pair<classifiers, classifiers> cardType;
+	classifiedCardsFromImages.clear();
+	for_each(extractedCardImages.begin(), extractedCardImages.end(), [this, &cc, &cardCharacteristics, &cardType] (cv::Mat mat) {
 		if (mat.empty())
 		{
 			cardType.first = EMPTY;
@@ -91,8 +85,9 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		else
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
+			cardType = cc.classifyCardUsingShape(cardCharacteristics);
+			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
 
-			
 			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 100; i++)
 			{
@@ -101,17 +96,12 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 			*/
-			cardType = cc.classifyCardUsingShape(cardCharacteristics);
-
-
-			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
-
 		}
-		classifiedCardsFromPlayingBoard.push_back(cardType);
+		classifiedCardsFromImages.push_back(cardType);
 	});
 }
 
-void GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
+void GameAnalytics::waitForStableImage(HWND & hwnd)	// -> average 112ms for non-updated screen
 {
 	Mat src1, src2, diff;
 	do {
@@ -379,11 +369,11 @@ void GameAnalytics::printPlayingBoardState()
 	}
 
 	auto averageThinkTime2 = Clock::now();
-	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - averageThinkTime1).count());
-	averageThinkTime1 = Clock::now();
-	std::cout << "Last move thinktime = " << averageThinkDurations.back() << "ms" << std::endl;
-	std::cout << "Average thinktime = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
-	std::cout << "Amount of moves = " << averageThinkDurations.size() << " moves" << std::endl;
+	averageThinkTimings.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfGameTimer).count());
+	startOfGameTimer = Clock::now();
+	std::cout << "Last move thinktime = " << averageThinkTimings.back() << "ms" << std::endl;
+	std::cout << "Average thinktime = " << std::accumulate(averageThinkTimings.begin(), averageThinkTimings.end(), 0) / averageThinkTimings.size() << "ms" << std::endl;
+	std::cout << "Amount of moves = " << averageThinkTimings.size() << " moves" << std::endl;
 	std::cout << std::endl;
 }
 

@@ -39,6 +39,7 @@ class ClassifyCard
 public:
 	ClassifyCard();
 	std::pair<classifiers, classifiers> classifyCardUsingShape(std::pair<Mat, Mat> cardCharacteristics);
+	void identifyColor(cv::Mat &src, cv::String &type);
 	void generateMoments();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);

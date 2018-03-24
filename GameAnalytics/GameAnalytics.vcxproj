@@ -170,6 +170,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
+    <Text Include="ColorDetector.txt" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ClicksHooks.h" />
@@ -210,6 +211,9 @@
     <Image Include="..\x64\Debug\cards\king.png" />
     <Image Include="..\x64\Debug\cards\queen.png" />
     <Image Include="..\x64\Debug\cards\spades.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

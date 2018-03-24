@@ -19,17 +19,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardUsingShape(std::pa
 	{
 		if (type == "black_suit" || type == "red_suit")
 		{
-			Mat3b hsv;
-			cvtColor(src, hsv, COLOR_BGR2HSV);
-			Mat1b mask1, mask2;
-			inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
-			inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
-			Mat1b mask = mask1 | mask2;
-			int nonZero = countNonZero(mask);
-			if (nonZero > 0)	// red!
-			{
-				type = "red_suit";
-			}
+			identifyColor(src, type);
 		}
 		
 		// process the src
@@ -85,16 +75,13 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardUsingShape(std::pa
 			}
 			if (best > 0.05 || list.at(best_int).first == '6' || list.at(best_int).first == '9')
 			{
-			//	std::cout << static_cast<char>(list.at(best_int).first) << " with " << best << ", not good enough! Trying again w/ knn --- ";
 				if (type == "black_suit" || type == "red_suit")
 				{
 					cardType.second = classifyTypeWithKnn(cardCharacteristics.second, type);
-				//	std::cout << "Actual type was " << static_cast<char>(cardType.second) << std::endl;
 				}
 				else
 				{
 					cardType.first = classifyTypeWithKnn(cardCharacteristics.first, type);
-				//	std::cout << "Actual type was " << static_cast<char>(cardType.first) << std::endl;
 				}
 			}
 			else
@@ -113,6 +100,21 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardUsingShape(std::pa
 		src = cardCharacteristics.second;
 	}
 	return cardType;
+}
+
+void ClassifyCard::identifyColor(cv::Mat &src, cv::String &type)
+{
+	Mat3b hsv;
+	cvtColor(src, hsv, COLOR_BGR2HSV);
+	Mat1b mask1, mask2;
+	inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
+	inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
+	Mat1b mask = mask1 | mask2;
+	int nonZero = countNonZero(mask);
+	if (nonZero > 0)	// red!
+	{
+		type = "red_suit";
+	}
 }
 
 void ClassifyCard::generateMoments()
