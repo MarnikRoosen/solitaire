@@ -50,8 +50,7 @@ public:
 private:
 	Size standardCardSize;
 	vector<std::pair<classifiers, std::vector<double>>> rankHuMoments;
-	vector<std::pair<classifiers, std::vector<double>>> red_suitHuMoments;
-	vector<std::pair<classifiers, std::vector<double>>> black_suitHuMoments;
+	vector<std::pair<classifiers, std::vector<double>>> suitHuMoments;
 
 };
 

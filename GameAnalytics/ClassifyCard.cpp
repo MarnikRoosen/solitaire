@@ -51,15 +51,10 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			cv::Mat ROI = src(boundingRect(contours.at(0)));
 			cv::Mat resizedROI;
 			vector<std::pair<classifiers, std::vector<double>>> list;
-			if (type == "red_suit")
+			if (type == "black_suit" || type == "red_suit")
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-				list = red_suitHuMoments;
-			}
-			else if (type == "black_suit" || type == "red_suit")
-			{
-				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-				list = black_suitHuMoments;
+				list = suitHuMoments;
 			}
 			else
 			{
@@ -152,9 +147,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 void ClassifyCard::generateMoments()
 {
 	vector<string> rankClassifiersList = { "2", "3", "4", "5", "6", "7", "8", "9", "J", "Q", "K", "A" };
-	vector<string> red_suitClassifiersList = { "D", "H" };
-	vector<string> black_suitClassifiersList = { "S", "C" };
-
+	vector<string> suitClassifiersList = { "D", "S", "H", "C" };
 	for (int i = 0; i < rankClassifiersList.size(); i++)
 	{
 		Mat src = imread("../GameAnalytics/testImages/" + rankClassifiersList.at(i) + ".png");
@@ -179,9 +172,9 @@ void ClassifyCard::generateMoments()
 		pair.second = mb;
 		rankHuMoments.push_back(pair);
 	}
-	for (int i = 0; i < red_suitClassifiersList.size(); i++)
+	for (int i = 0; i < suitClassifiersList.size(); i++)
 	{
-		Mat src = imread("../GameAnalytics/testImages/" + red_suitClassifiersList.at(i) + ".png");
+		Mat src = imread("../GameAnalytics/testImages/" + suitClassifiersList.at(i) + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			std::cerr << "Could not open or find the image" << std::endl;
@@ -199,33 +192,9 @@ void ClassifyCard::generateMoments()
 		HuMoments(moments(contours.at(0)), ma);
 		std::vector<double> mb(std::begin(ma), std::end(ma));
 		std::pair<classifiers, std::vector<double>> pair;
-		pair.first = classifiers(char(red_suitClassifiersList.at(i).at(0)));
+		pair.first = classifiers(char(suitClassifiersList.at(i).at(0)));
 		pair.second = mb;
-		red_suitHuMoments.push_back(pair);
-	}
-	for (int i = 0; i < black_suitClassifiersList.size(); i++)
-	{
-		Mat src = imread("../GameAnalytics/testImages/" + black_suitClassifiersList.at(i) + ".png");
-		if (!src.data)	// check for invalid input
-		{
-			std::cerr << "Could not open or find the image" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-
-		cv::Mat grayImg, blurredImg, threshImg;
-		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
-		cv::threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY);
-		vector<vector<Point> > contours;
-		vector<Vec4i> hierarchy;
-		cv::findContours(threshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-		double ma[7];
-		HuMoments(moments(contours.at(0)), ma);
-		std::vector<double> mb(std::begin(ma), std::end(ma));
-		std::pair<classifiers, std::vector<double>> pair;
-		pair.first = classifiers(char(black_suitClassifiersList.at(i).at(0)));
-		pair.second = mb;
-		black_suitHuMoments.push_back(pair);
+		suitHuMoments.push_back(pair);
 	}
 }
 
