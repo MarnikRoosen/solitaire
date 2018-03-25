@@ -27,7 +27,6 @@ class PlayingBoard
 public:
 	PlayingBoard();
 	~PlayingBoard();
-	Rect determineOuterRect(const std::vector<std::vector<cv::Point>>& contours);
 	void findCardsFromBoardImage(Mat const & boardImage);
 	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);
 	std::vector<cv::Mat> extractCardRegions(const cv::Mat & src);
@@ -35,8 +34,10 @@ public:
 	bool checkForOutOfMovesState(const cv::Mat &src);
 	const playingBoardState & getState();
 	const std::vector<cv::Mat> & PlayingBoard::getCards();
+	int getSelectedCard();
 
 private:
 	std::vector<cv::Mat> cards;
 	playingBoardState state;
+	int indexOfSelectedCard = -1;
 };

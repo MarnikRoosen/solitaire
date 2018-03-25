@@ -70,6 +70,11 @@ GameAnalytics::GameAnalytics()
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
 	extractedImagesFromPlayingBoard = playingBoard.getCards();
+	int indexOfSelectedCard = playingBoard.getSelectedCard();
+	if (indexOfSelectedCard != -1)
+	{
+		std::cout << "card selected at index " << indexOfSelectedCard << std::endl;
+	}
 	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 
 	if (init)

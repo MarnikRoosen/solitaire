@@ -125,6 +125,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		vector<Vec4i> hierarchy;
 
 		cv::cvtColor(playingCards.at(i), adaptedSrc, COLOR_BGR2GRAY);
+		cv::GaussianBlur(adaptedSrc, adaptedSrc, cv::Size(5, 5), 0);
 		cv::threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
@@ -137,11 +138,33 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		
 		if ( contours.size() > 0 )
 		{
-			Mat card = Mat(playingCards[i], boundingRect(contours.at(0))).clone();
+			Rect br = boundingRect(contours.at(0));
+			Mat card = Mat(playingCards[i], br).clone();
+			
+			Rect selectedRegion = br;
+			selectedRegion.x -= 3;
+			selectedRegion.height += 3;
+			selectedRegion.width += 6;
+			Mat selectedCard = Mat(playingCards[i], selectedRegion);
+			Mat hsv, mask;
+			cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);
+			blur(hsv, hsv, Size(1, 1));
+			Scalar lo_int(89, 43, 172);	// light blue
+			Scalar hi_int(95, 168, 239);
+			inRange(hsv, lo_int, hi_int, mask);
+			if (countNonZero(mask) > 0)	// card has a blue border -> selected!
+			{
+				indexOfSelectedCard = i;
+			}
+			else if (indexOfSelectedCard == i)
+			{
+				indexOfSelectedCard = -1;
+			}
+			
+			// Extracting only the card from the segment
 			Size cardSize = card.size();
 			Rect myROI;
-
-			if (cardSize.width * 1.35 > cardSize.height)	// card height is 33% longer than card width -> extract the topcard from a stack
+			if (cardSize.width * 1.35 > cardSize.height)
 			{
 				myROI.y = 0;
 				myROI.height = cardSize.height;
@@ -204,6 +227,11 @@ const playingBoardState & PlayingBoard::getState()
 const std::vector<cv::Mat> & PlayingBoard::getCards()
 {
 	return cards;
+}
+
+int PlayingBoard::getSelectedCard()
+{
+	return indexOfSelectedCard;
 }
 
 /*
