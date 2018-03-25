@@ -66,6 +66,7 @@ private:
 	HWND hwnd;
 	std::chrono::time_point<std::chrono::steady_clock> averageThinkTime1;
 	std::vector<long long> averageThinkDurations;
+	int indexOfSelectedCard = -1;
 };
 
 

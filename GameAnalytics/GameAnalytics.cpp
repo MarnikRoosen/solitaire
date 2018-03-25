@@ -21,7 +21,6 @@ GameAnalytics::GameAnalytics()
 	}
 
 	//ClicksHooks::Instance().InstallHook();
-	int i = 0;
 
 	averageThinkTime1 = Clock::now();
 	while (key != 27)	//key = 27 -> error
@@ -52,12 +51,6 @@ GameAnalytics::GameAnalytics()
 				handlePlayingState(playingBoard, classifyCard);
 				break;
 			}
-			i++;
-			if (i == 1000)
-			{
-				std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-				std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - averageThinkTime1).count() << std::endl;
-			}
 			
 		
 			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
@@ -70,10 +63,21 @@ GameAnalytics::GameAnalytics()
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
 	extractedImagesFromPlayingBoard = playingBoard.getCards();
-	int indexOfSelectedCard = playingBoard.getSelectedCard();
-	if (indexOfSelectedCard != -1)
+	if (indexOfSelectedCard == -1 && playingBoard.getSelectedCard() != -1)
 	{
-		std::cout << "card selected at index " << indexOfSelectedCard << std::endl;
+		std::cout << "Card at index " << playingBoard.getSelectedCard() << " was just selected!" << std::endl;
+		indexOfSelectedCard = playingBoard.getSelectedCard();
+	}
+	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() != -1 && indexOfSelectedCard != playingBoard.getSelectedCard())
+	{
+		std::cout << "Playing error! Card at index " << indexOfSelectedCard << " can't go on card at index " << playingBoard.getSelectedCard() << std::endl;
+		indexOfSelectedCard = playingBoard.getSelectedCard();
+		std::cout << "Card at index " << indexOfSelectedCard << " is now selected!" << std::endl;
+	}
+	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() == -1)
+	{
+		std::cout << "Card at index " << indexOfSelectedCard << " was just deselected!" << std::endl;
+		indexOfSelectedCard = -1;
 	}
 	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 
