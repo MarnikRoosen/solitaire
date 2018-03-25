@@ -20,7 +20,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
-		threshold(blurredImg, src, 130, 255, THRESH_BINARY_INV);
+		threshold(blurredImg, src, 150, 255, THRESH_BINARY_INV);
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 		cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
@@ -53,8 +53,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 				list = suitHuMoments;
 			}
-
-			threshold(resizedROI, resizedROI, 130, 255, THRESH_BINARY);
+			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(3, 3), 0);
+			threshold(resizedROI, resizedROI, 150, 255, THRESH_BINARY);
 			cv::findContours(resizedROI, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 			double huMomentsA[7];
 			HuMoments(moments(contours.at(0)), huMomentsA);
@@ -83,8 +83,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 						type = "red_suit";
 					}
 					cardType.second = classifyTypeWithKnn(resizedROI, type);
-					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
-					//	<< static_cast<char>(cardType.second) << std::endl;
+					std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
+						<< static_cast<char>(cardType.second) << std::endl;
 				}
 
 			}
@@ -111,6 +111,7 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 	// source: https://github.com/opencv/opencv/blob/master/modules/imgproc/src/matchcontours.cpp
 	
 	int indexOfLowestValue = 0;
+	int secondLowestValue = DBL_MAX;
 	for (int i = 0; i < list.size(); i++)
 	{
 		int signHuMomentA, signHuMomentB;
@@ -154,11 +155,16 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 			//If only one is true, then it's a false 0 and return large error.
 		}
 
-		if (lowestValue > result)
+		if (lowestValue > result && secondLowestValue > lowestValue)
 		{
+			secondLowestValue = lowestValue;
 			lowestValue = result;
 			indexOfLowestValue = i;
 		}
+	}
+	if (lowestValue * 2 > secondLowestValue)
+	{
+		lowestValue = DBL_MAX;
 	}
 	return indexOfLowestValue;
 }
