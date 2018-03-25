@@ -19,7 +19,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 	{		
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
+		cv::GaussianBlur(grayImg, blurredImg, Size(3, 3), 0);
 		threshold(blurredImg, src, 150, 255, THRESH_BINARY_INV);
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
@@ -61,13 +61,21 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			double lowestValue = DBL_MAX;
 			int indexOfLowestValue = classifyTypeWithShape(list, huMomentsA, lowestValue);
 			
-			if (lowestValue > 0.2 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
+			if (lowestValue > 0.1 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
 			{
 				if (type == "rank")
 				{
 					cardType.first = classifyTypeWithKnn(resizedROI, type);
 					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: "
-					//	<< static_cast<char>(cardType.first) << std::endl;
+						//<< static_cast<char>(cardType.first) << std::endl;
+					if ((list.at(indexOfLowestValue).first) == (cardType.first))
+					{
+						amountOfIncorrectThrowAways++;
+					}
+					else
+					{
+						amountOfCorrectThrowAways++;
+					}
 				}
 				else
 				{
@@ -83,13 +91,25 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 						type = "red_suit";
 					}
 					cardType.second = classifyTypeWithKnn(resizedROI, type);
-					std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
-						<< static_cast<char>(cardType.second) << std::endl;
+					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
+						//<< static_cast<char>(cardType.second) << std::endl;
+					if ((list.at(indexOfLowestValue).first) == (cardType.second))
+					{
+						amountOfIncorrectThrowAways++;
+					}
+					else
+					{
+						amountOfCorrectThrowAways++;
+					}
 				}
 
 			}
 			else
 			{
+				amountOfKnns++;
+
+				//std::cout << "Identified: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty" << std::endl;
+
 				if (type == "rank")
 				{
 					cardType.first = list.at(indexOfLowestValue).first;
@@ -111,7 +131,7 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 	// source: https://github.com/opencv/opencv/blob/master/modules/imgproc/src/matchcontours.cpp
 	
 	int indexOfLowestValue = 0;
-	int secondLowestValue = DBL_MAX;
+	double secondLowestValue = DBL_MAX;
 	for (int i = 0; i < list.size(); i++)
 	{
 		int signHuMomentA, signHuMomentB;
@@ -155,11 +175,18 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 			//If only one is true, then it's a false 0 and return large error.
 		}
 
-		if (lowestValue > result && secondLowestValue > lowestValue)
+		if (lowestValue > result)
 		{
-			secondLowestValue = lowestValue;
+			if (secondLowestValue > lowestValue)
+			{
+				secondLowestValue = lowestValue;
+			}
 			lowestValue = result;
 			indexOfLowestValue = i;
+		}
+		else if (secondLowestValue > result)
+		{
+			secondLowestValue = result;
 		}
 	}
 	if (lowestValue * 2 > secondLowestValue)
@@ -375,6 +402,21 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 	fsTrainingImages.release();
 }
 
+int ClassifyCard::getAmountOfCorrectThrowAways()
+{
+	return amountOfCorrectThrowAways;
+}
+
+int ClassifyCard::getAmountOfIncorrectThrowAways()
+{
+	return amountOfIncorrectThrowAways;
+}
+
+int ClassifyCard::getAmountOfKnns()
+{
+	return amountOfKnns;
+}
+
 std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics)
 {
 	Mat temp1, temp2;
@@ -407,8 +449,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
-		threshold(blurredImg, src, 130, 255, THRESH_BINARY_INV);
+		cv::GaussianBlur(grayImg, blurredImg, Size(3, 3), 0);
+		threshold(blurredImg, src, 140, 255, THRESH_BINARY_INV);
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 		cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
@@ -431,6 +473,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 			}
+			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(3, 3), 0);
+			threshold(resizedROI, resizedROI, 140, 255, THRESH_BINARY);
 			Mat ROIFloat;
 			resizedROI.convertTo(ROIFloat, CV_32FC1);
 			Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);

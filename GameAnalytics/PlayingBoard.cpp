@@ -142,9 +142,9 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			Mat card = Mat(playingCards[i], br).clone();
 			
 			Rect selectedRegion = br;
-			selectedRegion.x -= 3;
-			selectedRegion.height += 3;
-			selectedRegion.width += 6;
+			if (selectedRegion.x >= 3) selectedRegion.x -= 3;
+			if (selectedRegion.height + 3 <= playingCards.at(i).rows) selectedRegion.height += 3;
+			if (selectedRegion.width + 6 <= playingCards.at(i).cols) selectedRegion.width += 6;
 			Mat selectedCard = Mat(playingCards[i], selectedRegion);
 			Mat hsv, mask;
 			cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);

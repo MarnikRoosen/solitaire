@@ -12,7 +12,6 @@ GameAnalytics::GameAnalytics()
 	ClassifyCard classifyCard;
 	Mat src;
 	classifiedCardsFromPlayingBoard.reserve(12);
-
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 	if (hwnd == NULL)
 	{
@@ -26,11 +25,10 @@ GameAnalytics::GameAnalytics()
 	while (key != 27)	//key = 27 -> error
 	{
 		//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			waitForStableImage();
-			src = hwnd2mat(hwnd);
-			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+		src = waitForStableImage();
+		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 			
-			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+		/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			for (int i = 0; i < 1000; i++)
 			{
 				playingBoard.findCardsFromBoardImage(src); // -> average 38ms
@@ -38,23 +36,21 @@ GameAnalytics::GameAnalytics()
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 			*/
-			switch (playingBoard.getState())
-			{
-			case outOfMoves:
-				std::cout << "Out of moves" << std::endl;
-				Sleep(1000);
-				break;
-			case playing:
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-			default:
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-			}
-			
+		switch (playingBoard.getState())
+		{
+		case outOfMoves:
+			std::cout << "Out of moves" << std::endl;
+			Sleep(1000);
+			break;
+		case playing:
+			handlePlayingState(playingBoard, classifyCard);
+			break;
+		default:
+			handlePlayingState(playingBoard, classifyCard);
+			break;
+		}			
 		
-			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-	
+		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 	}
 
 	ClicksHooks::Instance().UninstallHook();
@@ -63,22 +59,6 @@ GameAnalytics::GameAnalytics()
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
 	extractedImagesFromPlayingBoard = playingBoard.getCards();
-	if (indexOfSelectedCard == -1 && playingBoard.getSelectedCard() != -1)
-	{
-		std::cout << "Card at index " << playingBoard.getSelectedCard() << " was just selected!" << std::endl;
-		indexOfSelectedCard = playingBoard.getSelectedCard();
-	}
-	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() != -1 && indexOfSelectedCard != playingBoard.getSelectedCard())
-	{
-		std::cout << "Playing error! Card at index " << indexOfSelectedCard << " can't go on card at index " << playingBoard.getSelectedCard() << std::endl;
-		indexOfSelectedCard = playingBoard.getSelectedCard();
-		std::cout << "Card at index " << indexOfSelectedCard << " is now selected!" << std::endl;
-	}
-	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() == -1)
-	{
-		std::cout << "Card at index " << indexOfSelectedCard << " was just deselected!" << std::endl;
-		indexOfSelectedCard = -1;
-	}
 	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
 
 	if (init)
@@ -90,6 +70,38 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 	{
 		updateBoard(classifiedCardsFromPlayingBoard);
 	}
+
+	if (indexOfSelectedCard == -1 && playingBoard.getSelectedCard() != -1)
+	{
+		//std::cout << "Card at index " << playingBoard.getSelectedCard() << " was just selected!" << std::endl;
+		//std::cout << "That is card: " << static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).first) << " "
+		//	<< static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).second) << std::endl;
+		indexOfSelectedCard = playingBoard.getSelectedCard();
+	}
+	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() != -1 && indexOfSelectedCard != playingBoard.getSelectedCard())
+	{
+		char prevSuit = static_cast<char>(classifiedCardsFromPlayingBoard.at(indexOfSelectedCard).second);
+		char newSuit = static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).second);
+		char prevRank = static_cast<char>(classifiedCardsFromPlayingBoard.at(indexOfSelectedCard).first);
+		char newRank = static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).first);
+		if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))
+			|| ((prevSuit == 'S' || prevSuit == 'C') && (newSuit == 'S' || newSuit == 'C')))
+		{
+			std::cout << "Incompatible suit! " << prevSuit << " isn't compatible with " << newSuit << std::endl;
+		}
+		else
+		{
+			std::cout << "Incompatible rank! " << prevRank << " isn't compatible with " << newRank << std::endl;
+		}
+		indexOfSelectedCard = playingBoard.getSelectedCard();
+		//std::cout << "Card at index " << indexOfSelectedCard << " is now selected!" << std::endl;
+	}
+	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() == -1)
+	{
+		//std::cout << "Card at index " << indexOfSelectedCard << " was just deselected!" << std::endl;
+		indexOfSelectedCard = -1;
+	}
+
 	return;
 }
 
@@ -115,19 +127,18 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 	});
 }
 
-void GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
+cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
-	Mat src1, src2, diff;
+	Mat src1, graySrc1, graySrc2, diff;
 	do {
 		src1 = hwnd2mat(hwnd);
-		cvtColor(src1, src1, COLOR_BGR2GRAY);
+		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
 		waitKey(100);
-		src2 = hwnd2mat(hwnd);
-		cvtColor(src2, src2, COLOR_BGR2GRAY);
-		diff;
-		cv::compare(src1, src2, diff, cv::CMP_NE);
-	} while (cv::countNonZero(diff) != 0);	
-	return;
+		graySrc2 = hwnd2mat(hwnd);
+		cvtColor(graySrc2, graySrc2, COLOR_BGR2GRAY);
+		cv::compare(graySrc1, graySrc2, diff, cv::CMP_NE);
+	} while (cv::countNonZero(diff) != 0);
+	return src1;
 }
 
 void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)

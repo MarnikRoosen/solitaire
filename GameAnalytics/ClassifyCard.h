@@ -47,11 +47,17 @@ public:
 	classifiers classifyTypeWithKnn(const Mat & type, String typeName);
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
+	int getAmountOfCorrectThrowAways();
+	int getAmountOfIncorrectThrowAways();
+	int getAmountOfKnns();
 
 private:
 	Size standardCardSize;
 	vector<std::pair<classifiers, std::vector<double>>> rankHuMoments;
 	vector<std::pair<classifiers, std::vector<double>>> suitHuMoments;
+	int amountOfCorrectThrowAways = 0;
+	int amountOfIncorrectThrowAways = 0;
+	int amountOfKnns = 0;
 
 };
 
