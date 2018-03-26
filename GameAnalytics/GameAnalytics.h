@@ -42,6 +42,7 @@ class GameAnalytics
 {
 public:
 	GameAnalytics();
+	void handleOutOfMoves();
 	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
 	void convertImagesToClassifiedCards(ClassifyCard & cc);
 	cv::Mat waitForStableImage();
@@ -64,7 +65,7 @@ private:
 	bool init = true;
 	int key = 0;
 	HWND hwnd;
-	std::chrono::time_point<std::chrono::steady_clock> averageThinkTime1;
+	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::vector<long long> averageThinkDurations;
 	int indexOfSelectedCard = -1;
 };

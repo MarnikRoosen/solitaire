@@ -20,40 +20,50 @@ GameAnalytics::GameAnalytics()
 	}
 
 	//ClicksHooks::Instance().InstallHook();
-
-	averageThinkTime1 = Clock::now();
-	while (key != 27)	//key = 27 -> error
+	int i = 0;
+	startOfGame = Clock::now();
+	bool endOfGameFlag = false;
+	while (key != 27 && !endOfGameFlag)	//key = 27 -> error
 	{
-		//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 		src = waitForStableImage();
 		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 			
-		/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			for (int i = 0; i < 1000; i++)
-			{
-				playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-			}
-			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-			std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-			*/
 		switch (playingBoard.getState())
 		{
 		case outOfMoves:
-			std::cout << "Out of moves" << std::endl;
-			Sleep(1000);
+		{
+			handleOutOfMoves();
+			endOfGameFlag = true;
 			break;
+		}
+			
 		case playing:
 			handlePlayingState(playingBoard, classifyCard);
 			break;
 		default:
 			handlePlayingState(playingBoard, classifyCard);
 			break;
-		}			
+		}	
+
+		if (i == 1000)
+		{
+			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test1 - startOfGame).count() << std::endl;
+		}
+		i++;
 		
-		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 	}
 
 	ClicksHooks::Instance().UninstallHook();
+}
+
+void GameAnalytics::handleOutOfMoves()
+{
+	std::cout << "Out of moves" << std::endl;
+	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
+	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endOfGame - startOfGame).count() / 1000000 << " ms" << std::endl;
+	Sleep(8000);
+	return;
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
@@ -394,8 +404,8 @@ void GameAnalytics::printPlayingBoardState()
 	}
 
 	auto averageThinkTime2 = Clock::now();
-	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - averageThinkTime1).count());
-	averageThinkTime1 = Clock::now();
+	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfGame).count());
+	startOfGame = Clock::now();
 	std::cout << "Last move thinktime = " << averageThinkDurations.back() << "ms" << std::endl;
 	std::cout << "Average thinktime = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
 	std::cout << "Amount of moves = " << averageThinkDurations.size() << " moves" << std::endl;
