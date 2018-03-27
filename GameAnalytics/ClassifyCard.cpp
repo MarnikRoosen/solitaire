@@ -7,6 +7,18 @@ ClassifyCard::ClassifyCard()
 	standardCardSize.width = 200;
 	standardCardSize.height = 266;
 	generateMoments();
+	std::vector<string> type = { "rank", "black_suit", "red_suit" };
+	for (int i = 0; i < type.size(); i++)
+	{
+		String name = "../GameAnalytics/knnData/trained_" + type.at(i) + ".yml";
+		if (!fileExists(name))
+		{
+			getTrainedData(type.at(i));
+		}
+	}
+	kNearest_rank = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_rank.yml");
+	kNearest_black_suit = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_black_suit.yml");
+	kNearest_red_suit = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_red_suit.yml");
 }
 
 std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Mat> cardCharacteristics)
@@ -20,12 +32,12 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(3, 3), 0);
-		threshold(blurredImg, src, 150, 255, THRESH_BINARY_INV);
+		threshold(blurredImg, src, 140, 255, THRESH_BINARY_INV);
 		vector<vector<Point> > contours;
 		vector<Vec4i> hierarchy;
 		cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
-		if (contours.empty())
+ 		if (contours.empty())
 		{
 			cardType.first = EMPTY;
 			cardType.second = EMPTY;
@@ -53,21 +65,21 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 				list = suitHuMoments;
 			}
-			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(3, 3), 0);
-			threshold(resizedROI, resizedROI, 150, 255, THRESH_BINARY);
+			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(5, 5), 0);
+			threshold(resizedROI, resizedROI, 140, 255, THRESH_BINARY);
 			cv::findContours(resizedROI, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 			double huMomentsA[7];
 			HuMoments(moments(contours.at(0)), huMomentsA);
 			double lowestValue = DBL_MAX;
 			int indexOfLowestValue = classifyTypeWithShape(list, huMomentsA, lowestValue);
 			
-			if (lowestValue > 0.1 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
+			if (lowestValue > 1 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9' || list.at(indexOfLowestValue).first == '3')
 			{
 				if (type == "rank")
 				{
-					cardType.first = classifyTypeWithKnn(resizedROI, type);
+					cardType.first = classifyTypeWithKnn(resizedROI, kNearest_rank);
 					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: "
-						//<< static_cast<char>(cardType.first) << std::endl;
+					//	<< static_cast<char>(cardType.first) << std::endl;
 					if ((list.at(indexOfLowestValue).first) == (cardType.first))
 					{
 						amountOfIncorrectThrowAways++;
@@ -89,10 +101,14 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 					if (nonZero > 0)	// red!
 					{
 						type = "red_suit";
+						cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit);
 					}
-					cardType.second = classifyTypeWithKnn(resizedROI, type);
+					else
+					{
+						cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
+					}
 					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
-						//<< static_cast<char>(cardType.second) << std::endl;
+					//	<< static_cast<char>(cardType.second) << std::endl;
 					if ((list.at(indexOfLowestValue).first) == (cardType.second))
 					{
 						amountOfIncorrectThrowAways++;
@@ -131,6 +147,7 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 	// source: https://github.com/opencv/opencv/blob/master/modules/imgproc/src/matchcontours.cpp
 	
 	int indexOfLowestValue = 0;
+	int indexOfSecondLowestValue = 0;
 	double secondLowestValue = DBL_MAX;
 	for (int i = 0; i < list.size(); i++)
 	{
@@ -180,6 +197,7 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 			if (secondLowestValue > lowestValue)
 			{
 				secondLowestValue = lowestValue;
+				indexOfSecondLowestValue = indexOfLowestValue;
 			}
 			lowestValue = result;
 			indexOfLowestValue = i;
@@ -187,9 +205,11 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 		else if (secondLowestValue > result)
 		{
 			secondLowestValue = result;
+			indexOfSecondLowestValue = i;
 		}
 	}
-	if (lowestValue * 2 > secondLowestValue)
+	std::cout << lowestValue << " " << indexOfLowestValue << " " << secondLowestValue << " " << indexOfSecondLowestValue << std::endl;
+	if (lowestValue * 1.3 > secondLowestValue)
 	{
 		lowestValue = DBL_MAX;
 	}
@@ -249,16 +269,9 @@ void ClassifyCard::generateMoments()
 	}
 }
 
-classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, String type)
+classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest)
 {
 	Mat src = image.clone();
-	String name = "../GameAnalytics/knnData/trained_" + type + ".yml";
-	if (!fileExists(name))
-	{
-		getTrainedData(type);
-	}
-	Ptr<ml::KNearest>  kNearest = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_" + type + ".yml");
-
 	Mat ROIFloat;
 	src.convertTo(ROIFloat, CV_32FC1);
 	Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);
@@ -424,6 +437,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 	String type = "rank";
 	Mat src = cardCharacteristics.first;
 	Mat blurredImg, grayImg;
+	Ptr<ml::KNearest>  kNearest;
 	for (int i = 0; i < 2; i++)
 	{
 		if (type == "black_suit" || type == "red_suit")
@@ -438,14 +452,13 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 			if (nonZero > 0)	// red!
 			{
 				type = "red_suit";
+				kNearest = kNearest_red_suit;
+			}
+			else
+			{
+				kNearest = kNearest_black_suit;
 			}
 		}
-		String name = "../GameAnalytics/knnData/trained_" + type + ".yml";
-		if (!fileExists(name))
-		{
-			getTrainedData(type);
-		}
-		Ptr<ml::KNearest>  kNearest = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_" + type + ".yml");
 
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
@@ -472,9 +485,10 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 			else
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
+				kNearest = kNearest_rank;
 			}
-			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(3, 3), 0);
-			threshold(resizedROI, resizedROI, 140, 255, THRESH_BINARY);
+			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(5, 5), 0);
+			threshold(resizedROI, resizedROI, 150, 255, THRESH_BINARY);
 			Mat ROIFloat;
 			resizedROI.convertTo(ROIFloat, CV_32FC1);
 			Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);

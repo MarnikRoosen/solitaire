@@ -23,6 +23,7 @@ GameAnalytics::GameAnalytics()
 	int i = 0;
 	startOfGame = Clock::now();
 	bool endOfGameFlag = false;
+	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	while (key != 27 && !endOfGameFlag)	//key = 27 -> error
 	{
 		src = waitForStableImage();
@@ -44,13 +45,13 @@ GameAnalytics::GameAnalytics()
 			handlePlayingState(playingBoard, classifyCard);
 			break;
 		}	
-
 		if (i == 1000)
 		{
-			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test1 - startOfGame).count() << std::endl;
+			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 		}
 		i++;
+		
 		
 	}
 
@@ -83,9 +84,6 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 
 	if (indexOfSelectedCard == -1 && playingBoard.getSelectedCard() != -1)
 	{
-		//std::cout << "Card at index " << playingBoard.getSelectedCard() << " was just selected!" << std::endl;
-		//std::cout << "That is card: " << static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).first) << " "
-		//	<< static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).second) << std::endl;
 		indexOfSelectedCard = playingBoard.getSelectedCard();
 	}
 	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() != -1 && indexOfSelectedCard != playingBoard.getSelectedCard())
@@ -104,11 +102,9 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 			std::cout << "Incompatible rank! " << prevRank << " isn't compatible with " << newRank << std::endl;
 		}
 		indexOfSelectedCard = playingBoard.getSelectedCard();
-		//std::cout << "Card at index " << indexOfSelectedCard << " is now selected!" << std::endl;
 	}
 	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() == -1)
 	{
-		//std::cout << "Card at index " << indexOfSelectedCard << " was just deselected!" << std::endl;
 		indexOfSelectedCard = -1;
 	}
 
@@ -128,8 +124,6 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
 			cardType = cc.classifyCard(cardCharacteristics);
-
-
 			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
 
 		}
@@ -139,16 +133,16 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
-	Mat src1, graySrc1, graySrc2, diff;
+	Mat src2, graySrc1, graySrc2, diff;
 	do {
-		src1 = hwnd2mat(hwnd);
-		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
+		graySrc1 = hwnd2mat(hwnd);
+		cvtColor(graySrc1, graySrc1, COLOR_BGR2GRAY);
 		waitKey(100);
-		graySrc2 = hwnd2mat(hwnd);
-		cvtColor(graySrc2, graySrc2, COLOR_BGR2GRAY);
+		src2 = hwnd2mat(hwnd);
+		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		cv::compare(graySrc1, graySrc2, diff, cv::CMP_NE);
 	} while (cv::countNonZero(diff) != 0);
-	return src1;
+	return src2;
 }
 
 void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
@@ -376,7 +370,7 @@ void GameAnalytics::printPlayingBoardState()
 	std::cout << "Solved cards: " << std::endl;
 	for (int i = 8; i < playingBoard.size(); i++)
 	{
-		std::cout << "   Position " << i - 8 << ": ";
+		std::cout << "   Pos " << i - 8 << ": ";
 		if (playingBoard.at(i).knownCards.empty())
 		{
 			std::cout << "// ";
@@ -391,7 +385,7 @@ void GameAnalytics::printPlayingBoardState()
 	std::cout << "Bottom cards: " << std::endl;
 	for (int i = 0; i < 7; i++)
 	{
-		std::cout << "   Position " << i << ": ";
+		std::cout << "   Pos " << i << ": ";
 		if (playingBoard.at(i).knownCards.empty())
 		{
 			std::cout << "// ";
@@ -406,9 +400,9 @@ void GameAnalytics::printPlayingBoardState()
 	auto averageThinkTime2 = Clock::now();
 	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfGame).count());
 	startOfGame = Clock::now();
-	std::cout << "Last move thinktime = " << averageThinkDurations.back() << "ms" << std::endl;
-	std::cout << "Average thinktime = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
-	std::cout << "Amount of moves = " << averageThinkDurations.size() << " moves" << std::endl;
+	std::cout << "Last time = " << averageThinkDurations.back() << "ms" << std::endl;
+	std::cout << "Avg time = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
+	std::cout << "Moves = " << averageThinkDurations.size() << " moves" << std::endl;
 	std::cout << std::endl;
 }
 

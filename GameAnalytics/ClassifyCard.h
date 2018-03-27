@@ -44,7 +44,7 @@ public:
 	void generateMoments();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);
-	classifiers classifyTypeWithKnn(const Mat & type, String typeName);
+	classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest);
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
 	int getAmountOfCorrectThrowAways();
@@ -58,6 +58,9 @@ private:
 	int amountOfCorrectThrowAways = 0;
 	int amountOfIncorrectThrowAways = 0;
 	int amountOfKnns = 0;
+	Ptr<ml::KNearest>  kNearest_rank;
+	Ptr<ml::KNearest>  kNearest_black_suit;
+	Ptr<ml::KNearest>  kNearest_red_suit;
 
 };
 

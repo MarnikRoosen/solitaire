@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PlayingBoard.h"
 
+# define M_PIl          3.141592653589793238462643383279502884L /* pi */
+
 PlayingBoard::PlayingBoard()
 {
 	cards.resize(12);
@@ -21,10 +23,10 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	blur(hsv, hsv, Size(10, 10));
 
 	//removing low intensities
-	Scalar lo_int(0, 0, 0);
+	/*Scalar lo_int(0, 0, 0);
 	Scalar hi_int(180, 255, 80);
 	inRange(hsv, lo_int, hi_int, mask);
-	croppedSrc.setTo(Scalar(0, 0, 0), mask);
+	croppedSrc.setTo(Scalar(0, 0, 0), mask);*/
 
 	//removing green
 	Scalar lo(72, 184, 105); //(hsv mean, var: 75.5889 199.844 122.861 0.621726 13.5166 8.62088)
@@ -140,7 +142,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		{
 			Rect br = boundingRect(contours.at(0));
 			Mat card = Mat(playingCards[i], br).clone();
-			
+	
 			Rect selectedRegion = br;
 			if (selectedRegion.x >= 3) selectedRegion.x -= 3;
 			if (selectedRegion.height + 3 <= playingCards.at(i).rows) selectedRegion.height += 3;
@@ -160,7 +162,18 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			{
 				indexOfSelectedCard = -1;
 			}
-			
+
+			Mat gray, edges, lines, img, thresh;
+			cv::cvtColor(card, gray, COLOR_BGR2GRAY);
+			cv::threshold(gray, thresh, 200, 255, THRESH_BINARY);
+			cv::Canny(thresh, edges, 0, 255);
+			int minLineLength = 100;
+			int maxLineGap = 5;
+			HoughLinesP(edges, lines, 1, M_PIl / 180, 100, minLineLength, maxLineGap);
+
+
+
+
 			// Extracting only the card from the segment
 			Size cardSize = card.size();
 			Rect myROI;
