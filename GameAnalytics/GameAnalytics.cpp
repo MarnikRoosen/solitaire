@@ -4,8 +4,8 @@
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
 DWORD WINAPI ThreadGameAFunction(LPVOID lpParam);
 
-//CONDITION_VARIABLE mouseclick;
-//CRITICAL_SECTION lock;
+CONDITION_VARIABLE mouseclick;
+CRITICAL_SECTION lock;
 
 int main(int argc, char** argv)
 {
@@ -15,8 +15,8 @@ int main(int argc, char** argv)
 	HANDLE  hThreadHook;
 	HANDLE  hThreadGameA;
 
-//	InitializeConditionVariable(&mouseclick);
-	//InitializeCriticalSection(&lock);
+	InitializeConditionVariable(&mouseclick);
+	InitializeCriticalSection(&lock);
 
 	hThreadGameA = CreateThread(
 		NULL,                   // default security attributes
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 	ClicksHooks::Instance().InstallHook();
 	ClicksHooks::Instance().Messsages();
 
-	//GameAnalytics ga;
+	GameAnalytics ga;
 
 	CloseHandle(hThreadGameA);
 }
@@ -74,43 +74,45 @@ GameAnalytics::GameAnalytics()
 
 	averageThinkTime1 = Clock::now();
 
-	//EnterCriticalSection(&lock);
+	EnterCriticalSection(&lock);
 	while (key != 27)	//key = 27 -> error
 	{
 		//SLEEP till MOUSE CLICK
-		//std::cout << "before sleep" << std::endl;
-		//SleepConditionVariableCS(&mouseclick, &lock, INFINITE);
-		//std::cout << "after sleep" << std::endl;
-		
-		//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-		src = waitForStableImage();
-		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-			
-		/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			for (int i = 0; i < 1000; i++)
+		std::cout << "before sleep" << std::endl;
+		if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {
+			std::cout << "after sleep" << std::endl;
+
+			//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+			src = waitForStableImage();
+			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+
+			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+				for (int i = 0; i < 1000; i++)
+				{
+					playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+				}
+				std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+				std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
+				*/
+			switch (playingBoard.getState())
 			{
-				playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+			case outOfMoves:
+				std::cout << "Out of moves" << std::endl;
+				Sleep(1000);
+				break;
+			case playing:
+				handlePlayingState(playingBoard, classifyCard);
+				break;
+			default:
+				handlePlayingState(playingBoard, classifyCard);
+				break;
 			}
-			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-			std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-			*/
-		switch (playingBoard.getState())
-		{
-		case outOfMoves:
-			std::cout << "Out of moves" << std::endl;
-			Sleep(1000);
-			break;
-		case playing:
-			handlePlayingState(playingBoard, classifyCard);
-			break;
-		default:
-			handlePlayingState(playingBoard, classifyCard);
-			break;
-		}			
+		}
 		
 		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 	}
-	//LeaveCriticalSection(&lock);
+
+	LeaveCriticalSection(&lock);
 
 
 }
