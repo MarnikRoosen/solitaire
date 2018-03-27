@@ -28,7 +28,22 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 	Mat src = cardCharacteristics.first;
 	Mat blurredImg, grayImg;
 	for (int i = 0; i < 2; i++)
-	{		
+	{	
+		if (type == "black_suit" || type == "red_suit")
+		{
+			Mat3b hsv;
+			cvtColor(cardCharacteristics.first, hsv, COLOR_BGR2HSV);
+			Mat1b mask1, mask2;
+			inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
+			inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
+			Mat1b mask = mask1 | mask2;
+			int nonZero = countNonZero(mask);
+			if (nonZero > 0)
+			{
+				type = "red_suit";
+			}
+		}
+		
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
 		cv::GaussianBlur(grayImg, blurredImg, Size(3, 3), 0);
@@ -63,7 +78,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			else
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-				list = suitHuMoments;
+				(type == "red_suit") ? list = red_suitHuMoments : list = black_suitHuMoments;
 			}
 			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(5, 5), 0);
 			threshold(resizedROI, resizedROI, 140, 255, THRESH_BINARY);
@@ -91,16 +106,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 				}
 				else
 				{
-					Mat3b hsv;
-					cvtColor(cardCharacteristics.first, hsv, COLOR_BGR2HSV);
-					Mat1b mask1, mask2;
-					inRange(hsv, Scalar(0, 70, 50), Scalar(10, 255, 255), mask1);
-					inRange(hsv, Scalar(170, 70, 50), Scalar(180, 255, 255), mask2);
-					Mat1b mask = mask1 | mask2;
-					int nonZero = countNonZero(mask);
-					if (nonZero > 0)	// red!
+					if (type == "red_suit")	// red!
 					{
-						type = "red_suit";
 						cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit);
 					}
 					else
@@ -208,7 +215,7 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 			indexOfSecondLowestValue = i;
 		}
 	}
-	std::cout << lowestValue << " " << indexOfLowestValue << " " << secondLowestValue << " " << indexOfSecondLowestValue << std::endl;
+	//std::cout << lowestValue << " " << indexOfLowestValue << " " << secondLowestValue << " " << indexOfSecondLowestValue << std::endl;
 	if (lowestValue * 1.3 > secondLowestValue)
 	{
 		lowestValue = DBL_MAX;
@@ -219,7 +226,9 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 void ClassifyCard::generateMoments()
 {
 	vector<string> rankClassifiersList = { "2", "3", "4", "5", "6", "7", "8", "9", "J", "Q", "K", "A" };
-	vector<string> suitClassifiersList = { "D", "S", "H", "C" };
+	vector<string> black_suitClassifiersList = { "S", "C" };
+	vector<string> red_suitClassifiersList = { "D", "H" };
+
 	for (int i = 0; i < rankClassifiersList.size(); i++)
 	{
 		Mat src = imread("../GameAnalytics/testImages/" + rankClassifiersList.at(i) + ".png");
@@ -243,9 +252,9 @@ void ClassifyCard::generateMoments()
 		pair.second = mb;
 		rankHuMoments.push_back(pair);
 	}
-	for (int i = 0; i < suitClassifiersList.size(); i++)
+	for (int i = 0; i < red_suitClassifiersList.size(); i++)
 	{
-		Mat src = imread("../GameAnalytics/testImages/" + suitClassifiersList.at(i) + ".png");
+		Mat src = imread("../GameAnalytics/testImages/" + red_suitClassifiersList.at(i) + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			std::cerr << "Could not open or find the image" << std::endl;
@@ -263,9 +272,33 @@ void ClassifyCard::generateMoments()
 		HuMoments(moments(contours.at(0)), ma);
 		std::vector<double> mb(std::begin(ma), std::end(ma));
 		std::pair<classifiers, std::vector<double>> pair;
-		pair.first = classifiers(char(suitClassifiersList.at(i).at(0)));
+		pair.first = classifiers(char(red_suitClassifiersList.at(i).at(0)));
 		pair.second = mb;
-		suitHuMoments.push_back(pair);
+		red_suitHuMoments.push_back(pair);
+	}
+	for (int i = 0; i < black_suitClassifiersList.size(); i++)
+	{
+		Mat src = imread("../GameAnalytics/testImages/" + black_suitClassifiersList.at(i) + ".png");
+		if (!src.data)	// check for invalid input
+		{
+			std::cerr << "Could not open or find the image" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		cv::Mat grayImg, blurredImg, threshImg;
+		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
+		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
+		cv::threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY);
+		vector<vector<Point> > contours;
+		vector<Vec4i> hierarchy;
+		cv::findContours(threshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+		double ma[7];
+		HuMoments(moments(contours.at(0)), ma);
+		std::vector<double> mb(std::begin(ma), std::end(ma));
+		std::pair<classifiers, std::vector<double>> pair;
+		pair.first = classifiers(char(black_suitClassifiersList.at(i).at(0)));
+		pair.second = mb;
+		black_suitHuMoments.push_back(pair);
 	}
 }
 
