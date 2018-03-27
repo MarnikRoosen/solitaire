@@ -25,6 +25,27 @@
 #include <chrono>
 #include <numeric>
 
+/*
+#include <windows.h>
+#include <tchar.h>
+#include <strsafe.h>
+
+
+#define MAX_THREADS 3
+#define BUF_SIZE 255
+
+DWORD WINAPI MyThreadFunction(LPVOID lpParam);
+void ErrorHandler(LPTSTR lpszFunction);
+
+// Sample custom data structure for threads to use.
+// This is passed by void pointer so it can be any data type
+// that can be passed using a single void pointer (LPVOID).
+typedef struct MyData {
+	int val1;
+	int val2;
+} MYDATA, *PMYDATA;
+*/
+
 typedef std::chrono::high_resolution_clock Clock;
 using namespace cv;
 using namespace std;

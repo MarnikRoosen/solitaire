@@ -1,10 +1,62 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
 
+DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
+DWORD WINAPI ThreadGameAFunction(LPVOID lpParam);
+
+//CONDITION_VARIABLE mouseclick;
+//CRITICAL_SECTION lock;
+
 int main(int argc, char** argv)
 {
-	GameAnalytics ga;
+	DWORD   dwThreadIdHook;
+	DWORD   dwThreadIdGameA;
+
+	HANDLE  hThreadHook;
+	HANDLE  hThreadGameA;
+
+//	InitializeConditionVariable(&mouseclick);
+	//InitializeCriticalSection(&lock);
+
+	hThreadGameA = CreateThread(
+		NULL,                   // default security attributes
+		0,                      // use default stack size  
+		ThreadGameAFunction,       // thread function name
+		0,          // argument to thread function 
+		0,                      // use default creation flags 
+		&dwThreadIdGameA);   // returns the thread identifier 
+	if (hThreadGameA == NULL)
+	{
+		std::cout << "Error thread creation GameA" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	ClicksHooks::Instance().InstallHook();
+	ClicksHooks::Instance().Messsages();
+
+	//GameAnalytics ga;
+
+	CloseHandle(hThreadGameA);
 }
+
+
+DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
+	
+	//ClicksHooks::Instance().InstallHook();
+	//ClicksHooks::Instance().Messsages();
+
+	return 0;
+}
+
+DWORD WINAPI ThreadGameAFunction(LPVOID lpParam) {
+
+
+	GameAnalytics ga;
+
+
+	return 0;
+}
+
 
 GameAnalytics::GameAnalytics()
 {
@@ -19,11 +71,17 @@ GameAnalytics::GameAnalytics()
 		exit(EXIT_FAILURE);
 	}
 
-	//ClicksHooks::Instance().InstallHook();
 
 	averageThinkTime1 = Clock::now();
+
+	//EnterCriticalSection(&lock);
 	while (key != 27)	//key = 27 -> error
 	{
+		//SLEEP till MOUSE CLICK
+		//std::cout << "before sleep" << std::endl;
+		//SleepConditionVariableCS(&mouseclick, &lock, INFINITE);
+		//std::cout << "after sleep" << std::endl;
+		
 		//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 		src = waitForStableImage();
 		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
@@ -52,8 +110,9 @@ GameAnalytics::GameAnalytics()
 		
 		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 	}
+	//LeaveCriticalSection(&lock);
 
-	ClicksHooks::Instance().UninstallHook();
+
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
