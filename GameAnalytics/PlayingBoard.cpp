@@ -42,10 +42,22 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 
 void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
 {
-	int width = boardImage.cols, 
-		height = boardImage.rows;
+	// certain resolutions return an image with black borders, we have to remove these for our processing
+	Mat gray, thresh;
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+	cv::cvtColor(boardImage, gray, COLOR_BGR2GRAY);
+	cv::threshold(gray, thresh, 1, 255, THRESH_BINARY);
+	cv::findContours(thresh, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+	Rect board = boundingRect(contours.at(0));
+	Mat crop(boardImage, board);
 
-	cv::Mat targetImage = cv::Mat::zeros(standardBoardHeight, standardBoardWidth, boardImage.type());
+
+	int width = crop.cols,
+		height = crop.rows;
+	
+
+	cv::Mat targetImage = cv::Mat::zeros(standardBoardHeight, standardBoardWidth, crop.type());
 
 	cv::Rect roi;
 	if (width >= height)
@@ -65,7 +77,7 @@ void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardIm
 		roi.x = (standardBoardWidth - roi.width) / 2;
 	}
 
-	cv::resize(boardImage, targetImage(roi), roi.size());
+	cv::resize(crop, targetImage(roi), roi.size());
 	resizedBoardImage = targetImage.clone();
 }
 
@@ -217,18 +229,14 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			}
 			cv::resize(croppedRef, targetImage(roi), roi.size());
 			resizedCardImage = targetImage.clone();
-
-			cv::cvtColor(resizedCardImage, checkImage, COLOR_BGR2GRAY);
-			cv::threshold(checkImage, checkImage, 200, 255, THRESH_BINARY);
-
-			if (cv::countNonZero(checkImage) > checkImage.rows * checkImage.cols * 0.3)
-			{
-				cards.at(i) = resizedCardImage.clone();
-				continue;
-			}
+			cards.at(i) = resizedCardImage.clone();
 		}
-		Mat empty;
-		cards.at(i) = empty;
+		else
+		{
+			Mat empty;
+			cards.at(i) = empty;
+		}
+
 	}
 }
 

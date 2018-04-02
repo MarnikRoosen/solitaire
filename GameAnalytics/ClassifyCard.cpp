@@ -4,8 +4,8 @@
 
 ClassifyCard::ClassifyCard()
 {
-	standardCardSize.width = 200;
-	standardCardSize.height = 266;
+	standardCardSize.width = 150;
+	standardCardSize.height = 200;
 	generateMoments();
 	std::vector<string> type = { "rank", "black_suit", "red_suit" };
 	for (int i = 0; i < type.size(); i++)
@@ -322,9 +322,9 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 		resize(aCard, card, standardCardSize);
 	}
 	// Get the rank and suit from the resized card
-	Rect myRankROI(4, 6, 30, 34);
+	Rect myRankROI(4, 4, 22, 26);
 	Mat rank(card, myRankROI);
-	Rect mySuitROI(4, 38, 34, 30);
+	Rect mySuitROI(4, 31, 22, 20);
 	Mat suit(card, mySuitROI);
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
 	return cardCharacteristics;

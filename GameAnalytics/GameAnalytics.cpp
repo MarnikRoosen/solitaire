@@ -19,7 +19,6 @@ GameAnalytics::GameAnalytics()
 		exit(EXIT_FAILURE);
 	}
 
-	//ClicksHooks::Instance().InstallHook();
 	int i = 0;
 	startOfGame = Clock::now();
 	bool endOfGameFlag = false;
@@ -50,9 +49,7 @@ GameAnalytics::GameAnalytics()
 			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
 			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
 		}
-		i++;
-		
-		
+		i++;		
 	}
 
 	ClicksHooks::Instance().UninstallHook();
