@@ -88,7 +88,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			double lowestValue = DBL_MAX;
 			int indexOfLowestValue = classifyTypeWithShape(list, huMomentsA, lowestValue);
 			
-			if (lowestValue > 1 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9' || list.at(indexOfLowestValue).first == '3')
+			if (lowestValue > 0.15 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
 			{
 				if (type == "rank")
 				{
@@ -324,8 +324,10 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 	// Get the rank and suit from the resized card
 	Rect myRankROI(4, 4, 22, 26);
 	Mat rank(card, myRankROI);
+	cv::resize(rank, rank, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
 	Rect mySuitROI(4, 31, 22, 20);
 	Mat suit(card, mySuitROI);
+	cv::resize(suit, suit, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
 	return cardCharacteristics;
 }
