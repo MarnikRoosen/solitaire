@@ -142,6 +142,19 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 					cardType.second = list.at(indexOfLowestValue).first;
 				}
 			}
+
+			if (type == "rank")
+			{
+				stringstream ss;
+				ss << static_cast<char>(cardType.first);
+				imwrite("../GameAnalytics/testImages/" + ss.str() + "_received.png", resizedROI);
+			}
+			else
+			{
+				stringstream ss;
+				ss << static_cast<char>(cardType.second);
+				imwrite("../GameAnalytics/testImages/" + ss.str() + "_received.png", resizedROI);
+			}
 		}
 		type = "black_suit";
 		src = cardCharacteristics.second;
