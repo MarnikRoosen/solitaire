@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "ClicksHooks.h"
+#include "GameAnalytics.h"
 
-extern CONDITION_VARIABLE mouseclick;
+//extern CONDITION_VARIABLE mouseclick;
+extern GameAnalytics ga;
 
 //sources: https://www.unknowncheats.me/wiki/C%2B%2B:WindowsHookEx_Mouse
 
@@ -71,6 +73,8 @@ void ClicksHooks::UninstallHook() {
 	UnhookWindowsHookEx(hook);
 }
 
+
+
 LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam) {
 
 	if (nCode == 0) {
@@ -84,22 +88,23 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam) {
 		case WM_LBUTTONUP:
 			//std::cout << "LEFT UP X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl; 
 			printf_s("LEFT CLICK UP: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
-			WakeConditionVariable(&mouseclick);
+			//WakeConditionVariable(&mouseclick);
+			ga.bufferImage();
 			break;
 
 		case WM_LBUTTONDOWN:			
 			//std::cout << "LEFT DOWN X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl;
-			printf_s("LEFT CLICK DOWN: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("LEFT CLICK DOWN: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 
 		case WM_RBUTTONUP:
 			//std::cout << "RIGHT UP X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl;
-			printf_s("RIGHT CLICK UP: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("RIGHT CLICK UP: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 
 		case WM_RBUTTONDOWN:
 			//std::cout << "RIGHT DOWN X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl;
-			printf_s("RIGHT CLICK DOWN: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
+			//printf_s("RIGHT CLICK DOWN: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 		}
 	}

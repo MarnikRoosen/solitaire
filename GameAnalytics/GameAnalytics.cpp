@@ -2,64 +2,54 @@
 #include "GameAnalytics.h"
 
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
-DWORD WINAPI ThreadGameAFunction(LPVOID lpParam);
 
-CONDITION_VARIABLE mouseclick;
-CRITICAL_SECTION lock;
+//CONDITION_VARIABLE mouseclick;
+//CRITICAL_SECTION lock;
+
+GameAnalytics ga;
 
 int main(int argc, char** argv)
 {
 	DWORD   dwThreadIdHook;
-	DWORD   dwThreadIdGameA;
 
 	HANDLE  hThreadHook;
-	HANDLE  hThreadGameA;
 
-	InitializeConditionVariable(&mouseclick);
-	InitializeCriticalSection(&lock);
+	//InitializeConditionVariable(&mouseclick);
+	//InitializeCriticalSection(&lock);
 
-	hThreadGameA = CreateThread(
+	hThreadHook = CreateThread(
 		NULL,                   // default security attributes
 		0,                      // use default stack size  
-		ThreadGameAFunction,       // thread function name
+		ThreadHookFunction,       // thread function name
 		0,          // argument to thread function 
 		0,                      // use default creation flags 
-		&dwThreadIdGameA);   // returns the thread identifier 
-	if (hThreadGameA == NULL)
+		&dwThreadIdHook);   // returns the thread identifier 
+	if (hThreadHook == NULL)
 	{
 		std::cout << "Error thread creation GameA" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
-	ClicksHooks::Instance().InstallHook();
-	ClicksHooks::Instance().Messsages();
+	ga.Process();
 
-	GameAnalytics ga;
+	CloseHandle(hThreadHook);
 
-	CloseHandle(hThreadGameA);
 }
 
 
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
 	
-	//ClicksHooks::Instance().InstallHook();
-	//ClicksHooks::Instance().Messsages();
-
-	return 0;
-}
-
-DWORD WINAPI ThreadGameAFunction(LPVOID lpParam) {
-
-
-	GameAnalytics ga;
-
+	ClicksHooks::Instance().InstallHook();
+	ClicksHooks::Instance().Messsages();
 
 	return 0;
 }
 
 
-GameAnalytics::GameAnalytics()
-{
+
+GameAnalytics::GameAnalytics() {}
+
+void GameAnalytics::Process() {
 	PlayingBoard playingBoard;
 	ClassifyCard classifyCard;
 	Mat src;
@@ -71,19 +61,21 @@ GameAnalytics::GameAnalytics()
 		exit(EXIT_FAILURE);
 	}
 
-
 	averageThinkTime1 = Clock::now();
 
-	EnterCriticalSection(&lock);
+	//EnterCriticalSection(&lock);
 	while (key != 27)	//key = 27 -> error
 	{
 		//SLEEP till MOUSE CLICK
-		std::cout << "before sleep" << std::endl;
-		if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {
-			std::cout << "after sleep" << std::endl;
-
+		//std::cout << "before sleep" << std::endl;
+		//if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {
+		if (!buffer.empty()) {
+			src = buffer.front();
 			//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			src = waitForStableImage();
+			//src = waitForStableImage();
+			std::cout << "take image from buffer" << std::endl;
+			src = hwnd2mat(hwnd);
+			std::cout << "find cards" << std::endl;
 			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 
 			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
@@ -101,20 +93,29 @@ GameAnalytics::GameAnalytics()
 				Sleep(1000);
 				break;
 			case playing:
+				std::cout << "Playing" << std::endl;
 				handlePlayingState(playingBoard, classifyCard);
 				break;
 			default:
+				std::cout << "Default" << std::endl;
 				handlePlayingState(playingBoard, classifyCard);
 				break;
 			}
+			std::cout << "END PROCESSING IMAGE" << std::endl;
+			buffer.pop();
+			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
 		}
+		else {
+			Sleep(10);
+		}
+		//LeaveCriticalSection(&lock);
 		
-		//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
+
 	}
+}
 
-	LeaveCriticalSection(&lock);
-
-
+void GameAnalytics::bufferImage() {
+	buffer.push(hwnd2mat(hwnd));
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
@@ -188,13 +189,15 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 	});
 }
 
+
+
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
 	Mat src1, graySrc1, graySrc2, diff;
 	do {
 		src1 = hwnd2mat(hwnd);
 		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-		waitKey(100);
+		//waitKey(100);
 		graySrc2 = hwnd2mat(hwnd);
 		cvtColor(graySrc2, graySrc2, COLOR_BGR2GRAY);
 		cv::compare(graySrc1, graySrc2, diff, cv::CMP_NE);
