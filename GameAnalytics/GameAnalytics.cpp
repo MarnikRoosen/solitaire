@@ -4,9 +4,11 @@
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
 
 //CONDITION_VARIABLE mouseclick;
-//CRITICAL_SECTION lock;
+CRITICAL_SECTION lock;
 
 GameAnalytics ga;
+
+int imagecounter;
 
 int main(int argc, char** argv)
 {
@@ -15,7 +17,11 @@ int main(int argc, char** argv)
 	HANDLE  hThreadHook;
 
 	//InitializeConditionVariable(&mouseclick);
-	//InitializeCriticalSection(&lock);
+	InitializeCriticalSection(&lock);
+
+	imagecounter = 0;
+
+	ga.Init();
 
 	hThreadHook = CreateThread(
 		NULL,                   // default security attributes
@@ -45,21 +51,22 @@ DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
 	return 0;
 }
 
-
-
 GameAnalytics::GameAnalytics() {}
 
-void GameAnalytics::Process() {
-	PlayingBoard playingBoard;
-	ClassifyCard classifyCard;
-	Mat src;
-	classifiedCardsFromPlayingBoard.reserve(12);
+void GameAnalytics::Init() {
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 	if (hwnd == NULL)
 	{
 		std::cout << "Cant find window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+}
+
+void GameAnalytics::Process() {
+	PlayingBoard playingBoard;
+	ClassifyCard classifyCard;
+	Mat src;
+	classifiedCardsFromPlayingBoard.reserve(12);
 
 	averageThinkTime1 = Clock::now();
 
@@ -68,14 +75,20 @@ void GameAnalytics::Process() {
 	{
 		//SLEEP till MOUSE CLICK
 		//std::cout << "before sleep" << std::endl;
-		//if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {
-		if (!buffer.empty()) {
-			src = buffer.front();
+		//if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {		
+		if (!buffer.empty() ) {
+			std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
+			EnterCriticalSection(&lock);
+			src = buffer.front(); buffer.pop();
+			int& x = xpos.front(); xpos.pop();
+			std::cout << "X from queue =" << x << std::endl;
+			//src = hwnd2mat(hwnd);
+			LeaveCriticalSection(&lock);
+
 			//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 			//src = waitForStableImage();
-			std::cout << "take image from buffer" << std::endl;
-			src = hwnd2mat(hwnd);
-			std::cout << "find cards" << std::endl;
+			
+			std::cout << "Find cards" << std::endl;
 			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 
 			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
@@ -93,7 +106,7 @@ void GameAnalytics::Process() {
 				Sleep(1000);
 				break;
 			case playing:
-				std::cout << "Playing" << std::endl;
+				std::cout << "Playing ..." << std::endl;
 				handlePlayingState(playingBoard, classifyCard);
 				break;
 			default:
@@ -102,20 +115,25 @@ void GameAnalytics::Process() {
 				break;
 			}
 			std::cout << "END PROCESSING IMAGE" << std::endl;
-			buffer.pop();
 			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-		}
-		else {
+		} else {
 			Sleep(10);
 		}
 		//LeaveCriticalSection(&lock);
-		
-
+	
 	}
 }
 
-void GameAnalytics::bufferImage() {
-	buffer.push(hwnd2mat(hwnd));
+void GameAnalytics::bufferImage(const int x, const int y) {
+	Mat m; // mbuffer;
+	EnterCriticalSection(&lock);
+	imagecounter++;
+	m = hwnd2mat(hwnd); 
+	buffer.push(m);
+	//mbuffer = buffer.front();
+	//imshow("test", mbuffer);
+	xpos.push(x);
+	LeaveCriticalSection(&lock);
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
@@ -488,7 +506,7 @@ Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array
 	height = srcheight * 1;  //possibility to resize the client window screen
 	width = srcwidth * 1;
 	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
-
+ 
 										// create a bitmap
 	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
 	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
@@ -515,6 +533,7 @@ Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array
 	DeleteObject(hbwindow);
 	DeleteDC(hwindowCompatibleDC);
 	ReleaseDC(hwnd, hwindowDC);
+	//imshow("test", src);
 
 	return src;
 }

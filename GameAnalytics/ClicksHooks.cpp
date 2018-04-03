@@ -23,7 +23,7 @@ ClicksHooks::~ClicksHooks()
 		 //printf_s("BEFORE PEEK MESSAGE\n");
 		 
 		 if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-			printf_s("PEEK MESSAGE RECEIVED\n");
+			//printf_s("PEEK MESSAGE RECEIVED\n");
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
@@ -89,7 +89,7 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam) {
 			//std::cout << "LEFT UP X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl; 
 			printf_s("LEFT CLICK UP: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 			//WakeConditionVariable(&mouseclick);
-			ga.bufferImage();
+			ga.bufferImage(pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 
 		case WM_LBUTTONDOWN:			
