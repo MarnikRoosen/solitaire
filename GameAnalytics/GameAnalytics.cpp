@@ -60,6 +60,9 @@ void GameAnalytics::Init() {
 		std::cout << "Cant find window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	//take first image and add this to buffer
+	bufferImage(0, 0);
+
 }
 
 void GameAnalytics::Process() {

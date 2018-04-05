@@ -89,6 +89,7 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam) {
 			//std::cout << "LEFT UP X:" << pMouseStruct->pt.x << " Y: " << pMouseStruct->pt.y << std::endl; 
 			printf_s("LEFT CLICK UP: x = %i | y = %i \n", pMouseStruct->pt.x, pMouseStruct->pt.y);
 			//WakeConditionVariable(&mouseclick);
+			Sleep(500); //wait litle time before taking the screenshot such that the card is already moved
 			ga.bufferImage(pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 
