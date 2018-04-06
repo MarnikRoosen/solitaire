@@ -69,7 +69,6 @@ private:
 	std::pair<Mat, Mat> cardCharacteristics;
 	bool init = true;
 	int key = 0;
-	HWND hwnd;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::vector<long long> averageThinkDurations;
 	int indexOfSelectedCard = -1;
@@ -77,6 +76,9 @@ private:
 	HWND hwnd;
 	std::queue<cv::Mat> buffer;
 	std::queue<int> xpos;
+	std::queue<int> ypos;
+	DWORD   dwThreadIdHook;
+	HANDLE  hThreadHook;
 
 };
 

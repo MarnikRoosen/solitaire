@@ -3,20 +3,19 @@
 
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
 
-//CONDITION_VARIABLE mouseclick;
 CRITICAL_SECTION lock;
 
 GameAnalytics ga;
 
 int imagecounter;
+static std::exception_ptr teptr = nullptr;
+
 
 int main(int argc, char** argv)
 {
 	DWORD   dwThreadIdHook;
-
 	HANDLE  hThreadHook;
 
-	//InitializeConditionVariable(&mouseclick);
 	InitializeCriticalSection(&lock);
 
 	imagecounter = 0;
@@ -40,18 +39,21 @@ int main(int argc, char** argv)
 
 	CloseHandle(hThreadHook);
 
+	return 0;
 }
 
 
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
 	
 	ClicksHooks::Instance().InstallHook();
-	ClicksHooks::Instance().Messsages();
+	ClicksHooks::Instance().Messages();
 
 	return 0;
 }
 
-GameAnalytics::GameAnalytics() {}
+GameAnalytics::GameAnalytics()
+{
+}
 
 void GameAnalytics::Init() {
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
@@ -60,69 +62,49 @@ void GameAnalytics::Init() {
 		std::cout << "Cant find window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	//take first image and add this to buffer
-	bufferImage(0, 0);
-
+	bufferImage(0, 0);	// take first image and add this to buffer
 }
 
-void GameAnalytics::Process() {
+void GameAnalytics::Process()
+{
 	PlayingBoard playingBoard;
 	ClassifyCard classifyCard;
 	Mat src;
 	classifiedCardsFromPlayingBoard.reserve(12);
 
-	averageThinkTime1 = Clock::now();
+	startOfGame = Clock::now();
 
-	//EnterCriticalSection(&lock);
 	while (key != 27)	//key = 27 -> error
-	{
-		//SLEEP till MOUSE CLICK
-		//std::cout << "before sleep" << std::endl;
-		//if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {		
+	{	
 		if (!buffer.empty() ) {
-			std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
+			//std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
+			
 			EnterCriticalSection(&lock);
 			src = buffer.front(); buffer.pop();
 			int& x = xpos.front(); xpos.pop();
-			std::cout << "X from queue =" << x << std::endl;
-			//src = hwnd2mat(hwnd);
-			LeaveCriticalSection(&lock);
-
-			//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-			//src = waitForStableImage();
+			int& y = ypos.front(); ypos.pop();
+			std::cout << "Click registered at position (" << x << "," << y << ")" << std::endl;
+			LeaveCriticalSection(&lock);			
 			
-			std::cout << "Find cards" << std::endl;
 			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
 
-			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-				for (int i = 0; i < 1000; i++)
-				{
-					playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-				}
-				std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-				std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-				*/
 			switch (playingBoard.getState())
 			{
-			case outOfMoves:
-				std::cout << "Out of moves" << std::endl;
-				Sleep(1000);
-				break;
-			case playing:
-				std::cout << "Playing ..." << std::endl;
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-			default:
-				std::cout << "Default" << std::endl;
-				handlePlayingState(playingBoard, classifyCard);
-				break;
+				case outOfMoves:
+					handleOutOfMoves();
+					break;
+				case playing:
+					handlePlayingState(playingBoard, classifyCard);
+					break;
+				default:
+					handlePlayingState(playingBoard, classifyCard);
+					break;
 			}
-			std::cout << "END PROCESSING IMAGE" << std::endl;
-			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
-		} else {
+		}
+		else
+		{
 			Sleep(10);
 		}
-		//LeaveCriticalSection(&lock);
 	
 	}
 }
@@ -134,15 +116,16 @@ void GameAnalytics::handleOutOfMoves()
 	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endOfGame - startOfGame).count() << " ns" << std::endl;
 	Sleep(8000);
 	return;
+}
+
 void GameAnalytics::bufferImage(const int x, const int y) {
-	Mat m; // mbuffer;
+	Mat src; // mbuffer;
 	EnterCriticalSection(&lock);
 	imagecounter++;
-	m = hwnd2mat(hwnd); 
-	buffer.push(m);
-	//mbuffer = buffer.front();
-	//imshow("test", mbuffer);
+	src = waitForStableImage();
+	buffer.push(src);
 	xpos.push(x);
+	ypos.push(y);
 	LeaveCriticalSection(&lock);
 }
 
@@ -210,15 +193,13 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 	});
 }
 
-
-
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
 	Mat src2, graySrc1, graySrc2, diff;
 	do {
 		graySrc1 = hwnd2mat(hwnd);
 		cvtColor(graySrc1, graySrc1, COLOR_BGR2GRAY);
-		waitKey(100);
+		waitKey(50);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		cv::compare(graySrc1, graySrc2, diff, cv::CMP_NE);
