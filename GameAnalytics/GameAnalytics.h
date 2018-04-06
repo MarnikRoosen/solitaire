@@ -42,6 +42,9 @@ class GameAnalytics
 {
 public:
 	GameAnalytics();
+	void Init();
+	void Process();
+
 	void handleOutOfMoves();
 	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
 	void convertImagesToClassifiedCards(ClassifyCard & cc);
@@ -53,6 +56,8 @@ public:
 	void printPlayingBoardState();
 	bool cardMoveBetweenTableauAndFoundations(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex2);
 	Mat hwnd2mat(const HWND & hwnd);
+
+	void bufferImage(const int x, const int y);
 
 private:
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
@@ -68,6 +73,11 @@ private:
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::vector<long long> averageThinkDurations;
 	int indexOfSelectedCard = -1;
+
+	HWND hwnd;
+	std::queue<cv::Mat> buffer;
+	std::queue<int> xpos;
+
 };
 
 
