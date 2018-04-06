@@ -1,51 +1,130 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
 
+DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
+
+//CONDITION_VARIABLE mouseclick;
+CRITICAL_SECTION lock;
+
+GameAnalytics ga;
+
+int imagecounter;
+
 int main(int argc, char** argv)
 {
-	GameAnalytics ga;
+	DWORD   dwThreadIdHook;
+
+	HANDLE  hThreadHook;
+
+	//InitializeConditionVariable(&mouseclick);
+	InitializeCriticalSection(&lock);
+
+	imagecounter = 0;
+
+	ga.Init();
+
+	hThreadHook = CreateThread(
+		NULL,                   // default security attributes
+		0,                      // use default stack size  
+		ThreadHookFunction,       // thread function name
+		0,          // argument to thread function 
+		0,                      // use default creation flags 
+		&dwThreadIdHook);   // returns the thread identifier 
+	if (hThreadHook == NULL)
+	{
+		std::cout << "Error thread creation GameA" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	ga.Process();
+
+	CloseHandle(hThreadHook);
+
 }
 
-GameAnalytics::GameAnalytics()
-{
-	PlayingBoard playingBoard;
-	ClassifyCard classifyCard;
-	Mat src;
-	classifiedCardsFromPlayingBoard.reserve(12);
+
+DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
+	
+	ClicksHooks::Instance().InstallHook();
+	ClicksHooks::Instance().Messsages();
+
+	return 0;
+}
+
+GameAnalytics::GameAnalytics() {}
+
+void GameAnalytics::Init() {
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 	if (hwnd == NULL)
 	{
 		std::cout << "Cant find window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	//take first image and add this to buffer
+	bufferImage(0, 0);
 
-	int i = 0;
-	startOfGame = Clock::now();
-	bool endOfGameFlag = false;
-	while (key != 27 && !endOfGameFlag)	//key = 27 -> error
+}
+
+void GameAnalytics::Process() {
+	PlayingBoard playingBoard;
+	ClassifyCard classifyCard;
+	Mat src;
+	classifiedCardsFromPlayingBoard.reserve(12);
+
+	averageThinkTime1 = Clock::now();
+
+	//EnterCriticalSection(&lock);
+	while (key != 27)	//key = 27 -> error
 	{
-		src = waitForStableImage();
-		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-			
-		switch (playingBoard.getState())
-		{
-		case outOfMoves:
-		{
-			handleOutOfMoves();
-			endOfGameFlag = true;
-			break;
-		}
-			
-		case playing:
-			handlePlayingState(playingBoard, classifyCard);
-			break;
-		default:
-			handlePlayingState(playingBoard, classifyCard);
-			break;
-		}		
-	}
+		//SLEEP till MOUSE CLICK
+		//std::cout << "before sleep" << std::endl;
+		//if (SleepConditionVariableCS(&mouseclick, &lock, INFINITE) != 0) {		
+		if (!buffer.empty() ) {
+			std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
+			EnterCriticalSection(&lock);
+			src = buffer.front(); buffer.pop();
+			int& x = xpos.front(); xpos.pop();
+			std::cout << "X from queue =" << x << std::endl;
+			//src = hwnd2mat(hwnd);
+			LeaveCriticalSection(&lock);
 
-	ClicksHooks::Instance().UninstallHook();
+			//std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+			//src = waitForStableImage();
+			
+			std::cout << "Find cards" << std::endl;
+			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+
+			/*std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+				for (int i = 0; i < 1000; i++)
+				{
+					playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+				}
+				std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+				std::cout << "Finding cards" << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
+				*/
+			switch (playingBoard.getState())
+			{
+			case outOfMoves:
+				std::cout << "Out of moves" << std::endl;
+				Sleep(1000);
+				break;
+			case playing:
+				std::cout << "Playing ..." << std::endl;
+				handlePlayingState(playingBoard, classifyCard);
+				break;
+			default:
+				std::cout << "Default" << std::endl;
+				handlePlayingState(playingBoard, classifyCard);
+				break;
+			}
+			std::cout << "END PROCESSING IMAGE" << std::endl;
+			//std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count() << std::endl;
+		} else {
+			Sleep(10);
+		}
+		//LeaveCriticalSection(&lock);
+	
+	}
 }
 
 void GameAnalytics::handleOutOfMoves()
@@ -55,6 +134,16 @@ void GameAnalytics::handleOutOfMoves()
 	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endOfGame - startOfGame).count() << " ns" << std::endl;
 	Sleep(8000);
 	return;
+void GameAnalytics::bufferImage(const int x, const int y) {
+	Mat m; // mbuffer;
+	EnterCriticalSection(&lock);
+	imagecounter++;
+	m = hwnd2mat(hwnd); 
+	buffer.push(m);
+	//mbuffer = buffer.front();
+	//imshow("test", mbuffer);
+	xpos.push(x);
+	LeaveCriticalSection(&lock);
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
@@ -120,6 +209,8 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		classifiedCardsFromPlayingBoard.push_back(cardType);
 	});
 }
+
+
 
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
@@ -418,7 +509,7 @@ Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array
 	height = srcheight * 1;  //possibility to resize the client window screen
 	width = srcwidth * 1;
 	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
-
+ 
 										// create a bitmap
 	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
 	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
@@ -445,6 +536,7 @@ Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array
 	DeleteObject(hbwindow);
 	DeleteDC(hwindowCompatibleDC);
 	ReleaseDC(hwnd, hwindowDC);
+	//imshow("test", src);
 
 	return src;
 }

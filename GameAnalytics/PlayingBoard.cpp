@@ -159,6 +159,16 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			if (selectedRegion.x >= 3) selectedRegion.x -= 3;
 			if (selectedRegion.height + 3 <= playingCards.at(i).rows) selectedRegion.height += 3;
 			if (selectedRegion.width + 6 <= playingCards.at(i).cols) selectedRegion.width += 6;
+
+			/*
+			std::cout << "Rect x =" << selectedRegion.x << std::endl;
+			std::cout << "Rect y =" << selectedRegion.y << std::endl;
+			std::cout << "Rect h =" << selectedRegion.height << std::endl;
+			std::cout << "Rect w =" << selectedRegion.width << std::endl;
+			std::cout << "Rows card =" << playingCards.at(i).rows << std::endl;
+			std::cout << "Cols card =" << playingCards.at(i).cols << std::endl;
+			*/
+
 			Mat selectedCard = Mat(playingCards[i], selectedRegion);
 			Mat hsv, mask;
 			cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);
