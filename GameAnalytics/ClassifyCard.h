@@ -40,13 +40,12 @@ class ClassifyCard
 public:
 	ClassifyCard();
 	std::pair<classifiers, classifiers> classifyCard(std::pair<Mat, Mat> cardCharacteristics);
-	int ClassifyCard::classifyTypeUsingComparison(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue);
-	int classifyTypeWithShape(vector<std::pair<classifiers, std::vector<double>>>& list, double huMomentsA[7], double & lowestValue);
-	void generateMoments();
+	int classifyTypeUsingShape(std::vector<std::pair<classifiers, cv::Mat>> &image_list, std::vector<std::vector<cv::Point>> &contours, double &lowestValueUsingShape);
+	int classifyTypeUsingComparison(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue);
 	void generateImageVector();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
 	std::pair<classifiers, classifiers> classifyCardWithKnn(std::pair<Mat, Mat> cardCharacteristics);
-	classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest);
+	classifiers classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest);
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
 	int getAmountOfCorrectThrowAways();

@@ -17,7 +17,7 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 {
 	cv::Mat adaptedSrc, src, hsv, mask;
 	resizeBoardImage(boardImage, src);
-	cv::Rect ROI = Rect(standardBoardWidth * 0.17, standardBoardHeight * 0.07, standardBoardWidth * 0.67, standardBoardHeight * 0.90);
+	cv::Rect ROI = Rect( (int) standardBoardWidth * 0.17, (int) standardBoardHeight * 0.07, (int) standardBoardWidth * 0.67, (int) standardBoardHeight * 0.90);
 	cv::Mat croppedSrc = src(ROI);
 	cv::cvtColor(croppedSrc, hsv, COLOR_BGR2HSV);
 	blur(hsv, hsv, Size(10, 10));
@@ -84,7 +84,7 @@ void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardIm
 std::vector<cv::Mat> PlayingBoard::extractCardRegions(const cv::Mat &src)
 {
 	cv::Size srcSize = src.size();
-	int topCardsHeight = srcSize.height * 0.26;
+	int topCardsHeight = (int) srcSize.height * 0.26;
 	Mat croppedtopCards(src, Rect(0, 0, (int) srcSize.width, topCardsHeight));
 	Mat croppedbottomCards(src, Rect(0, topCardsHeight, (int)srcSize.width, (int) (srcSize.height - topCardsHeight - 1)));
 	Size topCardsSize = croppedtopCards.size();
