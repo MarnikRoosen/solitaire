@@ -22,7 +22,6 @@ GameAnalytics::GameAnalytics()
 	int i = 0;
 	startOfGame = Clock::now();
 	bool endOfGameFlag = false;
-	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	while (key != 27 && !endOfGameFlag)	//key = 27 -> error
 	{
 		src = waitForStableImage();
@@ -43,13 +42,7 @@ GameAnalytics::GameAnalytics()
 		default:
 			handlePlayingState(playingBoard, classifyCard);
 			break;
-		}	
-		if (i == 1000)
-		{
-			std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
-			std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << std::endl;
-		}
-		i++;		
+		}		
 	}
 
 	ClicksHooks::Instance().UninstallHook();
@@ -59,7 +52,7 @@ void GameAnalytics::handleOutOfMoves()
 {
 	std::cout << "Out of moves" << std::endl;
 	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
-	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endOfGame - startOfGame).count() / 1000000 << " ms" << std::endl;
+	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endOfGame - startOfGame).count() << " ns" << std::endl;
 	Sleep(8000);
 	return;
 }
@@ -121,7 +114,7 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
 			cardType = cc.classifyCard(cardCharacteristics);
-			//cardType = cc.classifyCardsWithKnn(cardCharacteristics);
+			//cardType = cc.classifyCardWithKnn(cardCharacteristics);
 
 		}
 		classifiedCardsFromPlayingBoard.push_back(cardType);

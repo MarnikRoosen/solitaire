@@ -7,6 +7,7 @@ ClassifyCard::ClassifyCard()
 	standardCardSize.width = 150;
 	standardCardSize.height = 200;
 	generateMoments();
+	generateImageVector();
 	std::vector<string> type = { "rank", "black_suit", "red_suit" };
 	for (int i = 0; i < type.size(); i++)
 	{
@@ -23,13 +24,26 @@ ClassifyCard::ClassifyCard()
 
 std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Mat> cardCharacteristics)
 {
+	// initialize variables
 	std::pair<classifiers, classifiers> cardType;
-	String type = "rank";
-	Mat src = cardCharacteristics.first;
-	Mat blurredImg, grayImg;
+	std::vector<std::pair<classifiers, std::vector<double>>> huMoments_list;
+	std::vector<std::pair<classifiers, cv::Mat>> image_list;
+	std::string type = "rank";
+	std::vector<std::vector<cv::Point> > contours;
+	std::vector<cv::Vec4i> hierarchy;
+	cv::Mat src = cardCharacteristics.first;
+	cv::Mat blurredImg, grayImg, threshImg , diff, resizedBlurredImg, resizedThreshImg;
+	cv::Mat ROI, resizedROI;
+	double lowestValueOfShape;
+	double huMomentsA[7];
+	int indexOfLowestValueUsingComparison;
+	int lowestValueOfComparison;
+	int indexOfLowestValueUsingShape;
+
 	for (int i = 0; i < 2; i++)
 	{	
-		if (type == "black_suit" || type == "red_suit")
+		// determine color for the suitclassification
+		if (type != "rank")
 		{
 			Mat3b hsv;
 			cvtColor(cardCharacteristics.first, hsv, COLOR_BGR2HSV);
@@ -46,11 +60,9 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		
 		// process the src
 		cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::GaussianBlur(grayImg, blurredImg, Size(3, 3), 0);
-		threshold(blurredImg, src, 140, 255, THRESH_BINARY_INV);
-		vector<vector<Point> > contours;
-		vector<Vec4i> hierarchy;
-		cv::findContours(src, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+		cv::GaussianBlur(grayImg, blurredImg, Size(5, 5), 0);
+		threshold(blurredImg, threshImg, 150, 255, THRESH_BINARY_INV);
+		cv::findContours(threshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
  		if (contours.empty())
 		{
@@ -60,106 +72,102 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		}
 
 		// Sort and remove objects that are too small
-		std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
+		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2)
+			-> bool { return contourArea(c1, false) > contourArea(c2, false); });
+
 		if (type == "rank" && contours.size() > 1 && contourArea(contours.at(1), false) > 15.0)
 		{
 			cardType.first = TEN;
 		}
 		else
 		{
-			cv::Mat ROI = src(boundingRect(contours.at(0)));
-			cv::Mat resizedROI;
-			vector<std::pair<classifiers, std::vector<double>>> list;
+			ROI = threshImg(boundingRect(contours.at(0)));
 			if (type == "rank")
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
-				list = rankHuMoments;
+				huMoments_list = rankHuMoments;
+				image_list = rankImages;
 			}
 			else
 			{
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-				(type == "red_suit") ? list = red_suitHuMoments : list = black_suitHuMoments;
+				(type == "red_suit") ? huMoments_list = red_suitHuMoments : huMoments_list = black_suitHuMoments;
+				(type == "red_suit") ? image_list = red_suitImages : image_list = black_suitImages;
 			}
-			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(5, 5), 0);
-			threshold(resizedROI, resizedROI, 140, 255, THRESH_BINARY);
-			cv::findContours(resizedROI, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-			double huMomentsA[7];
-			HuMoments(moments(contours.at(0)), huMomentsA);
-			double lowestValue = DBL_MAX;
-			int indexOfLowestValue = classifyTypeWithShape(list, huMomentsA, lowestValue);
-			
-			if (lowestValue > 0.15 || list.at(indexOfLowestValue).first == '6' || list.at(indexOfLowestValue).first == '9')
+			cv::GaussianBlur(resizedROI, resizedBlurredImg, cv::Size(3, 3), 0);
+			cv::threshold(resizedBlurredImg, resizedThreshImg, 140, 255, THRESH_BINARY);
+			cv::findContours(resizedThreshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+
+			// COMPARISON METHOD
+			lowestValueOfComparison = INT_MAX;
+			indexOfLowestValueUsingComparison = classifyTypeUsingComparison(image_list, resizedThreshImg, lowestValueOfComparison);
+			if (type == "rank")
 			{
+				cardType.first = image_list.at(indexOfLowestValueUsingComparison).first;
+
+			}
+			else
+			{
+				cardType.second = image_list.at(indexOfLowestValueUsingComparison).first;
+			}
+
+			/*
+			// SHAPE ANALYSIS - KNN
+			HuMoments(moments(contours.at(0)), huMomentsA);
+			lowestValueOfShape = DBL_MAX;
+			indexOfLowestValueUsingShape = classifyTypeWithShape(huMoments_list, huMomentsA, lowestValueOfShape);
+			if (lowestValueOfShape > 0.15 || huMoments_list.at(indexOfLowestValueUsingShape).first == '6' || huMoments_list.at(indexOfLowestValueUsingShape).first == '9')
+			{
+				// not good enough with shape analysis
 				if (type == "rank")
 				{
 					cardType.first = classifyTypeWithKnn(resizedROI, kNearest_rank);
-					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: "
+
+					((huMoments_list.at(indexOfLowestValueUsingComparison).first) == (cardType.first)) ? amountOfIncorrectThrowAways++ : amountOfCorrectThrowAways++;
+					//std::cout << "Expected: " << static_cast<char>(huMoments_list.at(indexOfLowestValueUsingShape).first) << " with " << lowestValueOfShape << " certainty - actual: "
 					//	<< static_cast<char>(cardType.first) << std::endl;
-					if ((list.at(indexOfLowestValue).first) == (cardType.first))
-					{
-						amountOfIncorrectThrowAways++;
-					}
-					else
-					{
-						amountOfCorrectThrowAways++;
-					}
 				}
 				else
 				{
-					if (type == "red_suit")	// red!
-					{
-						cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit);
-					}
-					else
-					{
-						cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
-					}
-					//std::cout << "Expected: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty - actual: " 
+					(type == "red_suit") ? cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
+
+					((huMoments_list.at(indexOfLowestValueUsingShape).first) == (cardType.second)) ? amountOfIncorrectThrowAways++ : amountOfCorrectThrowAways++;
+					//std::cout << "Expected: " << static_cast<char>(huMoments_list.at(indexOfLowestValueUsingComparison).first) << " with " << lowestValuee << " certainty - actual: "
 					//	<< static_cast<char>(cardType.second) << std::endl;
-					if ((list.at(indexOfLowestValue).first) == (cardType.second))
-					{
-						amountOfIncorrectThrowAways++;
-					}
-					else
-					{
-						amountOfCorrectThrowAways++;
-					}
 				}
-
 			}
 			else
 			{
+				// good enough with shape analysis
+				(type == "rank") ? cardType.first = huMoments_list.at(indexOfLowestValueUsingShape).first : cardType.second = huMoments_list.at(indexOfLowestValueUsingShape).first;
+
 				amountOfKnns++;
-
-				//std::cout << "Identified: " << static_cast<char>(list.at(indexOfLowestValue).first) << " with " << lowestValue << " certainty" << std::endl;
-
-				if (type == "rank")
-				{
-					cardType.first = list.at(indexOfLowestValue).first;
-				}
-				else
-				{
-					cardType.second = list.at(indexOfLowestValue).first;
-				}
-			}
-
-			if (type == "rank")
-			{
-				stringstream ss;
-				ss << static_cast<char>(cardType.first);
-				imwrite("../GameAnalytics/testImages/" + ss.str() + "_received.png", resizedROI);
-			}
-			else
-			{
-				stringstream ss;
-				ss << static_cast<char>(cardType.second);
-				imwrite("../GameAnalytics/testImages/" + ss.str() + "_received.png", resizedROI);
-			}
+				//std::cout << "Identified: " << static_cast<char>(huMoments_list.at(indexOfLowestValueUsingComparison).first) << " with " << lowestValuee << " certainty" << std::endl;
+			}*/
 		}
 		type = "black_suit";
 		src = cardCharacteristics.second;
 	}
 	return cardType;
+}
+
+int ClassifyCard::classifyTypeUsingComparison(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue)
+{
+	cv::Mat diff;
+	int lowestIndex = INT_MAX;
+	int nonZero;
+	for (int i = 0; i < image_list.size(); i++)
+	{
+		cv::compare(image_list.at(i).second, resizedROI, diff, cv::CMP_NE);
+		nonZero = cv::countNonZero(diff);
+		if (nonZero < lowestValue)
+		{
+			lowestIndex = i;
+			lowestValue = nonZero;
+		}
+	}
+	return lowestIndex;
 }
 
 int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vector<double>>> &list, double  huMomentsA[7], double &lowestValue)
@@ -228,7 +236,7 @@ int ClassifyCard::classifyTypeWithShape(vector<std::pair<classifiers, std::vecto
 			indexOfSecondLowestValue = i;
 		}
 	}
-	//std::cout << lowestValue << " " << indexOfLowestValue << " " << secondLowestValue << " " << indexOfSecondLowestValue << std::endl;
+	//std::cout << lowestValueOfShape << " " << indexOfLowestValueUsingShape << " " << secondLowestValue << " " << indexOfSecondLowestValue << std::endl;
 	if (lowestValue * 1.3 > secondLowestValue)
 	{
 		lowestValue = DBL_MAX;
@@ -315,6 +323,67 @@ void ClassifyCard::generateMoments()
 	}
 }
 
+void ClassifyCard::generateImageVector()
+{
+	vector<string> rankClassifiersList = { "2", "3", "4", "5", "6", "7", "8", "9", "J", "Q", "K", "A" };
+	vector<string> black_suitClassifiersList = { "S", "C" };
+	vector<string> red_suitClassifiersList = { "D", "H" };
+
+	for (int i = 0; i < rankClassifiersList.size(); i++)
+	{
+		Mat src = imread("../GameAnalytics/testImages/" + rankClassifiersList.at(i) + ".png");
+		if (!src.data)	// check for invalid input
+		{
+			std::cerr << "Could not open or find the image" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		cv::Mat grayImg, blurredImg, threshImg;
+		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
+		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
+		cv::threshold(blurredImg, threshImg, 140, 255, THRESH_BINARY);
+		std::pair<classifiers, cv::Mat> pair;
+		pair.first = classifiers(char(rankClassifiersList.at(i).at(0)));
+		pair.second = threshImg.clone();
+		rankImages.push_back(pair);
+	}
+	for (int i = 0; i < red_suitClassifiersList.size(); i++)
+	{
+		Mat src = imread("../GameAnalytics/testImages/" + red_suitClassifiersList.at(i) + ".png");
+		if (!src.data)	// check for invalid input
+		{
+			std::cerr << "Could not open or find the image" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		cv::Mat grayImg, blurredImg, threshImg;
+		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
+		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
+		cv::threshold(blurredImg, threshImg, 140, 255, THRESH_BINARY);
+		std::pair<classifiers, cv::Mat> pair;
+		pair.first = classifiers(char(red_suitClassifiersList.at(i).at(0)));
+		pair.second = threshImg.clone();
+		red_suitImages.push_back(pair);
+	}
+	for (int i = 0; i < black_suitClassifiersList.size(); i++)
+	{
+		Mat src = imread("../GameAnalytics/testImages/" + black_suitClassifiersList.at(i) + ".png");
+		if (!src.data)	// check for invalid input
+		{
+			std::cerr << "Could not open or find the image" << std::endl;
+			exit(EXIT_FAILURE);
+		}
+
+		cv::Mat grayImg, blurredImg, threshImg;
+		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
+		cv::GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
+		cv::threshold(blurredImg, threshImg, 140, 255, THRESH_BINARY);
+		std::pair<classifiers, cv::Mat> pair;
+		pair.first = classifiers(char(black_suitClassifiersList.at(i).at(0)));
+		pair.second = threshImg.clone();
+		black_suitImages.push_back(pair);
+	}
+}
+
 classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest)
 {
 	Mat src = image.clone();
@@ -337,7 +406,7 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 	// Get the rank and suit from the resized card
 	Rect myRankROI(4, 4, 22, 26);
 	Mat rank(card, myRankROI);
-	cv::resize(rank, rank, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
+	cv::resize(rank, rank, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 	Rect mySuitROI(4, 31, 22, 20);
 	Mat suit(card, mySuitROI);
 	cv::resize(suit, suit, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
@@ -478,7 +547,7 @@ int ClassifyCard::getAmountOfKnns()
 	return amountOfKnns;
 }
 
-std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics)
+std::pair<classifiers, classifiers> ClassifyCard::classifyCardWithKnn(std::pair<Mat, Mat> cardCharacteristics)
 {
 	Mat temp1, temp2;
 	std::pair<classifiers, classifiers> cardType;
@@ -536,7 +605,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCardsWithKnn(std::pair
 				kNearest = kNearest_rank;
 			}
 			cv::GaussianBlur(resizedROI, resizedROI, cv::Size(5, 5), 0);
-			threshold(resizedROI, resizedROI, 150, 255, THRESH_BINARY);
+			threshold(resizedROI, resizedROI, 130, 255, THRESH_BINARY);
 			Mat ROIFloat;
 			resizedROI.convertTo(ROIFloat, CV_32FC1);
 			Mat ROIFlattenedFloat = ROIFloat.reshape(1, 1);

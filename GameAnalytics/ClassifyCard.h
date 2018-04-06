@@ -40,10 +40,12 @@ class ClassifyCard
 public:
 	ClassifyCard();
 	std::pair<classifiers, classifiers> classifyCard(std::pair<Mat, Mat> cardCharacteristics);
+	int ClassifyCard::classifyTypeUsingComparison(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue);
 	int classifyTypeWithShape(vector<std::pair<classifiers, std::vector<double>>>& list, double huMomentsA[7], double & lowestValue);
 	void generateMoments();
+	void generateImageVector();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
-	std::pair<classifiers, classifiers> classifyCardsWithKnn(std::pair<Mat, Mat> cardCharacteristics);
+	std::pair<classifiers, classifiers> classifyCardWithKnn(std::pair<Mat, Mat> cardCharacteristics);
 	classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest);
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
@@ -56,6 +58,9 @@ private:
 	vector<std::pair<classifiers, std::vector<double>>> rankHuMoments;
 	vector<std::pair<classifiers, std::vector<double>>> red_suitHuMoments;
 	vector<std::pair<classifiers, std::vector<double>>> black_suitHuMoments;
+	vector<std::pair<classifiers, cv::Mat>> rankImages;
+	vector<std::pair<classifiers, cv::Mat>> red_suitImages;
+	vector<std::pair<classifiers, cv::Mat>> black_suitImages;
 	int amountOfCorrectThrowAways = 0;
 	int amountOfIncorrectThrowAways = 0;
 	int amountOfKnns = 0;
