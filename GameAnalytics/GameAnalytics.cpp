@@ -108,6 +108,10 @@ void GameAnalytics::Process()
 			{
 				std::cout << "UNDO PRESSED!" << std::endl;
 			}
+			if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
+			{
+				std::cout << "NEW GAME PRESSED!" << std::endl;
+			}
 		}
 		src = waitForStableImage();
 		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
