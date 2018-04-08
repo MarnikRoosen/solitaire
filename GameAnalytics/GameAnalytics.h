@@ -46,31 +46,33 @@ public:
 	void Process();
 
 	void handleOutOfMoves();
+	void handleGameWon();
 	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
-	void convertImagesToClassifiedCards(ClassifyCard & cc);
-	cv::Mat waitForStableImage();
+
+	void classifyExtractedCards(ClassifyCard & cc);
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateDeck(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
-	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int &changedIndex1, int &changedIndex2);
-	void printPlayingBoardState();
-	bool cardMoveBetweenTableauAndFoundations(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex2);
-	Mat hwnd2mat(const HWND & hwnd);
+	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);
+	bool cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2);
 
-	void bufferImage(const int x, const int y);
+	void addCoordinatesToBuffer(const int x, const int y);
+	void printPlayingBoardState();
+	
+	cv::Mat hwnd2mat(const HWND & hwnd);
+	cv::Mat waitForStableImage();
 
 private:
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	std::vector<cardLocation> playingBoard;
-	std::vector<bool> knownCards;
-	std::vector<std::pair<classifiers, classifiers>> tempPlayingBoard;
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
+	
 	bool init = true;
 	bool endOfGame = false;
-	int key = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
+	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;
 	int indexOfSelectedCard = -1;
 	RECT appRect;
@@ -81,7 +83,4 @@ private:
 	std::queue<int> ypos;
 	DWORD   dwThreadIdHook;
 	HANDLE  hThreadHook;
-
 };
-
-

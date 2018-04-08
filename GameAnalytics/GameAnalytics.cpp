@@ -1,15 +1,10 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
 
-DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
-
-CRITICAL_SECTION lock;
-
 GameAnalytics ga;
-
 int imagecounter;
-static std::exception_ptr teptr = nullptr;
-
+DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
+CRITICAL_SECTION lock;
 
 int main(int argc, char** argv)
 {
@@ -22,7 +17,7 @@ int main(int argc, char** argv)
 
 	ga.Init();
 
-	hThreadHook = CreateThread(
+	/*hThreadHook = CreateThread(
 		NULL,                   // default security attributes
 		0,                      // use default stack size  
 		ThreadHookFunction,       // thread function name
@@ -33,21 +28,19 @@ int main(int argc, char** argv)
 	{
 		std::cout << "Error thread creation GameA" << std::endl;
 		exit(EXIT_FAILURE);
-	}
+	}*/
 
 	ga.Process();
 
-	CloseHandle(hThreadHook);
+	//CloseHandle(hThreadHook);
 
 	return 0;
 }
-
 
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
 	
 	ClicksHooks::Instance().InstallHook();
 	ClicksHooks::Instance().Messages();
-
 	return 0;
 }
 
@@ -69,7 +62,7 @@ void GameAnalytics::Init() {
 	appMonitorInfo.cbSize = sizeof(appMonitorInfo);
 	GetMonitorInfo(appMonitor, &appMonitorInfo);
 	appRect = appMonitorInfo.rcMonitor;
-	bufferImage(0, 0);	// take first image and add this to buffer
+	addCoordinatesToBuffer(0, 0);	// take first image and add this to buffer
 }
 
 void GameAnalytics::Process()
@@ -83,9 +76,10 @@ void GameAnalytics::Process()
 	POINT pt[2];
 
 	startOfGame = Clock::now();
+	startOfMove = Clock::now();
 
-	while (key != 27 && !endOfGame)	//key = 27 -> error
-	{	
+	while (!endOfGame)
+	{
 		if (!buffer.empty()) {
 			//std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
 
@@ -128,34 +122,37 @@ void GameAnalytics::Process()
 				handlePlayingState(playingBoard, classifyCard);
 				break;
 		}
+
+		if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
+			== classifiedCardsFromPlayingBoard.at(10).first == classifiedCardsFromPlayingBoard.at(11).first == KING)
+		{
+			handleGameWon();
+			endOfGame = true;
+		}
+
 	}	
 }
 
 void GameAnalytics::handleOutOfMoves()
 {
-	std::cout << "Out of moves" << std::endl;
+	std::cout << "GAME STATE: Out of moves" << std::endl;
 	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
-	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::nanoseconds>(endOfGame - startOfGame).count() << " ns" << std::endl;
+	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
 	Sleep(8000);
-	return;
 }
 
-void GameAnalytics::bufferImage(const int x, const int y) {
-	Mat src; // mbuffer;
-	EnterCriticalSection(&lock);
-	imagecounter++;
-	src = hwnd2mat(hwnd);
-	buffer.push(src);
-	xpos.push(x);
-	ypos.push(y);
-	LeaveCriticalSection(&lock);
+void GameAnalytics::handleGameWon()
+{
+	std::cout << "GAME STATE: Game won!" << std::endl;
+	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
+	std::cout << "Game duration: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
+	Sleep(8000);
 }
 
 void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
 {
 	extractedImagesFromPlayingBoard = playingBoard.getCards();
-	convertImagesToClassifiedCards(classifyCard);	// -> average d133ms and 550ms
-
+	classifyExtractedCards(classifyCard);	// -> average d133ms and 550ms
 	if (init)
 	{
 		initializePlayingBoard(classifiedCardsFromPlayingBoard);
@@ -166,6 +163,7 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 		updateBoard(classifiedCardsFromPlayingBoard);
 	}
 
+	// determine which card has been selected
 	if (indexOfSelectedCard == -1 && playingBoard.getSelectedCard() != -1)
 	{
 		indexOfSelectedCard = playingBoard.getSelectedCard();
@@ -191,11 +189,19 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 	{
 		indexOfSelectedCard = -1;
 	}
-
-	return;
 }
 
-void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
+void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
+	Mat src = hwnd2mat(hwnd); // mbuffer;
+	imagecounter++;
+	EnterCriticalSection(&lock);
+	buffer.push(src);
+	xpos.push(x);
+	ypos.push(y);
+	LeaveCriticalSection(&lock);
+}
+
+void GameAnalytics::classifyExtractedCards(ClassifyCard & cc)
 {
 	classifiedCardsFromPlayingBoard.clear();
 	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [&cc, this](cv::Mat mat) {
@@ -208,8 +214,6 @@ void GameAnalytics::convertImagesToClassifiedCards(ClassifyCard & cc)
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
 			cardType = cc.classifyCard(cardCharacteristics);
-			//cardType = cc.classifyCardWithKnn(cardCharacteristics);
-
 		}
 		classifiedCardsFromPlayingBoard.push_back(cardType);
 	});
@@ -221,44 +225,53 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 	do {
 		graySrc1 = hwnd2mat(hwnd);
 		cvtColor(graySrc1, graySrc1, COLOR_BGR2GRAY);
-		waitKey(50);
+		Sleep(20);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		cv::compare(graySrc1, graySrc2, diff, cv::CMP_NE);
-	} while (cv::countNonZero(diff) != 0);
+	} while (cv::countNonZero(diff) > 0);
 	return src2;
 }
 
 void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {
 	playingBoard.resize(12);
-	for (int i = 0; i < 7; i++)
+	int i;
+	cardLocation startupLocation;
+
+	// build stack
+	for (i = 0; i < 7; i++)
 	{
-		cardLocation startupLocation;
-		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
+		startupLocation.knownCards.clear();
+		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
 		{
 			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
 		}
 		startupLocation.unknownCards = i;
 		playingBoard.at(i) = startupLocation;
 	}
-	cardLocation startupLocation;
-	if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY || classifiedCardsFromPlayingBoard.at(7).second != EMPTY)
+
+	// talon
+	startupLocation.knownCards.clear();
+	if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
 	{
 		startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
 	}
 	startupLocation.unknownCards = 24;
 	playingBoard.at(7) = startupLocation;
-	for (int i = 8; i < playingBoard.size(); i++)
+
+	// suit stack
+	for (i = 8; i < playingBoard.size(); i++)
 	{
-		cardLocation startupLocation;
-		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY || classifiedCardsFromPlayingBoard.at(i).second != EMPTY)
+		startupLocation.knownCards.clear();
+		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
 		{
 			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
 		}
 		startupLocation.unknownCards = 0;
 		playingBoard.at(i) = startupLocation;
 	}
+
 	printPlayingBoardState();
 }
 
@@ -267,7 +280,7 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	int changedIndex1 = -1, changedIndex2 = -1;
 	findChangedCardLocations(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2);
 
-	// only one card location changed = shuffled deck
+	// pile pressed (only talon changed)
 	if (changedIndex1 == 7 && changedIndex2 == -1)
 	{
 		updateDeck(changedIndex1, classifiedCardsFromPlayingBoard);
@@ -275,11 +288,11 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	}
 
 
-	// card move from deck to board
+	// card move from talon to board
 	if (changedIndex1 == 7 || changedIndex2 == 7)
 	{
 		int tempIndex;
-		changedIndex1 == 7 ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
+		(changedIndex1 == 7) ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
 		auto result = std::find(
 			playingBoard.at(7).knownCards.begin(),
 			playingBoard.at(7).knownCards.end(),
@@ -293,10 +306,10 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		}
 	}
 
-	// card move between tableau and foundations
+	// card move between build stack and suit stack
 	if (changedIndex1 != -1 && changedIndex2 != -1)
 	{
-		if (cardMoveBetweenTableauAndFoundations(changedIndex1, classifiedCardsFromPlayingBoard, changedIndex2))
+		if (cardMoveBetweenBuildAndSuitStack(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2))
 		{
 			printPlayingBoardState();
 			return;
@@ -304,7 +317,7 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	}
 
 	// error with previously detected card
-	if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)
+	/*if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)
 	{
 		std::cout << "Error with previous board state! Card at index " << changedIndex1 << " should have been: " <<
 			static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).first) << static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).second) << std::endl;
@@ -322,10 +335,10 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		}
 		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		printPlayingBoardState();
-	}
+	}*/
 }
 
-bool GameAnalytics::cardMoveBetweenTableauAndFoundations(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex2)
+bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2)
 {
 	auto inList1 = std::find(playingBoard.at(changedIndex1).knownCards.begin(), playingBoard.at(changedIndex1).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
 	auto inList2 = std::find(playingBoard.at(changedIndex2).knownCards.begin(), playingBoard.at(changedIndex2).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex2));
@@ -389,7 +402,7 @@ bool GameAnalytics::cardMoveBetweenTableauAndFoundations(int changedIndex1, cons
 	return false;
 }
 
-void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int &changedIndex1, int &changedIndex2)
+void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2)
 {
 	for (int i = 0; i < playingBoard.size(); i++)
 	{
@@ -482,15 +495,15 @@ void GameAnalytics::printPlayingBoardState()
 	}
 
 	auto averageThinkTime2 = Clock::now();
-	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfGame).count());
-	startOfGame = Clock::now();
+	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfMove).count());
+	startOfMove = Clock::now();
 	std::cout << "Last time = " << averageThinkDurations.back() << "ms" << std::endl;
 	std::cout << "Avg time = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
 	std::cout << "Moves = " << averageThinkDurations.size() << " moves" << std::endl;
 	std::cout << std::endl;
 }
 
-Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
+cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 	HDC hwindowDC, hwindowCompatibleDC;

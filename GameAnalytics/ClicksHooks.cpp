@@ -56,7 +56,7 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam)
 
 		switch (wParam) {
 		case WM_LBUTTONUP:
-			ga.bufferImage(pMouseStruct->pt.x, pMouseStruct->pt.y);
+			ga.addCoordinatesToBuffer(pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 
 		case WM_LBUTTONDOWN:			
