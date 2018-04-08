@@ -56,6 +56,8 @@ GameAnalytics::GameAnalytics()
 }
 
 void GameAnalytics::Init() {
+	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
 	if (hwnd == NULL)
 	{
@@ -76,6 +78,9 @@ void GameAnalytics::Process()
 	ClassifyCard classifyCard;
 	Mat src;
 	classifiedCardsFromPlayingBoard.reserve(12);
+	double width = abs(appRect.right - appRect.left);
+	double height = abs(appRect.bottom - appRect.top);
+	POINT pt[2];
 
 	startOfGame = Clock::now();
 
@@ -91,13 +96,18 @@ void GameAnalytics::Process()
 			LeaveCriticalSection(&lock);
 			
 			// Mapping the coordinates from the primary window to the window in which the application is playing
-			POINT pt[2];
 			pt->x = x;
 			pt->y = y;
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
+			pt->x = pt->x * standardBoardWidth / width;
+			pt->y = pt->y * standardBoardHeight / height;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
-			
+
+			if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
+			{
+				std::cout << "UNDO PRESSED!" << std::endl;
+			}
 		}
 		src = waitForStableImage();
 		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
