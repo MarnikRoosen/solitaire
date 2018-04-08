@@ -52,7 +52,7 @@ public:
 	void classifyExtractedCards(ClassifyCard & cc);
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
-	void updateDeck(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
+	void updateDeck(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);
 	bool cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2);
 
@@ -78,9 +78,16 @@ private:
 	RECT appRect;
 
 	HWND hwnd;
-	std::queue<cv::Mat> buffer;
-	std::queue<int> xpos;
-	std::queue<int> ypos;
+	std::queue<cv::Mat> srcBuffer;
+	std::queue<int> xPosBuffer;
+	std::queue<int> yPosBuffer;
 	DWORD   dwThreadIdHook;
 	HANDLE  hThreadHook;
+
+	HDC hwindowDC, hwindowCompatibleDC;
+	int height, width;
+	HBITMAP hbwindow;
+	Mat src;
+	BITMAPINFOHEADER  bi;
+	RECT windowsize;    // get the height and width of the screen
 };

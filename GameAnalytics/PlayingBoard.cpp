@@ -152,7 +152,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		
 		if ( contours.size() > 0 )
 		{
-			Rect br = boundingRect(contours.at(0));
+			Rect br = boundingRect(contours.back());
 			Mat card = Mat(playingCards[i], br).clone();
 	
 			Rect selectedRegion = br;

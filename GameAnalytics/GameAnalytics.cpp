@@ -5,6 +5,7 @@ GameAnalytics ga;
 int imagecounter;
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
 CRITICAL_SECTION lock;
+bool debug = false;
 
 int main(int argc, char** argv)
 {
@@ -17,22 +18,23 @@ int main(int argc, char** argv)
 
 	ga.Init();
 
-	/*hThreadHook = CreateThread(
-		NULL,                   // default security attributes
-		0,                      // use default stack size  
-		ThreadHookFunction,       // thread function name
-		0,          // argument to thread function 
-		0,                      // use default creation flags 
-		&dwThreadIdHook);   // returns the thread identifier 
-	if (hThreadHook == NULL)
-	{
-		std::cout << "Error thread creation GameA" << std::endl;
-		exit(EXIT_FAILURE);
-	}*/
+	hThreadHook = CreateThread(
+			NULL,                   // default security attributes
+			0,                      // use default stack size  
+			ThreadHookFunction,       // thread function name
+			0,          // argument to thread function 
+			0,                      // use default creation flags 
+			&dwThreadIdHook);   // returns the thread identifier 
+		if (hThreadHook == NULL)
+		{
+			std::cout << "Error thread creation GameA" << std::endl;
+			exit(EXIT_FAILURE);
+		}
 
 	ga.Process();
 
-	//CloseHandle(hThreadHook);
+	CloseHandle(hThreadHook);
+	
 
 	return 0;
 }
@@ -62,7 +64,7 @@ void GameAnalytics::Init() {
 	appMonitorInfo.cbSize = sizeof(appMonitorInfo);
 	GetMonitorInfo(appMonitor, &appMonitorInfo);
 	appRect = appMonitorInfo.rcMonitor;
-	addCoordinatesToBuffer(0, 0);	// take first image and add this to buffer
+	addCoordinatesToBuffer(0, 0);	// take first image and add this to srcBuffer
 }
 
 void GameAnalytics::Process()
@@ -80,57 +82,68 @@ void GameAnalytics::Process()
 
 	while (!endOfGame)
 	{
-		if (!buffer.empty()) {
-			//std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
+		if (!xPosBuffer.empty() || debug)
+		{
+			if (!debug)
+			{
+				//std::cout << "Take image from srcBuffer - counter = " << imagecounter << std::endl;
+				EnterCriticalSection(&lock);
+				//src = srcBuffer.front(); srcBuffer.pop();
+				int& x = xPosBuffer.front(); xPosBuffer.pop();
+				int& y = yPosBuffer.front(); yPosBuffer.pop();
+				LeaveCriticalSection(&lock);
 
-			EnterCriticalSection(&lock);
-			src = buffer.front(); buffer.pop();
-			int& x = xpos.front(); xpos.pop();
-			int& y = ypos.front(); ypos.pop();
-			LeaveCriticalSection(&lock);
+				// Mapping the coordinates from the primary window to the window in which the application is playing
+				pt->x = x;
+				pt->y = y;
+				MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
+				MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
+				pt->x = pt->x * standardBoardWidth / width;
+				pt->y = pt->y * standardBoardHeight / height;
+				std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
+
+				if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
+				{
+					std::cout << "UNDO PRESSED!" << std::endl;
+				}
+				if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
+				{
+					std::cout << "NEW GAME PRESSED!" << std::endl;
+				}
+			}
 			
-			// Mapping the coordinates from the primary window to the window in which the application is playing
-			pt->x = x;
-			pt->y = y;
-			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
-			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
-			pt->x = pt->x * standardBoardWidth / width;
-			pt->y = pt->y * standardBoardHeight / height;
-			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
-			if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
+			for (int k = 0; k < 2; k++)
 			{
-				std::cout << "UNDO PRESSED!" << std::endl;
-			}
-			if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
-			{
-				std::cout << "NEW GAME PRESSED!" << std::endl;
-			}
-		}
-		src = waitForStableImage();
-		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-		switch (playingBoard.getState())
-		{
-			case outOfMoves:
-				handleOutOfMoves();
-				endOfGame = true;
-				break;
-			case playing:
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-			default:
-				handlePlayingState(playingBoard, classifyCard);
-				break;
-		}
+				src = waitForStableImage();
+				playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+				switch (playingBoard.getState())
+				{
+				case outOfMoves:
+					handleOutOfMoves();
+					endOfGame = true;
+					break;
+				case playing:
+					handlePlayingState(playingBoard, classifyCard);
+					break;
+				default:
+					handlePlayingState(playingBoard, classifyCard);
+					break;
+				}
 
-		if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
-			== classifiedCardsFromPlayingBoard.at(10).first == classifiedCardsFromPlayingBoard.at(11).first == KING)
-		{
-			handleGameWon();
-			endOfGame = true;
+				if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
+					== classifiedCardsFromPlayingBoard.at(10).first == classifiedCardsFromPlayingBoard.at(11).first == KING)
+				{
+					handleGameWon();
+					endOfGame = true;
+				}
+			}
 		}
-
-	}	
+		else
+		{
+			Sleep(10);
+		}
+	}
 }
 
 void GameAnalytics::handleOutOfMoves()
@@ -192,12 +205,12 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 }
 
 void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
-	Mat src = hwnd2mat(hwnd); // mbuffer;
+	//Mat src = hwnd2mat(hwnd); // mbuffer;
 	imagecounter++;
 	EnterCriticalSection(&lock);
-	buffer.push(src);
-	xpos.push(x);
-	ypos.push(y);
+	//srcBuffer.push(src);
+	xPosBuffer.push(x);
+	yPosBuffer.push(y);
 	LeaveCriticalSection(&lock);
 }
 
@@ -283,7 +296,10 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	// pile pressed (only talon changed)
 	if (changedIndex1 == 7 && changedIndex2 == -1)
 	{
-		updateDeck(changedIndex1, classifiedCardsFromPlayingBoard);
+		if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
+		{
+			updateDeck(classifiedCardsFromPlayingBoard);
+		}
 		return;
 	}
 
@@ -317,25 +333,11 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	}
 
 	// error with previously detected card
-	/*if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)
+	if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)
 	{
-		std::cout << "Error with previous board state! Card at index " << changedIndex1 << " should have been: " <<
-			static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).first) << static_cast<char>(classifiedCardsFromPlayingBoard.at(changedIndex1).second) << std::endl;
-		if (!playingBoard.at(changedIndex1).knownCards.empty())
-		{
-			playingBoard.at(changedIndex1).knownCards.pop_back();
-		}
-		else if (classifiedCardsFromPlayingBoard.at(changedIndex1).first == EMPTY)
-		{
-			return;
-		}
-		else
-		{
-			--playingBoard.at(changedIndex1).unknownCards;
-		}
 		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		printPlayingBoardState();
-	}*/
+	}
 }
 
 bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2)
@@ -431,22 +433,22 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 	}
 }
 
-void GameAnalytics::updateDeck(int changedIndex1, const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard)
+void GameAnalytics::updateDeck(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard)
 {
 	auto result = std::find(
-		playingBoard.at(changedIndex1).knownCards.begin(),
-		playingBoard.at(changedIndex1).knownCards.end(),
-		classifiedCardsFromPlayingBoard.at(changedIndex1));
-	if (result == playingBoard.at(changedIndex1).knownCards.end() && classifiedCardsFromPlayingBoard.at(changedIndex1).first != EMPTY)
+		playingBoard.at(7).knownCards.begin(),
+		playingBoard.at(7).knownCards.end(),
+		classifiedCardsFromPlayingBoard.at(7));
+	if (result == playingBoard.at(7).knownCards.end())
 	{
-		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
-		--playingBoard.at(changedIndex1).unknownCards;
+		playingBoard.at(7).knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
+		--playingBoard.at(7).unknownCards;
 		printPlayingBoardState();
 	}
 	else
 	{
-		playingBoard.at(changedIndex1).knownCards.erase(result);
-		playingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+		playingBoard.at(7).knownCards.erase(result);
+		playingBoard.at(7).knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
 		printPlayingBoardState();
 	}
 }
@@ -506,27 +508,16 @@ void GameAnalytics::printPlayingBoardState()
 cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-	HDC hwindowDC, hwindowCompatibleDC;
-
-	int height, width, srcheight, srcwidth;
-	HBITMAP hbwindow;
-	Mat src;
-	BITMAPINFOHEADER  bi;
-
 	hwindowDC = GetDC(hwnd);	//get device context
 	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	//creates a compatible memory device context for the device
 	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, color on color deletes all eliminated lines of pixels
-	RECT windowsize;    // get the height and width of the screen
+
 	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
-	srcheight = windowsize.bottom;
-	srcwidth = windowsize.right;
-	//srcheight = 768;
-	//srcwidth = 1366;
-	height = srcheight * 1;  //possibility to resize the client window screen
-	width = srcwidth * 1;
+	height = windowsize.bottom;
+	width = windowsize.right;
 	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
  
-										// create a bitmap
+	// create a bitmap
 	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
 	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
 	bi.biWidth = width;
@@ -545,14 +536,13 @@ cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense a
 	//PrintWindow(hwnd, hwindowCompatibleDC, PW_CLIENTONLY);
 
 	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, width, height, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 																									   // avoid memory leak
 	DeleteObject(hbwindow);
 	DeleteDC(hwindowCompatibleDC);
 	ReleaseDC(hwnd, hwindowDC);
-	//imshow("test", src);
 
 	return src;
 }
