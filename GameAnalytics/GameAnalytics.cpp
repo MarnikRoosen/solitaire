@@ -62,6 +62,11 @@ void GameAnalytics::Init() {
 		std::cout << "Cant find window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	HMONITOR appMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+	MONITORINFO appMonitorInfo;
+	appMonitorInfo.cbSize = sizeof(appMonitorInfo);
+	GetMonitorInfo(appMonitor, &appMonitorInfo);
+	appRect = appMonitorInfo.rcMonitor;
 	bufferImage(0, 0);	// take first image and add this to buffer
 }
 
@@ -74,39 +79,42 @@ void GameAnalytics::Process()
 
 	startOfGame = Clock::now();
 
-	while (key != 27)	//key = 27 -> error
+	while (key != 27 && !endOfGame)	//key = 27 -> error
 	{	
-		if (!buffer.empty() ) {
+		if (!buffer.empty()) {
 			//std::cout << "Take image from buffer - counter = " << imagecounter << std::endl;
-			
+
 			EnterCriticalSection(&lock);
 			src = buffer.front(); buffer.pop();
 			int& x = xpos.front(); xpos.pop();
 			int& y = ypos.front(); ypos.pop();
-			std::cout << "Click registered at position (" << x << "," << y << ")" << std::endl;
-			LeaveCriticalSection(&lock);			
+			LeaveCriticalSection(&lock);
 			
-			playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-
-			switch (playingBoard.getState())
-			{
-				case outOfMoves:
-					handleOutOfMoves();
-					break;
-				case playing:
-					handlePlayingState(playingBoard, classifyCard);
-					break;
-				default:
-					handlePlayingState(playingBoard, classifyCard);
-					break;
-			}
+			// Mapping the coordinates from the primary window to the window in which the application is playing
+			POINT pt[2];
+			pt->x = x;
+			pt->y = y;
+			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
+			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
+			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
+			
 		}
-		else
+		src = waitForStableImage();
+		playingBoard.findCardsFromBoardImage(src); // -> average 38ms
+		switch (playingBoard.getState())
 		{
-			Sleep(10);
+			case outOfMoves:
+				handleOutOfMoves();
+				endOfGame = true;
+				break;
+			case playing:
+				handlePlayingState(playingBoard, classifyCard);
+				break;
+			default:
+				handlePlayingState(playingBoard, classifyCard);
+				break;
 		}
-	
-	}
+	}	
 }
 
 void GameAnalytics::handleOutOfMoves()
@@ -122,7 +130,7 @@ void GameAnalytics::bufferImage(const int x, const int y) {
 	Mat src; // mbuffer;
 	EnterCriticalSection(&lock);
 	imagecounter++;
-	src = waitForStableImage();
+	src = hwnd2mat(hwnd);
 	buffer.push(src);
 	xpos.push(x);
 	ypos.push(y);

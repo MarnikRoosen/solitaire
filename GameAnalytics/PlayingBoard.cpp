@@ -169,7 +169,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			std::cout << "Cols card =" << playingCards.at(i).cols << std::endl;
 			*/
 
-			Mat selectedCard = Mat(playingCards[i], selectedRegion);
+			/*Mat selectedCard = Mat(playingCards[i], selectedRegion);
 			Mat hsv, mask;
 			cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);
 			blur(hsv, hsv, Size(1, 1));
@@ -183,7 +183,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			else if (indexOfSelectedCard == i)
 			{
 				indexOfSelectedCard = -1;
-			}
+			}*/
 
 			Mat gray, edges, lines, img, thresh;
 			cv::cvtColor(card, gray, COLOR_BGR2GRAY);

@@ -68,10 +68,12 @@ private:
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
 	bool init = true;
+	bool endOfGame = false;
 	int key = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::vector<long long> averageThinkDurations;
 	int indexOfSelectedCard = -1;
+	RECT appRect;
 
 	HWND hwnd;
 	std::queue<cv::Mat> buffer;
