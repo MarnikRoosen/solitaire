@@ -307,7 +307,7 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	// card move from talon to board
 	if (changedIndex1 == 7 || changedIndex2 == 7)
 	{
-		int tempIndex;
+		int tempIndex;	// contains the other index
 		(changedIndex1 == 7) ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
 		auto result = std::find(
 			playingBoard.at(7).knownCards.begin(),
@@ -318,8 +318,8 @@ void GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 			playingBoard.at(7).knownCards.erase(result);
 			playingBoard.at(tempIndex).knownCards.push_back(classifiedCardsFromPlayingBoard.at(tempIndex));
 			printPlayingBoardState();
-			return;
 		}
+
 	}
 
 	// card move between build stack and suit stack
@@ -417,7 +417,7 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 		}
 		else if (i == 7)
 		{
-			if (playingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7) && classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
+			if (playingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7))
 			{
 				changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
 			}
