@@ -35,6 +35,8 @@ struct cardLocation
 	std::vector<std::pair<classifiers, classifiers>> knownCards;
 };
 
+enum SolitaireState { PLAYING, UNDO, QUIT, NEWGAME, MENU, MAINMENU, OUTOFMOVES, WON, HINT, AUTOCOMPLETE };
+
 class PlayingBoard;
 class ClassifyCard;
 
@@ -44,6 +46,10 @@ public:
 	GameAnalytics();
 	void Init();
 	void Process();
+
+	int getTotalUnknownCards();
+
+	void determineNextState();
 
 	void handleEndOfGame();
 	bool handlePlayingState();
@@ -65,6 +71,8 @@ private:
 	PlayingBoard pb;
 	ClassifyCard cc;
 
+	SolitaireState currentState;
+
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	std::vector<cardLocation> currentPlayingBoard;
@@ -75,6 +83,7 @@ private:
 	bool endOfGameBool = false;
 	int numberOfUndos = 0;
 	int numberOfTalonPresses = 0;
+	int numberOfHints = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;

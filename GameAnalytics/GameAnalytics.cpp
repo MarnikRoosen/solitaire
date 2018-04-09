@@ -51,9 +51,13 @@ GameAnalytics::GameAnalytics() : cc(), pb()
 }
 
 void GameAnalytics::Init() {
+	currentState = PLAYING;
+
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
+	//hwnd = FindWindow(_T("Chrome_WidgetWin_1"), NULL);
+
 	if (hwnd == NULL)
 	{
 		std::cout << "Cant find window" << std::endl;
@@ -73,101 +77,205 @@ void GameAnalytics::Init() {
 
 	classifiedCardsFromPlayingBoard.reserve(12);
 	src = waitForStableImage();
-	pb.findCardsFromBoardImage(src); // -> average 38ms
+	pb.findCardsFromBoardImage(src);
 	extractedImagesFromPlayingBoard = pb.getCards();
-	classifyExtractedCards();	// -> average d133ms and 550ms
+	classifyExtractedCards();
 	initializePlayingBoard(classifiedCardsFromPlayingBoard);
 }
 
 void GameAnalytics::Process()
 {
 	bool boardChanged;
+	int loopCount = 0;
 	while (!endOfGameBool)
 	{
-		if (!xPosBuffer.empty() || debug)
+		if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
+			== classifiedCardsFromPlayingBoard.at(10).first == classifiedCardsFromPlayingBoard.at(11).first == KING)
 		{
-			if (!debug)
-			{
-				//std::cout << "Take image from srcBuffer - counter = " << imagecounter << std::endl;
-				EnterCriticalSection(&lock);
-				//src = srcBuffer.front(); srcBuffer.pop();
-				int& x = xPosBuffer.front(); xPosBuffer.pop();
-				int& y = yPosBuffer.front(); yPosBuffer.pop();
-				LeaveCriticalSection(&lock);
+			currentState = WON;
+		}
+		else if (!xPosBuffer.empty())
+		{
+			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 
-				// Mapping the coordinates from the primary window to the window in which the application is playing
-				pt->x = x;
-				pt->y = y;
-				MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
-				MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
-				pt->x = pt->x * standardBoardWidth / windowWidth;
-				pt->y = pt->y * standardBoardHeight / windowHeight;
-				std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
+			EnterCriticalSection(&lock);
+			int& x = xPosBuffer.front(); xPosBuffer.pop();
+			int& y = yPosBuffer.front(); yPosBuffer.pop();
+			LeaveCriticalSection(&lock);
 
-				if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
-				{
-					std::cout << "UNDO PRESSED! Updated playingboard:" << std::endl;
-					previousPlayingBoards.pop_back();
-					currentPlayingBoard = previousPlayingBoards.back();
-					printPlayingBoardState();
-					++numberOfUndos;
-					continue;
-				}
-				if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
-				{
-					std::cout << "NEW GAME PRESSED!" << std::endl;
-				}
-				if ((13 <= pt->x  && pt->x <= 82) && (1 <= pt->y && pt->y <= 55))
-				{
-					std::cout << "MENU PRESSED!" << std::endl;
-				}
-				if ((283 <= pt->x  && pt->x <= 416) && (84 <= pt->y && pt->y <= 258))
-				{
-					++numberOfTalonPresses;
-				}
-				if ((91 <= pt->x  && pt->x <= 161) && (1 <= pt->y && pt->y <= 55))
-				{
-					std::cout << "BACK PRESSED!" << std::endl;
-				}
-			}
+			// Mapping the coordinates from the primary window to the window in which the application is playing
+			pt->x = x;
+			pt->y = y;
+			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
+			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
+			pt->x = pt->x * standardBoardWidth / windowWidth;
+			pt->y = pt->y * standardBoardHeight / windowHeight;
+			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 			
-			boardChanged = false;
-			do
+			std::chrono::time_point<std::chrono::steady_clock> test3 = Clock::now();
+			std::cout << "XY: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test3 - test1).count() << " ns" << std::endl;
+			determineNextState();
+			std::chrono::time_point<std::chrono::steady_clock> test4 = Clock::now();
+			std::cout << "State: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test4 - test1).count() << " ns" << std::endl;
+
+			switch (currentState)
 			{
+			case PLAYING:
 				src = waitForStableImage();
 				pb.findCardsFromBoardImage(src); // -> average 38ms
-				switch (pb.getState())
-				{
-				case outOfMoves:
-					std::cout << "--------------------------------------------------------" << std::endl;
-					std::cout << "Out of moves" << std::endl;
-					std::cout << "--------------------------------------------------------" << std::endl;
-					handleEndOfGame();
-					endOfGameBool = true;
-					break;
-				case playing:
-					boardChanged = handlePlayingState();
-					break;
-				default:
-					boardChanged = handlePlayingState();
-					break;
-				}
-
-				if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
-					== classifiedCardsFromPlayingBoard.at(10).first == classifiedCardsFromPlayingBoard.at(11).first == KING)
-				{
-					std::cout << "--------------------------------------------------------" << std::endl;
-					std::cout << "Game won!" << std::endl;
-					std::cout << "--------------------------------------------------------" << std::endl;
-					endOfGameBool = true;
-					handleEndOfGame();
-				}
-			} while (false);
+				boardChanged = handlePlayingState();
+				break;
+			case UNDO:
+				previousPlayingBoards.pop_back();
+				currentPlayingBoard = previousPlayingBoards.back();
+				printPlayingBoardState();
+				++numberOfUndos;
+				currentState = PLAYING;
+				break;
+			case QUIT:
+				std::cout << "--------------------------------------------------------" << std::endl;
+				std::cout << "Game lost" << std::endl;
+				std::cout << "--------------------------------------------------------" << std::endl;
+				handleEndOfGame();
+				endOfGameBool = true;
+				break;
+			case NEWGAME:
+				break;
+			case MENU:
+				break;
+			case MAINMENU:
+				break;
+			case OUTOFMOVES:
+				break;
+			case WON:
+				std::cout << "--------------------------------------------------------" << std::endl;
+				std::cout << "Game won!" << std::endl;
+				std::cout << "--------------------------------------------------------" << std::endl;
+				endOfGameBool = true;
+				handleEndOfGame();
+				break;
+			case AUTOCOMPLETE:
+				std::cout << "--------------------------------------------------------" << std::endl;
+				std::cout << "Game won! Finished using autocomplete." << std::endl;
+				std::cout << "--------------------------------------------------------" << std::endl;
+				endOfGameBool = true;
+				handleEndOfGame();
+				break;
+			case HINT:
+				++numberOfHints;
+				currentState = PLAYING;
+				break;
+			default:
+				std::cerr << "Error: currentState is not defined!" << std::endl;
+				break;
+			}
+			std::chrono::time_point<std::chrono::steady_clock> testb = Clock::now();
+			std::cout << "TEST: " << std::chrono::duration_cast<std::chrono::nanoseconds>(testb - test4).count() << " ns" << std::endl;
 		}
 		else
 		{
 			Sleep(10);
 		}
+
+	}
+}
+
+int GameAnalytics::getTotalUnknownCards()
+{
+	int totalUnknownCards = 0;
+	for_each(currentPlayingBoard.begin(), currentPlayingBoard.end(), [&totalUnknownCards](const cardLocation & loc) { totalUnknownCards += loc.unknownCards; });
+	return totalUnknownCards;
+}
+
+void GameAnalytics::determineNextState()
+{
+	switch (currentState)
+	{
+	case MENU:
+		if ((1 <= pt->x  && pt->x <= 300) && (64 <= pt->y && pt->y <= 108))
+		{
+			std::cout << "HINT PRESSED!" << std::endl;
+			currentState = HINT;
+		}
+		else if (!((1 <= pt->x  && pt->x <= 300) && (54 <= pt->y && pt->y <= 899)))
+		{
+			std::cout << "PLAYING!" << std::endl;
+			currentState = PLAYING;
+		}
+		break;
+	case NEWGAME:
+		if ((1175 <= pt->x  && pt->x <= 1312) && (486 <= pt->y && pt->y <= 516))
+		{
+			std::cout << "CANCEL PRESSED!" << std::endl;
+			currentState = PLAYING;
+		}
+		else if ((1010 <= pt->x  && pt->x <= 1146) && (486 <= pt->y && pt->y <= 516))
+		{
+			std::cout << "CONTINUE PRESSED!" << std::endl;
+			currentState = QUIT;
+		}
+		break;
+	case OUTOFMOVES:
+		if ((1175 <= pt->x  && pt->x <= 1312) && (486 <= pt->y && pt->y <= 516))
+		{
+			std::cout << "UNDO PRESSED!" << std::endl;
+			currentState = UNDO;
+		}
+		else if ((1010 <= pt->x  && pt->x <= 1146) && (486 <= pt->y && pt->y <= 516))
+		{
+			std::cout << "CONTINUE PRESSED!" << std::endl;
+			currentState = QUIT;
+		}
+		else
+		{
+			currentState = OUTOFMOVES;
+		}
+		break;
+	case MAINMENU:
+		if ((75 <= pt->x  && pt->x <= 360) && (149 <= pt->y && pt->y <= 416))
+		{
+			std::cout << "KLONDIKE PRESSED!" << std::endl;
+			currentState = PLAYING;
+		}
+		break;
+	case PLAYING:
+		if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
+		{
+			if (currentPlayingBoard.at(7).knownCards.size() > 0 && getTotalUnknownCards() > 0)
+			{
+				std::cout << "UNDO PRESSED!" << std::endl;
+				currentState = UNDO;
+			}
+			else
+			{
+				std::cout << "SOLVE PRESSED!" << std::endl;
+				currentState = AUTOCOMPLETE;
+			}
+		}
+		else if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
+		{
+			std::cout << "NEWGAME PRESSED!" << std::endl;
+			currentState = NEWGAME;
+		}
+		else if ((13 <= pt->x  && pt->x <= 82) && (1 <= pt->y && pt->y <= 55))
+		{
+			std::cout << "MENU PRESSED!" << std::endl;
+			currentState = MENU;
+		}
+		else if ((283 <= pt->x  && pt->x <= 416) && (84 <= pt->y && pt->y <= 258))
+		{
+			std::cout << "TALON PRESSED!" << std::endl;
+			++numberOfTalonPresses;
+		}
+		else if ((91 <= pt->x  && pt->x <= 161) && (1 <= pt->y && pt->y <= 55))
+		{
+			std::cout << "BACK PRESSED!" << std::endl;
+			currentState = MAINMENU;
+		}
+		break;
+	default:
+		std::cerr << "Error: currentState is not defined!" << std::endl;
+		break;
 	}
 }
 
