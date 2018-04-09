@@ -45,16 +45,15 @@ public:
 	void Init();
 	void Process();
 
-	void handleOutOfMoves();
-	void handleGameWon();
-	void handlePlayingState();
+	void handleEndOfGame();
+	bool handlePlayingState();
 
 	void classifyExtractedCards();
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateDeck(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);
 	bool cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2);
-	void updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
+	bool updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 
 	void addCoordinatesToBuffer(const int x, const int y);
 	void printPlayingBoardState();
@@ -68,11 +67,14 @@ private:
 
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
-	std::vector<cardLocation> playingBoard;
+	std::vector<cardLocation> currentPlayingBoard;
+	std::vector<std::vector<cardLocation>> previousPlayingBoards;
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
 	
-	bool endOfGame = false;
+	bool endOfGameBool = false;
+	int numberOfUndos = 0;
+	int numberOfTalonPresses = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;
