@@ -47,9 +47,9 @@ public:
 
 	void handleOutOfMoves();
 	void handleGameWon();
-	void handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard);
+	void handlePlayingState();
 
-	void classifyExtractedCards(ClassifyCard & cc);
+	void classifyExtractedCards();
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
 	void updateDeck(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);
@@ -63,19 +63,22 @@ public:
 	cv::Mat waitForStableImage();
 
 private:
+	PlayingBoard pb;
+	ClassifyCard cc;
+
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;
 	std::vector<cardLocation> playingBoard;
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
 	
-	bool init = true;
 	bool endOfGame = false;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;
 	int indexOfSelectedCard = -1;
 	RECT appRect;
+	double windowWidth, windowHeight;
 
 	HWND hwnd;
 	std::queue<cv::Mat> srcBuffer;
@@ -90,4 +93,6 @@ private:
 	Mat src;
 	BITMAPINFOHEADER  bi;
 	RECT windowsize;    // get the height and width of the screen
+	POINT pt[2];
+
 };

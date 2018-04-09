@@ -46,7 +46,7 @@ DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
 	return 0;
 }
 
-GameAnalytics::GameAnalytics()
+GameAnalytics::GameAnalytics() : cc(), pb()
 {
 }
 
@@ -64,22 +64,23 @@ void GameAnalytics::Init() {
 	appMonitorInfo.cbSize = sizeof(appMonitorInfo);
 	GetMonitorInfo(appMonitor, &appMonitorInfo);
 	appRect = appMonitorInfo.rcMonitor;
-	addCoordinatesToBuffer(0, 0);	// take first image and add this to srcBuffer
-}
-
-void GameAnalytics::Process()
-{
-	PlayingBoard playingBoard;
-	ClassifyCard classifyCard;
-	Mat src;
-	classifiedCardsFromPlayingBoard.reserve(12);
-	double width = abs(appRect.right - appRect.left);
-	double height = abs(appRect.bottom - appRect.top);
-	POINT pt[2];
+	//addCoordinatesToBuffer(0, 0);	// take first image and add this to srcBuffer
+	windowWidth = abs(appRect.right - appRect.left);
+	windowHeight = abs(appRect.bottom - appRect.top);
 
 	startOfGame = Clock::now();
 	startOfMove = Clock::now();
 
+	classifiedCardsFromPlayingBoard.reserve(12);
+	src = waitForStableImage();
+	pb.findCardsFromBoardImage(src); // -> average 38ms
+	extractedImagesFromPlayingBoard = pb.getCards();
+	classifyExtractedCards();	// -> average d133ms and 550ms
+	initializePlayingBoard(classifiedCardsFromPlayingBoard);
+}
+
+void GameAnalytics::Process()
+{
 	while (!endOfGame)
 	{
 		if (!xPosBuffer.empty() || debug)
@@ -98,8 +99,8 @@ void GameAnalytics::Process()
 				pt->y = y;
 				MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
 				MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
-				pt->x = pt->x * standardBoardWidth / width;
-				pt->y = pt->y * standardBoardHeight / height;
+				pt->x = pt->x * standardBoardWidth / windowWidth;
+				pt->y = pt->y * standardBoardHeight / windowHeight;
 				std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
 				if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
@@ -116,18 +117,18 @@ void GameAnalytics::Process()
 			for (int k = 0; k < 2; k++)
 			{
 				src = waitForStableImage();
-				playingBoard.findCardsFromBoardImage(src); // -> average 38ms
-				switch (playingBoard.getState())
+				pb.findCardsFromBoardImage(src); // -> average 38ms
+				switch (pb.getState())
 				{
 				case outOfMoves:
 					handleOutOfMoves();
 					endOfGame = true;
 					break;
 				case playing:
-					handlePlayingState(playingBoard, classifyCard);
+					handlePlayingState();
 					break;
 				default:
-					handlePlayingState(playingBoard, classifyCard);
+					handlePlayingState();
 					break;
 				}
 
@@ -162,31 +163,23 @@ void GameAnalytics::handleGameWon()
 	Sleep(8000);
 }
 
-void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard &classifyCard)
+void GameAnalytics::handlePlayingState()
 {
-	extractedImagesFromPlayingBoard = playingBoard.getCards();
-	classifyExtractedCards(classifyCard);	// -> average d133ms and 550ms
-	if (init)
-	{
-		initializePlayingBoard(classifiedCardsFromPlayingBoard);
-		init = false;
-	}
-	else
-	{
-		updateBoard(classifiedCardsFromPlayingBoard);
-	}
+	extractedImagesFromPlayingBoard = pb.getCards();
+	classifyExtractedCards();	// -> average d133ms and 550ms
+	updateBoard(classifiedCardsFromPlayingBoard);
 
 	// determine which card has been selected
-	if (indexOfSelectedCard == -1 && playingBoard.getSelectedCard() != -1)
+	if (indexOfSelectedCard == -1 && pb.getSelectedCard() != -1)
 	{
-		indexOfSelectedCard = playingBoard.getSelectedCard();
+		indexOfSelectedCard = pb.getSelectedCard();
 	}
-	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() != -1 && indexOfSelectedCard != playingBoard.getSelectedCard())
+	else if (indexOfSelectedCard != -1 && pb.getSelectedCard() != -1 && indexOfSelectedCard != pb.getSelectedCard())
 	{
 		char prevSuit = static_cast<char>(classifiedCardsFromPlayingBoard.at(indexOfSelectedCard).second);
-		char newSuit = static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).second);
+		char newSuit = static_cast<char>(classifiedCardsFromPlayingBoard.at(pb.getSelectedCard()).second);
 		char prevRank = static_cast<char>(classifiedCardsFromPlayingBoard.at(indexOfSelectedCard).first);
-		char newRank = static_cast<char>(classifiedCardsFromPlayingBoard.at(playingBoard.getSelectedCard()).first);
+		char newRank = static_cast<char>(classifiedCardsFromPlayingBoard.at(pb.getSelectedCard()).first);
 		if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))
 			|| ((prevSuit == 'S' || prevSuit == 'C') && (newSuit == 'S' || newSuit == 'C')))
 		{
@@ -196,9 +189,9 @@ void GameAnalytics::handlePlayingState(PlayingBoard &playingBoard, ClassifyCard 
 		{
 			std::cout << "Incompatible rank! " << prevRank << " isn't compatible with " << newRank << std::endl;
 		}
-		indexOfSelectedCard = playingBoard.getSelectedCard();
+		indexOfSelectedCard = pb.getSelectedCard();
 	}
-	else if (indexOfSelectedCard != -1 && playingBoard.getSelectedCard() == -1)
+	else if (indexOfSelectedCard != -1 && pb.getSelectedCard() == -1)
 	{
 		indexOfSelectedCard = -1;
 	}
@@ -214,10 +207,10 @@ void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
 	LeaveCriticalSection(&lock);
 }
 
-void GameAnalytics::classifyExtractedCards(ClassifyCard & cc)
+void GameAnalytics::classifyExtractedCards()
 {
 	classifiedCardsFromPlayingBoard.clear();
-	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [&cc, this](cv::Mat mat) {
+	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [this](cv::Mat mat) {
 		if (mat.empty())
 		{
 			cardType.first = EMPTY;
