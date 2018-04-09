@@ -5,7 +5,6 @@ GameAnalytics ga;
 int imagecounter;
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
 CRITICAL_SECTION lock;
-bool debug = false;
 
 int main(int argc, char** argv)
 {
@@ -33,7 +32,7 @@ int main(int argc, char** argv)
 
 	ga.Process();
 
-	CloseHandle(hThreadHook);
+	//CloseHandle(hThreadHook);
 	
 
 	return 0;
@@ -112,16 +111,12 @@ void GameAnalytics::Process()
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 			
-			std::chrono::time_point<std::chrono::steady_clock> test3 = Clock::now();
-			std::cout << "XY: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test3 - test1).count() << " ns" << std::endl;
+			src = waitForStableImage();
 			determineNextState();
-			std::chrono::time_point<std::chrono::steady_clock> test4 = Clock::now();
-			std::cout << "State: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test4 - test1).count() << " ns" << std::endl;
 
 			switch (currentState)
 			{
 			case PLAYING:
-				src = waitForStableImage();
 				pb.findCardsFromBoardImage(src); // -> average 38ms
 				boardChanged = handlePlayingState();
 				break;
@@ -134,7 +129,7 @@ void GameAnalytics::Process()
 				break;
 			case QUIT:
 				std::cout << "--------------------------------------------------------" << std::endl;
-				std::cout << "Game lost" << std::endl;
+				std::cout << "Game over" << std::endl;
 				std::cout << "--------------------------------------------------------" << std::endl;
 				handleEndOfGame();
 				endOfGameBool = true;
@@ -169,8 +164,6 @@ void GameAnalytics::Process()
 				std::cerr << "Error: currentState is not defined!" << std::endl;
 				break;
 			}
-			std::chrono::time_point<std::chrono::steady_clock> testb = Clock::now();
-			std::cout << "TEST: " << std::chrono::duration_cast<std::chrono::nanoseconds>(testb - test4).count() << " ns" << std::endl;
 		}
 		else
 		{
@@ -239,7 +232,11 @@ void GameAnalytics::determineNextState()
 		}
 		break;
 	case PLAYING:
-		if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
+		if (pb.checkForOutOfMovesState(src))
+		{
+			currentState = OUTOFMOVES;
+		}
+		else if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
 		{
 			if (currentPlayingBoard.at(7).knownCards.size() > 0 && getTotalUnknownCards() > 0)
 			{

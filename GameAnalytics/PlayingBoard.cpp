@@ -143,7 +143,7 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		cv::threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
-		if (contours.size() > 1)	// exceptional cases in which small noisefragments would be visible
+		if (contours.size() > 1)
 		{
 			auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point> & c1) { return (contourArea(c1, false) < 10000); });
 			contours.erase(new_end, contours.end());
@@ -152,7 +152,16 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		
 		if ( contours.size() > 0 )
 		{
-			Rect br = boundingRect(contours.back());
+			Rect br = boundingRect(contours.at(0));
+			if (contours.size() == 2)	// the lowest rect is the actual card
+			{
+				Rect br2 = boundingRect(contours.at(1));
+				if (br.y < br2.y)
+				{
+					br = br2;
+				}
+			}
+			
 			Mat card = Mat(playingCards[i], br).clone();
 	
 			Rect selectedRegion = br;
@@ -160,38 +169,14 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			if (selectedRegion.height + 3 <= playingCards.at(i).rows) selectedRegion.height += 3;
 			if (selectedRegion.width + 6 <= playingCards.at(i).cols) selectedRegion.width += 6;
 
-			/*
-			std::cout << "Rect x =" << selectedRegion.x << std::endl;
-			std::cout << "Rect y =" << selectedRegion.y << std::endl;
-			std::cout << "Rect h =" << selectedRegion.height << std::endl;
-			std::cout << "Rect w =" << selectedRegion.width << std::endl;
-			std::cout << "Rows card =" << playingCards.at(i).rows << std::endl;
-			std::cout << "Cols card =" << playingCards.at(i).cols << std::endl;
-			*/
 
-			/*Mat selectedCard = Mat(playingCards[i], selectedRegion);
-			Mat hsv, mask;
-			cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);
-			blur(hsv, hsv, Size(1, 1));
-			Scalar lo_int(89, 43, 172);	// light blue
-			Scalar hi_int(95, 168, 239);
-			inRange(hsv, lo_int, hi_int, mask);
-			if (countNonZero(mask) > 0)	// card has a blue border -> selected!
-			{
-				indexOfSelectedCard = i;
-			}
-			else if (indexOfSelectedCard == i)
-			{
-				indexOfSelectedCard = -1;
-			}*/
-
-			Mat gray, edges, lines, img, thresh;
+			/*Mat gray, edges, lines, img, thresh;
 			cv::cvtColor(card, gray, COLOR_BGR2GRAY);
 			cv::threshold(gray, thresh, 200, 255, THRESH_BINARY);
 			cv::Canny(thresh, edges, 0, 255);
 			int minLineLength = 100;
 			int maxLineGap = 5;
-			HoughLinesP(edges, lines, 1, M_PIl / 180, 100, minLineLength, maxLineGap);
+			HoughLinesP(edges, lines, 1, M_PIl / 180, 100, minLineLength, maxLineGap);*/
 
 
 
