@@ -49,6 +49,13 @@ GameAnalytics::GameAnalytics() : cc(), pb()
 {
 }
 
+GameAnalytics::~GameAnalytics()
+{
+	DeleteObject(hbwindow);
+	DeleteDC(hwindowCompatibleDC);
+	ReleaseDC(hwnd, hwindowDC);
+}
+
 void GameAnalytics::Init() {
 	currentState = PLAYING;
 
@@ -67,9 +74,33 @@ void GameAnalytics::Init() {
 	appMonitorInfo.cbSize = sizeof(appMonitorInfo);
 	GetMonitorInfo(appMonitor, &appMonitorInfo);
 	appRect = appMonitorInfo.rcMonitor;
-	//addCoordinatesToBuffer(0, 0);	// take first image and add this to srcBuffer
 	windowWidth = abs(appRect.right - appRect.left);
 	windowHeight = abs(appRect.bottom - appRect.top);
+	
+	// preparing for screencapture
+
+	hwindowDC = GetDC(hwnd);	//get device context
+	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	//creates a compatible memory device context for the device
+	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, color on color deletes all eliminated lines of pixels
+
+	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
+	height = windowsize.bottom;
+	width = windowsize.right;
+	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
+										// create a bitmap
+	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
+	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
+	bi.biWidth = width;
+	bi.biHeight = -height;  //origin of the source is the top left corner, height is 'negative'
+	bi.biPlanes = 1;
+	bi.biBitCount = 32;
+	bi.biCompression = BI_RGB;
+	bi.biSizeImage = 0;
+	bi.biXPelsPerMeter = 0;
+	bi.biYPelsPerMeter = 0;
+	bi.biClrUsed = 0;
+	bi.biClrImportant = 0;
+	SelectObject(hwindowCompatibleDC, hbwindow);	// use the previously created device context with the bitmap
 
 	startOfGame = Clock::now();
 	startOfMove = Clock::now();
@@ -85,7 +116,6 @@ void GameAnalytics::Init() {
 void GameAnalytics::Process()
 {
 	bool boardChanged;
-	int loopCount = 0;
 	while (!endOfGameBool)
 	{
 		if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
@@ -95,8 +125,6 @@ void GameAnalytics::Process()
 		}
 		else if (!xPosBuffer.empty())
 		{
-			std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-
 			EnterCriticalSection(&lock);
 			int& x = xPosBuffer.front(); xPosBuffer.pop();
 			int& y = yPosBuffer.front(); yPosBuffer.pop();
@@ -113,7 +141,8 @@ void GameAnalytics::Process()
 			
 			src = waitForStableImage();
 			determineNextState();
-
+			determinePressedCard();
+		
 			switch (currentState)
 			{
 			case PLAYING:
@@ -124,7 +153,7 @@ void GameAnalytics::Process()
 				previousPlayingBoards.pop_back();
 				currentPlayingBoard = previousPlayingBoards.back();
 				printPlayingBoardState();
-				++numberOfUndos;
+				++numberOfUndos;			
 				currentState = PLAYING;
 				break;
 			case QUIT:
@@ -178,6 +207,60 @@ int GameAnalytics::getTotalUnknownCards()
 	int totalUnknownCards = 0;
 	for_each(currentPlayingBoard.begin(), currentPlayingBoard.end(), [&totalUnknownCards](const cardLocation & loc) { totalUnknownCards += loc.unknownCards; });
 	return totalUnknownCards;
+}
+
+void GameAnalytics::determinePressedCard()
+{
+	
+	if ((434 <= pt->x  && pt->x <= 629) && (84 <= pt->y && pt->y <= 258))
+	{
+		std::cout << "TALON PRESSED!" << std::endl;
+	}
+	else if ((734 <= pt->x  && pt->x <= 865) && (84 <= pt->y && pt->y <= 258))
+	{
+		std::cout << "SUIT0 PRESSED!" << std::endl;
+	}
+	else if ((884 <= pt->x  && pt->x <= 1015) && (84 <= pt->y && pt->y <= 258))
+	{
+		std::cout << "SUIT1 PRESSED!" << std::endl;
+	}
+	else if ((1034 <= pt->x  && pt->x <= 1165) && (84 <= pt->y && pt->y <= 258))
+	{
+		std::cout << "SUIT2 PRESSED!" << std::endl;
+	}
+	else if ((1184 <= pt->x  && pt->x <= 1315) && (84 <= pt->y && pt->y <= 258))
+	{
+		std::cout << "SUIT3 PRESSED!" << std::endl;
+	}
+	else if ((284 <= pt->x  && pt->x <= 415) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD0 PRESSED!" << std::endl;
+	}
+	else if ((434 <= pt->x  && pt->x <= 565) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD1 PRESSED!" << std::endl;
+	}
+	else if ((584 <= pt->x  && pt->x <= 715) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD2 PRESSED!" << std::endl;
+	}
+	else if ((734 <= pt->x  && pt->x <= 865) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD3 PRESSED!" << std::endl;
+	}
+	else if ((884 <= pt->x  && pt->x <= 1015) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD4 PRESSED!" << std::endl;
+	}
+	else if ((1034 <= pt->x  && pt->x <= 1165) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD5 PRESSED!" << std::endl;
+	}
+	else if ((1184 <= pt->x  && pt->x <= 1315) && (290 <= pt->y && pt->y <= 850))
+	{
+		std::cout << "BUILD6 PRESSED!" << std::endl;
+	}
+			
 }
 
 void GameAnalytics::determineNextState()
@@ -234,20 +317,13 @@ void GameAnalytics::determineNextState()
 	case PLAYING:
 		if (pb.checkForOutOfMovesState(src))
 		{
+			std::cout << "OUT OF MOVES!" << std::endl;
 			currentState = OUTOFMOVES;
 		}
 		else if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
 		{
-			if (currentPlayingBoard.at(7).knownCards.size() > 0 && getTotalUnknownCards() > 0)
-			{
-				std::cout << "UNDO PRESSED!" << std::endl;
-				currentState = UNDO;
-			}
-			else
-			{
-				std::cout << "SOLVE PRESSED!" << std::endl;
-				currentState = AUTOCOMPLETE;
-			}
+			std::cout << "UNDO PRESSED!" << std::endl;
+			currentState = UNDO;
 		}
 		else if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
 		{
@@ -261,8 +337,8 @@ void GameAnalytics::determineNextState()
 		}
 		else if ((283 <= pt->x  && pt->x <= 416) && (84 <= pt->y && pt->y <= 258))
 		{
-			std::cout << "TALON PRESSED!" << std::endl;
-			++numberOfTalonPresses;
+			std::cout << "PILE PRESSED!" << std::endl;
+			++numberOfPilePresses;
 		}
 		else if ((91 <= pt->x  && pt->x <= 161) && (1 <= pt->y && pt->y <= 55))
 		{
@@ -284,7 +360,7 @@ void GameAnalytics::handleEndOfGame()
 	std::cout << "Average time per move = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
 	std::cout << "Number of moves = " << averageThinkDurations.size() << " moves" << std::endl;
 	std::cout << "Times undo = " << numberOfUndos << std::endl;
-	std::cout << "Times talon pressed = " << numberOfTalonPresses << std::endl;
+	std::cout << "Times pile pressed = " << numberOfPilePresses << std::endl;
 	Sleep(15000);
 }
 
@@ -301,6 +377,7 @@ bool GameAnalytics::handlePlayingState()
 	{
 		return false;
 	}
+
 }
 
 void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
@@ -333,15 +410,16 @@ void GameAnalytics::classifyExtractedCards()
 
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
-	Mat src2, graySrc1, graySrc2, diff;
+	Mat src1, src2, graySrc1, graySrc2;
+	double norm = DBL_MAX;
 	do {
-		graySrc1 = hwnd2mat(hwnd);
-		cvtColor(graySrc1, graySrc1, COLOR_BGR2GRAY);
+		src1 = hwnd2mat(hwnd);
+		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
 		Sleep(50);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
-		cv::compare(graySrc1, graySrc2, diff, cv::CMP_NE);
-	} while (cv::countNonZero(diff) > 0);
+		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
+	} while (norm > 0.0);
 	return src2;
 }
 
@@ -617,42 +695,8 @@ void GameAnalytics::printPlayingBoardState()
 
 cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
-	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
-	hwindowDC = GetDC(hwnd);	//get device context
-	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	//creates a compatible memory device context for the device
-	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, color on color deletes all eliminated lines of pixels
-
-	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
-	height = windowsize.bottom;
-	width = windowsize.right;
-	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
- 
-	// create a bitmap
-	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
-	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
-	bi.biWidth = width;
-	bi.biHeight = -height;  //origin of the source is the top left corner, height is 'negative'
-	bi.biPlanes = 1;
-	bi.biBitCount = 32;
-	bi.biCompression = BI_RGB;
-	bi.biSizeImage = 0;
-	bi.biXPelsPerMeter = 0;
-	bi.biYPelsPerMeter = 0;
-	bi.biClrUsed = 0;
-	bi.biClrImportant = 0;
-
-	// use the previously created device context with the bitmap
-	SelectObject(hwindowCompatibleDC, hbwindow);
-	//PrintWindow(hwnd, hwindowCompatibleDC, PW_CLIENTONLY);
-
 	// copy from the window device context to the bitmap device context
 	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, width, height, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
-
-																									   // avoid memory leak
-	DeleteObject(hbwindow);
-	DeleteDC(hwindowCompatibleDC);
-	ReleaseDC(hwnd, hwindowDC);
-
 	return src;
 }

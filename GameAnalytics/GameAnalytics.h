@@ -44,10 +44,13 @@ class GameAnalytics
 {
 public:
 	GameAnalytics();
+	~GameAnalytics();
 	void Init();
 	void Process();
 
 	int getTotalUnknownCards();
+
+	void determinePressedCard();
 
 	void determineNextState();
 
@@ -82,7 +85,7 @@ private:
 	
 	bool endOfGameBool = false;
 	int numberOfUndos = 0;
-	int numberOfTalonPresses = 0;
+	int numberOfPilePresses = 0;
 	int numberOfHints = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;

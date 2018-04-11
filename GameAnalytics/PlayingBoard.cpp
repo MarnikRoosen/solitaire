@@ -34,8 +34,6 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	inRange(hsv, lo, hi, mask);
 	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 
-	//if (checkForOutOfMovesState(boardImage)) { return; }
-
 	// filter out the cardregions, followed by the cards
 	extractCards( extractCardRegions( croppedSrc ) );
 }
