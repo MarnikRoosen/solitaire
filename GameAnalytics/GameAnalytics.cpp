@@ -118,8 +118,8 @@ void GameAnalytics::Process()
 	bool boardChanged;
 	while (!endOfGameBool)
 	{
-		if (classifiedCardsFromPlayingBoard.at(8).first == classifiedCardsFromPlayingBoard.at(9).first
-			== classifiedCardsFromPlayingBoard.at(10).first == classifiedCardsFromPlayingBoard.at(11).first == KING)
+		if (currentPlayingBoard.at(8).knownCards.size() == 13 && currentPlayingBoard.at(9).knownCards.size() == 13
+			&& currentPlayingBoard.at(10).knownCards.size() == 13 && currentPlayingBoard.at(11).knownCards.size() == 13)
 		{
 			currentState = WON;
 		}
@@ -163,14 +163,6 @@ void GameAnalytics::Process()
 				handleEndOfGame();
 				endOfGameBool = true;
 				break;
-			case NEWGAME:
-				break;
-			case MENU:
-				break;
-			case MAINMENU:
-				break;
-			case OUTOFMOVES:
-				break;
 			case WON:
 				std::cout << "--------------------------------------------------------" << std::endl;
 				std::cout << "Game won!" << std::endl;
@@ -188,6 +180,14 @@ void GameAnalytics::Process()
 			case HINT:
 				++numberOfHints;
 				currentState = PLAYING;
+				break;
+			case NEWGAME:
+				break;
+			case MENU:
+				break;
+			case MAINMENU:
+				break;
+			case OUTOFMOVES:
 				break;
 			default:
 				std::cerr << "Error: currentState is not defined!" << std::endl;

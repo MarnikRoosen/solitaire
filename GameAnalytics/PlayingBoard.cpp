@@ -166,62 +166,11 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			if (selectedRegion.x >= 3) selectedRegion.x -= 3;
 			if (selectedRegion.height + 3 <= playingCards.at(i).rows) selectedRegion.height += 3;
 			if (selectedRegion.width + 6 <= playingCards.at(i).cols) selectedRegion.width += 6;
-
-
-			/*Mat gray, edges, lines, img, thresh;
-			cv::cvtColor(card, gray, COLOR_BGR2GRAY);
-			cv::threshold(gray, thresh, 200, 255, THRESH_BINARY);
-			cv::Canny(thresh, edges, 0, 255);
-			int minLineLength = 100;
-			int maxLineGap = 5;
-			HoughLinesP(edges, lines, 1, M_PIl / 180, 100, minLineLength, maxLineGap);*/
-
-
-
-
-			// Extracting only the card from the segment
-			Size cardSize = card.size();
-			Rect myROI;
-			if (cardSize.width * 1.35 > cardSize.height)
-			{
-				myROI.y = 0;
-				myROI.height = cardSize.height;
-				myROI.x = cardSize.width - cardSize.height / 1.34 + 1;
-				myROI.width = cardSize.width - myROI.x;
-			}
-			else
-			{
-				myROI.x = 0;
-				myROI.y = cardSize.height - cardSize.width * 1.32 - 1;
-				myROI.height = cardSize.height - myROI.y;
-				myROI.width = cardSize.width;
-			}
-
-			Mat croppedRef(card, myROI);
-			Mat checkImage, resizedCardImage;
-
-			int width = croppedRef.cols,
-				height = croppedRef.rows;
-			cv::Mat targetImage = cv::Mat::zeros(standardCardHeight, standardCardWidth, croppedRef.type());
-			cv::Rect roi;
-			if (width >= height)
-			{
-				float scale = ((float)standardCardWidth) / width;
-				roi.width = standardCardWidth;
-				roi.x = 0;
-				roi.height = height * scale;
-				roi.y = 0;
-			}
-			else
-			{
-				float scale = ((float)standardCardHeight) / height;
-				roi.y = 0;
-				roi.height = standardCardHeight;
-				roi.width = width * scale;
-				roi.x = 0;
-			}
-			cv::resize(croppedRef, targetImage(roi), roi.size());
-			resizedCardImage = targetImage.clone();
+			
+			Mat croppedRef, resizedCardImage;
+			extractTopCardUsingSobel(card, croppedRef, i);
+			//extractTopCardUsingAspectRatio(card, croppedRef);
+			croppedTopCardToStandardSize(croppedRef, resizedCardImage);
 			cards.at(i) = resizedCardImage.clone();
 		}
 		else
@@ -231,6 +180,124 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 		}
 
 	}
+}
+
+void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, int i)
+{
+	Mat gray, grad, abs_grad, thresh_grad;
+	cv::cvtColor(src, gray, COLOR_BGR2GRAY);
+	std::vector<cv::Vec2f> lines;
+	cv::Point lowest_pt1, lowest_pt2;
+	cv::Point pt1, pt2;
+	float rho, theta;
+	double a, b, x0, y0;
+	Size cardSize = src.size();
+	Rect myROI;
+
+	if (i != 7)
+	{
+		/// Gradient Y
+		cv::Sobel(gray, grad, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
+		cv::convertScaleAbs(grad, abs_grad);
+		cv::threshold(abs_grad, thresh_grad, 100, 255, THRESH_BINARY);
+
+		cv::HoughLines(thresh_grad, lines, 1, CV_PI / 180, 70, 0, 0);
+		lowest_pt1.y = 0;
+		for (size_t j = 0; j < lines.size(); j++)
+		{
+			rho = lines[j][0], theta = lines[j][1];
+			a = cos(theta), b = sin(theta);
+			x0 = a * rho, y0 = b * rho;
+			pt1.x = cvRound(x0 + 1000 * (-b));
+			pt1.y = cvRound(y0 + 1000 * (a));
+			pt2.x = cvRound(x0 - 1000 * (-b));
+			pt2.y = cvRound(y0 - 1000 * (a));
+			if (abs(pt1.y - pt2.y) < 3 && pt1.y > lowest_pt1.y)
+			{
+				lowest_pt1 = pt1;
+				lowest_pt2 = pt2;
+			}
+		}
+		myROI.x = 0, myROI.width = cardSize.width;
+		myROI.y = lowest_pt1.y, myROI.height = cardSize.height - lowest_pt1.y;
+	}
+	else
+	{
+		/// Gradient X
+		cv::Sobel(gray, grad, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
+		cv::convertScaleAbs(grad, abs_grad);
+		cv::threshold(abs_grad, thresh_grad, 100, 255, THRESH_BINARY);
+
+		cv::HoughLines(thresh_grad, lines, 1, CV_PI / 180, 70, 0, 0);
+		lowest_pt1.x = 0;
+		for (size_t j = 0; j < lines.size(); j++)
+		{
+			rho = lines[j][0], theta = lines[j][1];
+			a = cos(theta), b = sin(theta);
+			x0 = a * rho, y0 = b * rho;
+			pt1.x = cvRound(x0 + 1000 * (-b));
+			pt1.y = cvRound(y0 + 1000 * (a));
+			pt2.x = cvRound(x0 - 1000 * (-b));
+			pt2.y = cvRound(y0 - 1000 * (a));
+			if (abs(pt1.x - pt2.x) < 3 && pt1.x > lowest_pt1.x)
+			{
+				lowest_pt1 = pt1;
+				lowest_pt2 = pt2;
+			}
+		}
+		myROI.x = lowest_pt1.x, myROI.width = cardSize.width - lowest_pt1.x;
+		myROI.y = 0, myROI.height = cardSize.height;
+	}
+	Mat croppedRef(src, myROI);
+	dest = croppedRef.clone();
+}
+
+void PlayingBoard::croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::Mat &resizedCardImage)
+{
+	int width = croppedRef.cols,
+		height = croppedRef.rows;
+	resizedCardImage = cv::Mat::zeros(standardCardHeight, standardCardWidth, croppedRef.type());
+	cv::Rect roi;
+	if (width >= height)
+	{
+		float scale = ((float)standardCardWidth) / width;
+		roi.width = standardCardWidth;
+		roi.x = 0;
+		roi.height = height * scale;
+		roi.y = 0;
+	}
+	else
+	{
+		float scale = ((float)standardCardHeight) / height;
+		roi.y = 0;
+		roi.height = standardCardHeight;
+		roi.width = width * scale;
+		roi.x = 0;
+	}
+	cv::resize(croppedRef, resizedCardImage(roi), roi.size());
+}
+
+void PlayingBoard::extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat & dest)
+{
+	Size cardSize = src.size();
+	Rect myROI;
+	if (cardSize.width * 1.35 > cardSize.height)
+	{
+		myROI.y = 0;
+		myROI.height = cardSize.height;
+		myROI.x = cardSize.width - cardSize.height / 1.34 + 1;
+		myROI.width = cardSize.width - myROI.x;
+	}
+	else
+	{
+		myROI.x = 0;
+		myROI.y = cardSize.height - cardSize.width * 1.32 - 1;
+		myROI.height = cardSize.height - myROI.y;
+		myROI.width = cardSize.width;
+	}
+
+	Mat croppedRef(src, myROI);
+	dest = croppedRef.clone();
 }
 
 const playingBoardState & PlayingBoard::getState()
