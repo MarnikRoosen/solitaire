@@ -35,7 +35,8 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 
 	// filter out the cardregions, followed by the cards
-	extractCards( extractCardRegions( croppedSrc ) );
+	extractCardRegions(croppedSrc);
+	extractCards();
 }
 
 void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
@@ -79,34 +80,33 @@ void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardIm
 	resizedBoardImage = targetImage.clone();
 }
 
-std::vector<cv::Mat> PlayingBoard::extractCardRegions(const cv::Mat &src)
+void PlayingBoard::extractCardRegions(const cv::Mat &src)
 {
+	cardRegions.clear();
 	cv::Size srcSize = src.size();
 	int topCardsHeight = (int) srcSize.height * 0.26;
 	Mat croppedtopCards(src, Rect(0, 0, (int) srcSize.width, topCardsHeight));
 	Mat croppedbottomCards(src, Rect(0, topCardsHeight, (int)srcSize.width, (int) (srcSize.height - topCardsHeight - 1)));
 	Size topCardsSize = croppedtopCards.size();
 	Size bottomCardsSize = croppedbottomCards.size();
-	std::vector<cv::Mat> playingCards;
 
 	for (int i = 0; i < 7; i++)	// build stack
 	{
 		Rect cardLocationRect = Rect((int) bottomCardsSize.width / 7.1 * i, 0, (int) (bottomCardsSize.width / 7 - 1), bottomCardsSize.height);
 		Mat croppedCard(croppedbottomCards, cardLocationRect);
-		playingCards.push_back(croppedCard.clone());
+		cardRegions.push_back(croppedCard.clone());
 	}
 
 	Rect deckCardsRect = Rect(topCardsSize.width / 7, 0, topCardsSize.width / 5, topCardsSize.height);	// deck
 	Mat croppedCard(croppedtopCards, deckCardsRect);
-	playingCards.push_back(croppedCard.clone());
+	cardRegions.push_back(croppedCard.clone());
 
 	for (int i = 3; i < 7; i++)	// foundations
 	{
 		Rect cardLocationRect = Rect((int)(topCardsSize.width / 7.1 * i), 0, (int)(topCardsSize.width / 7 - 1), topCardsSize.height);
 		Mat croppedCard(croppedtopCards, cardLocationRect);
-		playingCards.push_back(croppedCard.clone());
+		cardRegions.push_back(croppedCard.clone());
 	}
-	return playingCards;
 }
 
 bool PlayingBoard::checkForOutOfMovesState(const cv::Mat &src)
@@ -128,20 +128,20 @@ bool PlayingBoard::checkForOutOfMovesState(const cv::Mat &src)
 	}
 }
 
-void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
+void PlayingBoard::extractCards()
 {
-	for (int i = 0; i < playingCards.size(); i++)
+	for (int i = 0; i < cardRegions.size(); i++)
 	{		
 		Mat adaptedSrc;
-		vector<vector<Point>> contours, validContours;
+		vector<vector<Point>> contours;
 		vector<Vec4i> hierarchy;
 
-		cv::cvtColor(playingCards.at(i), adaptedSrc, COLOR_BGR2GRAY);
+		cv::cvtColor(cardRegions.at(i), adaptedSrc, COLOR_BGR2GRAY);
 		cv::GaussianBlur(adaptedSrc, adaptedSrc, cv::Size(5, 5), 0);
 		cv::threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);
 		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));
 
-		if (contours.size() > 1)
+		if (contours.size() > 1)	// remove potential noise
 		{
 			auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point> & c1) { return (contourArea(c1, false) < 10000); });
 			contours.erase(new_end, contours.end());
@@ -160,16 +160,13 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 				}
 			}
 			
-			Mat card = Mat(playingCards[i], br).clone();
-	
-			Rect selectedRegion = br;
-			if (selectedRegion.x >= 3) selectedRegion.x -= 3;
-			if (selectedRegion.height + 3 <= playingCards.at(i).rows) selectedRegion.height += 3;
-			if (selectedRegion.width + 6 <= playingCards.at(i).cols) selectedRegion.width += 6;
-			
+			Mat card = Mat(cardRegions[i], br);		
 			Mat croppedRef, resizedCardImage;
 			extractTopCardUsingSobel(card, croppedRef, i);
-			//extractTopCardUsingAspectRatio(card, croppedRef);
+			if (i == 7)
+			{
+				extractTopCardUsingAspectRatio(card, croppedRef);
+			}
 			croppedTopCardToStandardSize(croppedRef, resizedCardImage);
 			cards.at(i) = resizedCardImage.clone();
 		}
@@ -179,6 +176,29 @@ void PlayingBoard::extractCards(std::vector<cv::Mat> &playingCards)
 			cards.at(i) = empty;
 		}
 
+	}
+}
+
+int PlayingBoard::getIndexOfSelectedCard(int i)
+{
+	Mat selectedCard = cardRegions.at(i).clone();
+	Mat hsv, mask;
+	cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);
+	blur(hsv, hsv, Size(1, 1));
+	Scalar lo_int(91, 95, 214);	// light blue
+	Scalar hi_int(96, 160, 255);
+	inRange(hsv, lo_int, hi_int, mask);
+	cv::GaussianBlur(mask, mask, cv::Size(5, 5), 0);
+	vector<vector<Point>> selected_contours;
+	vector<Vec4i> selected_hierarchy;
+	findContours(mask, selected_contours, selected_hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE, Point(0, 0));
+	if (selected_contours.size() > 1)
+	{
+		return selected_contours.size() - 2;
+	}
+	else
+	{
+		return -1;
 	}
 }
 
@@ -212,7 +232,7 @@ void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 			pt1.y = cvRound(y0 + 1000 * (a));
 			pt2.x = cvRound(x0 - 1000 * (-b));
 			pt2.y = cvRound(y0 - 1000 * (a));
-			if (abs(pt1.y - pt2.y) < 3 && pt1.y > lowest_pt1.y)
+			if (abs(pt1.y - pt2.y) < 3 && pt1.y > lowest_pt1.y && pt1.y < cardSize.height - 50)
 			{
 				lowest_pt1 = pt1;
 				lowest_pt2 = pt2;
@@ -223,6 +243,7 @@ void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 	}
 	else
 	{
+		
 		/// Gradient X
 		cv::Sobel(gray, grad, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
 		cv::convertScaleAbs(grad, abs_grad);
@@ -308,11 +329,6 @@ const playingBoardState & PlayingBoard::getState()
 const std::vector<cv::Mat> & PlayingBoard::getCards()
 {
 	return cards;
-}
-
-int PlayingBoard::getSelectedCard()
-{
-	return indexOfSelectedCard;
 }
 
 /*

@@ -29,18 +29,18 @@ public:
 	~PlayingBoard();
 	void findCardsFromBoardImage(Mat const & boardImage);
 	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);
-	std::vector<cv::Mat> extractCardRegions(const cv::Mat & src);
-	void extractCards(std::vector<cv::Mat>& playingCards);
+	void extractCardRegions(const cv::Mat & src);
+	void extractCards();
+	int getIndexOfSelectedCard(int i);
 	void extractTopCardUsingSobel(const cv::Mat & src, cv::Mat & dest, int i);
 	void croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::Mat &resizedCardImage);
 	void extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat & dest);
 	bool checkForOutOfMovesState(const cv::Mat &src);
 	const playingBoardState & getState();
 	const std::vector<cv::Mat> & getCards();
-	int getSelectedCard();
 
 private:
 	std::vector<cv::Mat> cards;
+	std::vector<cv::Mat> cardRegions;
 	playingBoardState state;
-	int indexOfSelectedCard = -1;
 };

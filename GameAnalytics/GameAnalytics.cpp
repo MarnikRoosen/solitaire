@@ -111,6 +111,16 @@ void GameAnalytics::Init() {
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();
 	initializePlayingBoard(classifiedCardsFromPlayingBoard);
+	int indexOfPressedCardLocation = determineIndexOfPressedCard();
+	if (indexOfPressedCardLocation != -1)
+	{
+		pb.findCardsFromBoardImage(src);
+		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
+		if (indexOfPressedCard != -1)
+		{
+			std::cout << "card" << indexOfPressedCard << " at location " << indexOfPressedCardLocation << " was pressed!" << std::endl;
+		}
+	}
 }
 
 void GameAnalytics::Process()
@@ -141,8 +151,16 @@ void GameAnalytics::Process()
 			
 			src = waitForStableImage();
 			determineNextState();
-			determinePressedCard();
-		
+			int indexOfPressedCardLocation = determineIndexOfPressedCard();
+			if (indexOfPressedCardLocation != -1)
+			{
+				pb.findCardsFromBoardImage(src);
+				int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
+				if (indexOfPressedCard != -1)
+				{
+					std::cout << "card" << indexOfPressedCard << " at location " << indexOfPressedCardLocation << " was pressed!" << std::endl;
+				}
+			}
 			switch (currentState)
 			{
 			case PLAYING:
@@ -209,58 +227,75 @@ int GameAnalytics::getTotalUnknownCards()
 	return totalUnknownCards;
 }
 
-void GameAnalytics::determinePressedCard()
+int GameAnalytics::determineIndexOfPressedCard()
 {
-	
-	if ((434 <= pt->x  && pt->x <= 629) && (84 <= pt->y && pt->y <= 258))
+	if (84 <= pt->y && pt->y <= 258)
 	{
-		std::cout << "TALON PRESSED!" << std::endl;
+		if (434 <= pt->x && pt->x <= 629)
+		{
+			return 7;
+		}
+		else if (734 <= pt->x && pt->x <= 865)
+		{
+			return 8;
+		}
+		else if (884 <= pt->x && pt->x <= 1015)
+		{
+			return 9;
+		}
+		else if (1034 <= pt->x && pt->x <= 1165)
+		{
+			return 10;
+		}
+		else if (1184 <= pt->x && pt->x <= 1315)
+		{
+			return 11;
+		}
+		else
+		{
+			return -1;
+		}
 	}
-	else if ((734 <= pt->x  && pt->x <= 865) && (84 <= pt->y && pt->y <= 258))
+	else if (290 <= pt->y && pt->y <= 850)
 	{
-		std::cout << "SUIT0 PRESSED!" << std::endl;
+		if (284 <= pt->x && pt->x <= 415)
+		{
+			return 0;
+		}
+		else if (434 <= pt->x && pt->x <= 565)
+		{
+			return 1;
+		}
+		else if (584 <= pt->x && pt->x <= 715)
+		{
+			return 2;
+		}
+		else if (734 <= pt->x && pt->x <= 865)
+		{
+			return 3;
+		}
+		else if (884 <= pt->x && pt->x <= 1015)
+		{
+			return 4;
+		}
+		else if (1034 <= pt->x && pt->x <= 1165)
+		{
+			return 5;
+		}
+		else if (1184 <= pt->x && pt->x <= 1315)
+		{
+			return 6;
+		}
+		else
+		{
+			return -1;
+		}
 	}
-	else if ((884 <= pt->x  && pt->x <= 1015) && (84 <= pt->y && pt->y <= 258))
+	else
 	{
-		std::cout << "SUIT1 PRESSED!" << std::endl;
-	}
-	else if ((1034 <= pt->x  && pt->x <= 1165) && (84 <= pt->y && pt->y <= 258))
-	{
-		std::cout << "SUIT2 PRESSED!" << std::endl;
-	}
-	else if ((1184 <= pt->x  && pt->x <= 1315) && (84 <= pt->y && pt->y <= 258))
-	{
-		std::cout << "SUIT3 PRESSED!" << std::endl;
-	}
-	else if ((284 <= pt->x  && pt->x <= 415) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD0 PRESSED!" << std::endl;
-	}
-	else if ((434 <= pt->x  && pt->x <= 565) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD1 PRESSED!" << std::endl;
-	}
-	else if ((584 <= pt->x  && pt->x <= 715) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD2 PRESSED!" << std::endl;
-	}
-	else if ((734 <= pt->x  && pt->x <= 865) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD3 PRESSED!" << std::endl;
-	}
-	else if ((884 <= pt->x  && pt->x <= 1015) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD4 PRESSED!" << std::endl;
-	}
-	else if ((1034 <= pt->x  && pt->x <= 1165) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD5 PRESSED!" << std::endl;
-	}
-	else if ((1184 <= pt->x  && pt->x <= 1315) && (290 <= pt->y && pt->y <= 850))
-	{
-		std::cout << "BUILD6 PRESSED!" << std::endl;
-	}
-			
+		return -1;
+	}	
+	return -1;
 }
 
 void GameAnalytics::determineNextState()

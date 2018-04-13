@@ -50,7 +50,7 @@ public:
 
 	int getTotalUnknownCards();
 
-	void determinePressedCard();
+	int determineIndexOfPressedCard();
 
 	void determineNextState();
 
