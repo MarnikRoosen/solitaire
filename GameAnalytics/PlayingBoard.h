@@ -36,7 +36,6 @@ public:
 	void croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::Mat &resizedCardImage);
 	void extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat & dest);
 	bool checkForOutOfMovesState(const cv::Mat &src);
-	const playingBoardState & getState();
 	const std::vector<cv::Mat> & getCards();
 
 private:

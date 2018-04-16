@@ -317,11 +317,6 @@ void PlayingBoard::extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat &
 	dest = croppedRef.clone();
 }
 
-const playingBoardState & PlayingBoard::getState()
-{
-	return state;
-}
-
 const std::vector<cv::Mat> & PlayingBoard::getCards()
 {
 	return cards;

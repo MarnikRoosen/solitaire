@@ -49,19 +49,15 @@ public:
 	void Process();
 
 	void processCardSelection();
-
-	int getTotalUnknownCards();
-
 	int determineIndexOfPressedCard();
-
-	void determineNextState();
 
 	void handleEndOfGame();
 	bool handlePlayingState();
+	void determineNextState();
 
 	void classifyExtractedCards();
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
-	void updateDeck(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
+	void updateTalonStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard);
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);
 	bool cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2);
 	bool updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
@@ -75,7 +71,6 @@ public:
 private:
 	PlayingBoard pb;
 	ClassifyCard cc;
-
 	SolitaireState currentState;
 
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;
@@ -93,14 +88,11 @@ private:
 	int numberOfHints = 0;
 	int numberOfSuitErrors = 0;
 	int numberOfRankErrors = 0;
+	int score = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;
-	int indexOfSelectedCard = -1;
-	RECT appRect;
-	double windowWidth, windowHeight;
-
-	HWND hwnd;
+	
 	std::queue<cv::Mat> srcBuffer;
 	std::queue<int> xPosBuffer;
 	std::queue<int> yPosBuffer;
@@ -108,11 +100,15 @@ private:
 	HANDLE  hThreadHook;
 
 	HDC hwindowDC, hwindowCompatibleDC;
-	int height, width;
 	HBITMAP hbwindow;
-	Mat src;
 	BITMAPINFOHEADER  bi;
 	RECT windowsize;    // get the height and width of the screen
-	POINT pt[2];
+	RECT appRect;	// get location of the game in respect to the primary window
+	POINT pt[2];	// remap the coordinates to the correct window
+	double windowWidth, windowHeight;
+	int height, width;
+	int distortedWindowHeight = 0;
+	HWND hwnd;
+	Mat src;
 
 };
