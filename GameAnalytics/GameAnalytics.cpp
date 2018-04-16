@@ -585,6 +585,7 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 				updateDeck(classifiedCardsFromPlayingBoard);
 			}
 			printPlayingBoardState();
+			++numberOfPresses.at(tempIndex);
 			return true;
 		}
 		return false;
@@ -629,6 +630,8 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 		currentPlayingBoard.at(changedIndex1).knownCards.erase(
 			inList1,
 			currentPlayingBoard.at(changedIndex1).knownCards.end());
+		
+		++numberOfPresses.at(changedIndex2);
 		return true;
 	}
 	if (inList1 == currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 != currentPlayingBoard.at(changedIndex2).knownCards.end())
@@ -641,6 +644,8 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 		currentPlayingBoard.at(changedIndex2).knownCards.erase(
 			inList2,
 			currentPlayingBoard.at(changedIndex2).knownCards.end());
+
+		++numberOfPresses.at(changedIndex1);
 		return true;
 	}
 	if (inList1 == currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 == currentPlayingBoard.at(changedIndex2).knownCards.end())
@@ -659,6 +664,8 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 				currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 				--currentPlayingBoard.at(changedIndex1).unknownCards;
 			}
+
+			++numberOfPresses.at(changedIndex2);
 			return true;
 		}
 		if (inList1 == currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 != currentPlayingBoard.at(changedIndex2).knownCards.end())
@@ -673,6 +680,8 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 				currentPlayingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
 				--currentPlayingBoard.at(changedIndex2).unknownCards;
 			}
+
+			++numberOfPresses.at(changedIndex1);
 			return true;
 		}
 	}
