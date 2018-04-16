@@ -159,14 +159,13 @@ void PlayingBoard::extractCards()
 					br = br2;
 				}
 			}
+
+			//getIndexOfSelectedCard(i);
 			
 			Mat card = Mat(cardRegions[i], br);		
 			Mat croppedRef, resizedCardImage;
-			extractTopCardUsingSobel(card, croppedRef, i);
-			if (i == 7)
-			{
-				extractTopCardUsingAspectRatio(card, croppedRef);
-			}
+			//extractTopCardUsingSobel(card, croppedRef, i);
+			extractTopCardUsingAspectRatio(card, croppedRef);
 			croppedTopCardToStandardSize(croppedRef, resizedCardImage);
 			cards.at(i) = resizedCardImage.clone();
 		}
@@ -192,9 +191,15 @@ int PlayingBoard::getIndexOfSelectedCard(int i)
 	vector<vector<Point>> selected_contours;
 	vector<Vec4i> selected_hierarchy;
 	findContours(mask, selected_contours, selected_hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE, Point(0, 0));
+	if (selected_contours.size() > 1)	// remove potential noise
+	{
+		auto new_end = std::remove_if(selected_contours.begin(), selected_contours.end(), [](const std::vector<cv::Point> & c1) { return (contourArea(c1, false) < 1000); });
+		selected_contours.erase(new_end, selected_contours.end());
+	}
 	if (selected_contours.size() > 1)
 	{
-		return selected_contours.size() - 2;
+		int index = selected_contours.size() - 2;
+		return index;
 	}
 	else
 	{
@@ -206,36 +211,32 @@ void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 {
 	Mat gray, grad, abs_grad, thresh_grad;
 	cv::cvtColor(src, gray, COLOR_BGR2GRAY);
-	std::vector<cv::Vec2f> lines;
+	vector<Vec4i> linesP;
+	Vec4i l;	
 	cv::Point lowest_pt1, lowest_pt2;
 	cv::Point pt1, pt2;
 	float rho, theta;
 	double a, b, x0, y0;
 	Size cardSize = src.size();
 	Rect myROI;
+	//Mat cdst = src.clone();
 
 	if (i != 7)
 	{
 		/// Gradient Y
 		cv::Sobel(gray, grad, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);
 		cv::convertScaleAbs(grad, abs_grad);
-		cv::threshold(abs_grad, thresh_grad, 100, 255, THRESH_BINARY);
-
-		cv::HoughLines(thresh_grad, lines, 1, CV_PI / 180, 70, 0, 0);
+		cv::threshold(abs_grad, thresh_grad, 70, 255, THRESH_BINARY);
 		lowest_pt1.y = 0;
-		for (size_t j = 0; j < lines.size(); j++)
+		HoughLinesP(thresh_grad, linesP, 1, CV_PI / 180, 30, 100, 10);
+		for (size_t i = 0; i < linesP.size(); i++)
 		{
-			rho = lines[j][0], theta = lines[j][1];
-			a = cos(theta), b = sin(theta);
-			x0 = a * rho, y0 = b * rho;
-			pt1.x = cvRound(x0 + 1000 * (-b));
-			pt1.y = cvRound(y0 + 1000 * (a));
-			pt2.x = cvRound(x0 - 1000 * (-b));
-			pt2.y = cvRound(y0 - 1000 * (a));
-			if (abs(pt1.y - pt2.y) < 3 && pt1.y > lowest_pt1.y && pt1.y < cardSize.height - 50)
+			l = linesP[i];
+			if (abs(l[1] - l[3]) < 5 && l[1] > lowest_pt1.y && l[1] < cardSize.height - 50)
 			{
-				lowest_pt1 = pt1;
-				lowest_pt2 = pt2;
+				lowest_pt1 = Point(l[0], l[1]);
+				lowest_pt2 = Point(l[2], l[3]);
+				//line(cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, CV_AA);
 			}
 		}
 		myROI.x = 0, myROI.width = cardSize.width;
@@ -247,24 +248,19 @@ void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 		/// Gradient X
 		cv::Sobel(gray, grad, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
 		cv::convertScaleAbs(grad, abs_grad);
-		cv::threshold(abs_grad, thresh_grad, 100, 255, THRESH_BINARY);
-
-		cv::HoughLines(thresh_grad, lines, 1, CV_PI / 180, 70, 0, 0);
-		lowest_pt1.x = 0;
-		for (size_t j = 0; j < lines.size(); j++)
+		cv::threshold(abs_grad, thresh_grad, 70, 255, THRESH_BINARY);
+		lowest_pt1.y = 0;
+		HoughLinesP(thresh_grad, linesP, 1, CV_PI / 180, 30, 100, 10);
+		for (size_t i = 0; i < linesP.size(); i++)
 		{
-			rho = lines[j][0], theta = lines[j][1];
-			a = cos(theta), b = sin(theta);
-			x0 = a * rho, y0 = b * rho;
-			pt1.x = cvRound(x0 + 1000 * (-b));
-			pt1.y = cvRound(y0 + 1000 * (a));
-			pt2.x = cvRound(x0 - 1000 * (-b));
-			pt2.y = cvRound(y0 - 1000 * (a));
-			if (abs(pt1.x - pt2.x) < 3 && pt1.x > lowest_pt1.x)
+			l = linesP[i];
+			if (abs(l[0] - l[2]) < 1 && l[0] > lowest_pt1.x && l[0] < cardSize.width - 50)
 			{
-				lowest_pt1 = pt1;
-				lowest_pt2 = pt2;
+				lowest_pt1 = Point(l[0], l[1]);
+				lowest_pt2 = Point(l[2], l[3]);
+				//line(cdst, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(0, 0, 255), 3, CV_AA);
 			}
+
 		}
 		myROI.x = lowest_pt1.x, myROI.width = cardSize.width - lowest_pt1.x;
 		myROI.y = 0, myROI.height = cardSize.height;

@@ -48,6 +48,8 @@ public:
 	void Init();
 	void Process();
 
+	void processCardSelection();
+
 	int getTotalUnknownCards();
 
 	int determineIndexOfPressedCard();
@@ -82,11 +84,15 @@ private:
 	std::vector<std::vector<cardLocation>> previousPlayingBoards;
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
+	std::pair<classifiers, classifiers> previouslySelectedCard;
 	
 	bool endOfGameBool = false;
 	int numberOfUndos = 0;
 	int numberOfPilePresses = 0;
+	std::vector<int> numberOfPresses;
 	int numberOfHints = 0;
+	int numberOfSuitErrors = 0;
+	int numberOfRankErrors = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;

@@ -102,6 +102,8 @@ void GameAnalytics::Init() {
 	bi.biClrImportant = 0;
 	SelectObject(hwindowCompatibleDC, hbwindow);	// use the previously created device context with the bitmap
 
+	previouslySelectedCard.first = EMPTY;
+	previouslySelectedCard.second = EMPTY;
 	startOfGame = Clock::now();
 	startOfMove = Clock::now();
 
@@ -111,16 +113,13 @@ void GameAnalytics::Init() {
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();
 	initializePlayingBoard(classifiedCardsFromPlayingBoard);
-	int indexOfPressedCardLocation = determineIndexOfPressedCard();
-	if (indexOfPressedCardLocation != -1)
+
+	numberOfPresses.resize(12);
+	for (int i = 0; i < numberOfPresses.size(); i++)
 	{
-		pb.findCardsFromBoardImage(src);
-		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
-		if (indexOfPressedCard != -1)
-		{
-			std::cout << "card" << indexOfPressedCard << " at location " << indexOfPressedCardLocation << " was pressed!" << std::endl;
-		}
+		numberOfPresses.at(i) = 0;
 	}
+	int indexOfPressedCardLocation = determineIndexOfPressedCard();
 }
 
 void GameAnalytics::Process()
@@ -151,16 +150,6 @@ void GameAnalytics::Process()
 			
 			src = waitForStableImage();
 			determineNextState();
-			int indexOfPressedCardLocation = determineIndexOfPressedCard();
-			if (indexOfPressedCardLocation != -1)
-			{
-				pb.findCardsFromBoardImage(src);
-				int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
-				if (indexOfPressedCard != -1)
-				{
-					std::cout << "card" << indexOfPressedCard << " at location " << indexOfPressedCardLocation << " was pressed!" << std::endl;
-				}
-			}
 			switch (currentState)
 			{
 			case PLAYING:
@@ -211,12 +200,59 @@ void GameAnalytics::Process()
 				std::cerr << "Error: currentState is not defined!" << std::endl;
 				break;
 			}
+			processCardSelection();
+
 		}
 		else
 		{
 			Sleep(10);
 		}
 
+	}
+}
+
+void GameAnalytics::processCardSelection()
+{
+	int indexOfPressedCardLocation = determineIndexOfPressedCard();
+	if (indexOfPressedCardLocation != -1)
+	{
+		pb.findCardsFromBoardImage(src);
+		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
+		if (indexOfPressedCard != -1)
+		{
+			int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;
+			std::pair<classifiers, classifiers> selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);
+			std::cout << static_cast<char>(selectedCard.first) << static_cast<char>(selectedCard.second) << " is selected." << std::endl;
+
+			++numberOfPresses.at(indexOfPressedCardLocation);
+
+			// detection of wrong card placement
+			if (previouslySelectedCard.first != EMPTY)
+			{
+				char prevSuit = static_cast<char>(previouslySelectedCard.second);
+				char newSuit = static_cast<char>(selectedCard.second);
+				char prevRank = static_cast<char>(previouslySelectedCard.first);
+				char newRank = static_cast<char>(selectedCard.first);
+
+				if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))
+					|| ((prevSuit == 'S' || prevSuit == 'C') && (newSuit == 'S' || newSuit == 'C')))
+				{
+					std::cout << "Incompatible suit! " << prevSuit << " isn't compatible with " << newSuit << std::endl;
+					++numberOfSuitErrors;
+				}
+				else
+				{
+					std::cout << "Incompatible rank! " << prevRank << " isn't compatible with " << newRank << std::endl;
+					++numberOfRankErrors;
+				}
+			}
+			previouslySelectedCard = selectedCard;
+		}
+		else
+		{
+			previouslySelectedCard.first = EMPTY;
+			previouslySelectedCard.second = EMPTY;
+		}
 	}
 }
 
@@ -395,7 +431,18 @@ void GameAnalytics::handleEndOfGame()
 	std::cout << "Average time per move = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
 	std::cout << "Number of moves = " << averageThinkDurations.size() << " moves" << std::endl;
 	std::cout << "Times undo = " << numberOfUndos << std::endl;
-	std::cout << "Times pile pressed = " << numberOfPilePresses << std::endl;
+	std::cout << "Number of rank errors = " << numberOfRankErrors << std::endl;
+	std::cout << "Number of suit errors = " << numberOfSuitErrors << std::endl;
+	for (int i = 0; i < 7; i++)
+	{
+		std::cout << "Number of build stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
+	}
+	std::cout << "Number of pile presses = " << numberOfPilePresses << std::endl;
+	std::cout << "Number of talon presses = " << numberOfPresses.at(7) << std::endl;
+	for (int i = 8; i < 12; i++)
+	{
+		std::cout << "Number of suit stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
+	}
 	Sleep(15000);
 }
 
