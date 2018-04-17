@@ -58,7 +58,6 @@ GameAnalytics::~GameAnalytics()
 
 void GameAnalytics::Init() {
 	currentState = PLAYING;
-
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
@@ -79,7 +78,7 @@ void GameAnalytics::Init() {
 	if (1.75 < windowWidth / windowHeight < 1.80)
 	{
 		distortedWindowHeight = (windowWidth * 1080 / 1920);
-		std::cout << "heightOffset = " << distortedWindowHeight << std::endl;
+		//std::cout << "heightOffset = " << distortedWindowHeight << std::endl;
 	}
 	
 	// preparing for screencapture
@@ -207,10 +206,6 @@ void GameAnalytics::Process()
 			}
 			processCardSelection();
 
-		}
-		else if (pb.checkForOutOfMovesState(waitForStableImage()))
-		{
-			currentState = OUTOFMOVES;
 		}
 		else
 		{
@@ -387,7 +382,12 @@ void GameAnalytics::determineNextState()
 		}
 		break;
 	case PLAYING:
-		if (pb.checkForOutOfMovesState(src))
+		if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
+		{
+			std::cout << "NEWGAME PRESSED!" << std::endl;
+			currentState = NEWGAME;
+		}
+		else if (pb.checkForOutOfMovesState(src))
 		{
 			std::cout << "OUT OF MOVES!" << std::endl;
 			currentState = OUTOFMOVES;
@@ -397,11 +397,6 @@ void GameAnalytics::determineNextState()
 			std::cout << "UNDO PRESSED!" << std::endl;
 			currentState = UNDO;
 		}
-		else if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
-		{
-			std::cout << "NEWGAME PRESSED!" << std::endl;
-			currentState = NEWGAME;
-		}
 		else if ((13 <= pt->x  && pt->x <= 82) && (1 <= pt->y && pt->y <= 55))
 		{
 			std::cout << "MENU PRESSED!" << std::endl;
@@ -409,7 +404,7 @@ void GameAnalytics::determineNextState()
 		}
 		else if ((283 <= pt->x  && pt->x <= 416) && (84 <= pt->y && pt->y <= 258))
 		{
-			std::cout << "PILE PRESSED!" << std::endl;
+			//std::cout << "PILE PRESSED!" << std::endl;
 			++numberOfPilePresses;
 		}
 		else if ((91 <= pt->x  && pt->x <= 161) && (1 <= pt->y && pt->y <= 55))
