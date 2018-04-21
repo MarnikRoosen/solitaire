@@ -44,4 +44,5 @@ private:
 	std::vector<cv::Mat> cardRegions;
 	playingBoardState state;
 	Rect ROI;
+	int topCardsHeight;
 };

@@ -47,14 +47,20 @@ void PlayingBoard::determineROI(const Mat & boardImage)
 	int xmax = tempRect.x + tempRect.width;
 	int ymin = tempRect.y;
 	int ymax = tempRect.y + tempRect.height;
+	topCardsHeight = ymin;
 	for (int i = 1; i < contours.size(); i++)
 	{
 		tempRect = boundingRect(contours.at(i));
 		if (xmin > tempRect.x) { xmin = tempRect.x; }
 		if (xmax < tempRect.x + tempRect.width) { xmax = tempRect.x + tempRect.width; }
-		if (ymin > tempRect.y) { ymin = tempRect.y; }
+		if (ymin > tempRect.y)
+		{ 
+			ymin = tempRect.y;
+			topCardsHeight = tempRect.height;
+		}
 	}
 	ROI = Rect(xmin - 10, ymin - 10, xmax - xmin + 20, standardBoardHeight - ymin);
+	topCardsHeight += 30;
 }
 
 void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
@@ -102,7 +108,6 @@ void PlayingBoard::extractCardRegions(const cv::Mat &src)
 {
 	cardRegions.clear();
 	cv::Size srcSize = src.size();
-	int topCardsHeight = (int) srcSize.height * 0.26;
 	Mat croppedtopCards(src, Rect(0, 0, (int) srcSize.width, topCardsHeight));
 	Mat croppedbottomCards(src, Rect(0, topCardsHeight, (int)srcSize.width, (int) (srcSize.height - topCardsHeight - 1)));
 	Size topCardsSize = croppedtopCards.size();
