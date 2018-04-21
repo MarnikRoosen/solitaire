@@ -1,13 +1,17 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
 #include <thread>
+#include <cwchar>
 
 GameAnalytics ga;
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
+void changeConsoleFontSize(const double & percentageIncrease);
 CRITICAL_SECTION clickLock;
 
 int main(int argc, char** argv)
 {
+	changeConsoleFontSize(0.25);
+
 	DWORD   dwThreadIdHook;
 	HANDLE  hThreadHook;
 	InitializeCriticalSection(&clickLock);
@@ -126,6 +130,25 @@ void GameAnalytics::Init() {
 	}
 }
 
+void changeConsoleFontSize(const double & percentageIncrease)
+{
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_FONT_INFOEX font = { sizeof(CONSOLE_FONT_INFOEX) };
+
+	if (!GetCurrentConsoleFontEx(hConsole, 0, &font))
+	{
+		exit(EXIT_FAILURE);
+	}
+	COORD size = font.dwFontSize;
+	size.X += (SHORT)(size.X * percentageIncrease);
+	size.Y += (SHORT)(size.Y * percentageIncrease);
+	font.dwFontSize = size;
+	if (!SetCurrentConsoleFontEx(hConsole, 0, &font))
+	{
+		exit(EXIT_FAILURE);
+	}
+}
+
 void GameAnalytics::Process()
 {
 	bool boardChanged;
@@ -144,7 +167,6 @@ void GameAnalytics::Process()
 			pt->x = pt->x * standardBoardWidth / windowWidth;
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
-			std::cout << "processing image nr = " << dataCounter << " , left in queue = " << srcBuffer.size() << std::endl;
 
 			src = data.src;
 			determineNextState(pt->x, pt->y);
@@ -266,7 +288,10 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 					std::cout << "Incompatible suit! " << prevSuit << " isn't compatible with " << newSuit << std::endl;
 					++numberOfSuitErrors;
 				}
-				else
+				if ((prevRank == '2' && newRank != '3') || (prevRank == '3' && newRank != '4') || (prevRank == '4' && newRank != '5')
+					|| (prevRank == '5' && newRank != '6') || (prevRank == '6' && newRank != '7') || (prevRank == '7' && newRank != '8')
+					|| (prevRank == '8' && newRank != '9') || (prevRank == '9' && newRank != ':') || (prevRank == ':' && newRank != 'J')
+					|| (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K') || (prevRank == 'K' && newRank != 'A'))
 				{
 					std::cout << "Incompatible rank! " << prevRank << " isn't compatible with " << newRank << std::endl;
 					++numberOfRankErrors;
