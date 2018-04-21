@@ -92,6 +92,7 @@ private:
 	std::pair<classifiers, classifiers> previouslySelectedCard;
 	
 	bool endOfGameBool = false;
+	bool gameWon = false;
 	int numberOfUndos = 0;
 	int numberOfPilePresses = 0;
 	std::vector<int> numberOfPresses;

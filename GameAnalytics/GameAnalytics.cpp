@@ -135,6 +135,7 @@ void GameAnalytics::Process()
 			&& currentPlayingBoard.at(10).knownCards.size() == 13 && currentPlayingBoard.at(11).knownCards.size() == 13)
 		{
 			currentState = WON;
+			gameWon = true;
 		}
 		else if (!srcBuffer.empty())
 		{
@@ -170,19 +171,19 @@ void GameAnalytics::Process()
 				std::cout << "--------------------------------------------------------" << std::endl;
 				std::cout << "Game over" << std::endl;
 				std::cout << "--------------------------------------------------------" << std::endl;
-				handleEndOfGame();
+				gameWon = false;
 				endOfGameBool = true;
 				break;
 			case WON:
+				gameWon = true;
 				endOfGameBool = true;
-				handleEndOfGame();
 				break;
 			case AUTOCOMPLETE:
 				std::cout << "--------------------------------------------------------" << std::endl;
 				std::cout << "Game won! Finished using autocomplete." << std::endl;
 				std::cout << "--------------------------------------------------------" << std::endl;
+				gameWon = true;
 				endOfGameBool = true;
-				handleEndOfGame();
 				break;
 			case HINT:
 				++numberOfHints;
@@ -208,6 +209,7 @@ void GameAnalytics::Process()
 			Sleep(10);
 		}
 	}
+	handleEndOfGame();
 }
 
 void GameAnalytics::grabSrc()
@@ -451,11 +453,12 @@ void GameAnalytics::determineNextState(const int & x, const int & y)
 void GameAnalytics::handleEndOfGame()
 {
 	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
-	std::cout << "Game solved: " << std::boolalpha << endOfGameBool << std::endl;
+	std::cout << "Game solved: " << std::boolalpha << gameWon << std::endl;
 	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
 	std::cout << "Points scored: " << score << std::endl;
 	std::cout << "Average time per move = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
 	std::cout << "Number of moves = " << averageThinkDurations.size() << " moves" << std::endl;
+	std::cout << "Hints requested = " << numberOfHints << std::endl;
 	std::cout << "Times undo = " << numberOfUndos << std::endl;
 	std::cout << "Number of rank errors = " << numberOfRankErrors << std::endl;
 	std::cout << "Number of suit errors = " << numberOfSuitErrors << std::endl;
@@ -525,7 +528,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 	do {
 		src1 = hwnd2mat(hwnd);
 		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-		Sleep(50);
+		Sleep(60);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
