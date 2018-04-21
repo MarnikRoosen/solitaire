@@ -35,6 +35,12 @@ struct cardLocation
 	std::vector<std::pair<classifiers, classifiers>> knownCards;
 };
 
+struct srcData
+{
+	int x, y;
+	cv::Mat src;
+};
+
 enum SolitaireState { PLAYING, UNDO, QUIT, NEWGAME, MENU, MAINMENU, OUTOFMOVES, WON, HINT, AUTOCOMPLETE };
 
 class PlayingBoard;
@@ -48,12 +54,16 @@ public:
 	void Init();
 	void Process();
 
-	void processCardSelection();
-	int determineIndexOfPressedCard();
+	void grabSrc();
+
+	void processCardSelection(const int & x, const int & y);
+
+	int determineIndexOfPressedCard(const int & x, const int & y);
+
+	void determineNextState(const int & x, const int & y);
 
 	void handleEndOfGame();
 	bool handlePlayingState();
-	void determineNextState();
 
 	void classifyExtractedCards();
 	void initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);
@@ -93,11 +103,13 @@ private:
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;
 	
-	std::queue<cv::Mat> srcBuffer;
+	std::queue<srcData> srcBuffer;
 	std::queue<int> xPosBuffer;
 	std::queue<int> yPosBuffer;
 	DWORD   dwThreadIdHook;
 	HANDLE  hThreadHook;
+	int dataCounter = 0, imageCounter = 0;
+	int changedIndex1, changedIndex2;
 
 	HDC hwindowDC, hwindowCompatibleDC;
 	HBITMAP hbwindow;

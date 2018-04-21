@@ -1,39 +1,39 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
+#include <thread>
 
 GameAnalytics ga;
-int imagecounter;
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
-CRITICAL_SECTION lock;
+CRITICAL_SECTION clickLock;
 
 int main(int argc, char** argv)
 {
 	DWORD   dwThreadIdHook;
 	HANDLE  hThreadHook;
-
-	InitializeCriticalSection(&lock);
-
-	imagecounter = 0;
+	InitializeCriticalSection(&clickLock);
 
 	ga.Init();
 
 	hThreadHook = CreateThread(
-			NULL,                   // default security attributes
-			0,                      // use default stack size  
-			ThreadHookFunction,       // thread function name
-			0,          // argument to thread function 
-			0,                      // use default creation flags 
-			&dwThreadIdHook);   // returns the thread identifier 
-		if (hThreadHook == NULL)
-		{
-			std::cout << "Error thread creation GameA" << std::endl;
-			exit(EXIT_FAILURE);
-		}
+		NULL,                   // default security attributes
+		0,                      // use default stack size  
+		ThreadHookFunction,       // thread function name
+		0,          // argument to thread function 
+		0,                      // use default creation flags 
+		&dwThreadIdHook);   // returns the thread identifier 
+	if (hThreadHook == NULL)
+	{
+		std::cout << "Error thread creation GameA" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	std::thread srcGrabber(&GameAnalytics::grabSrc, &ga);
 
 	ga.Process();
 
-	//CloseHandle(hThreadHook);
-	
+	srcGrabber.join();
+	TerminateThread(hThreadHook, EXIT_SUCCESS);
+	CloseHandle(hThreadHook);
 
 	return 0;
 }
@@ -124,7 +124,6 @@ void GameAnalytics::Init() {
 	{
 		numberOfPresses.at(i) = 0;
 	}
-	int indexOfPressedCardLocation = determineIndexOfPressedCard();
 }
 
 void GameAnalytics::Process()
@@ -137,24 +136,23 @@ void GameAnalytics::Process()
 		{
 			currentState = WON;
 		}
-		else if (!xPosBuffer.empty())
+		else if (!srcBuffer.empty())
 		{
-			EnterCriticalSection(&lock);
-			int& x = xPosBuffer.front(); xPosBuffer.pop();
-			int& y = yPosBuffer.front(); yPosBuffer.pop();
-			LeaveCriticalSection(&lock);
-
-			// Mapping the coordinates from the primary window to the window in which the application is playing
-			pt->x = x;
-			pt->y = (y - (windowHeight - distortedWindowHeight)/2) / distortedWindowHeight * windowHeight;
+			srcData data;
+			EnterCriticalSection(&clickLock);
+			data = srcBuffer.front(); srcBuffer.pop();
+			LeaveCriticalSection(&clickLock);
+			pt->x = data.x;
+			pt->y = (data.y - (windowHeight - distortedWindowHeight) / 2) / distortedWindowHeight * windowHeight;
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
 			pt->x = pt->x * standardBoardWidth / windowWidth;
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
+			std::cout << "processing image nr = " << dataCounter << " , left in queue = " << srcBuffer.size() << std::endl;
 
-			src = waitForStableImage();
-			determineNextState();
+			src = data.src;
+			determineNextState(pt->x, pt->y);
 			switch (currentState)
 			{
 			case PLAYING:
@@ -176,9 +174,6 @@ void GameAnalytics::Process()
 				endOfGameBool = true;
 				break;
 			case WON:
-				std::cout << "--------------------------------------------------------" << std::endl;
-				std::cout << "Game won!" << std::endl;
-				std::cout << "--------------------------------------------------------" << std::endl;
 				endOfGameBool = true;
 				handleEndOfGame();
 				break;
@@ -205,7 +200,7 @@ void GameAnalytics::Process()
 				std::cerr << "Error: currentState is not defined!" << std::endl;
 				break;
 			}
-			processCardSelection();
+			processCardSelection(pt->x, pt->y);
 
 		}
 		else
@@ -215,9 +210,37 @@ void GameAnalytics::Process()
 	}
 }
 
-void GameAnalytics::processCardSelection()
+void GameAnalytics::grabSrc()
 {
-	int indexOfPressedCardLocation = determineIndexOfPressedCard();
+	while (!endOfGameBool)
+	{
+		if (!xPosBuffer.empty())
+		{
+			cv::Mat img = waitForStableImage();
+			srcData data;
+			data.src = img.clone();
+
+			EnterCriticalSection(&clickLock);
+			data.x = xPosBuffer.front(); xPosBuffer.pop();
+			data.y = yPosBuffer.front(); yPosBuffer.pop();
+			srcBuffer.push(data);
+			LeaveCriticalSection(&clickLock);
+			dataCounter++;
+
+			stringstream ss;
+			ss << dataCounter;
+			imwrite("../GameAnalytics/test/" + ss.str() + ".png", img);
+		}
+		else
+		{
+			Sleep(5);
+		}
+	}
+}
+
+void GameAnalytics::processCardSelection(const int & x, const int & y)
+{
+	int indexOfPressedCardLocation = determineIndexOfPressedCard(x, y);
 	if (indexOfPressedCardLocation != -1)
 	{
 		pb.findCardsFromBoardImage(src);
@@ -260,27 +283,27 @@ void GameAnalytics::processCardSelection()
 	}
 }
 
-int GameAnalytics::determineIndexOfPressedCard()
+int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)
 {
-	if (84 <= pt->y && pt->y <= 258)
+	if (84 <= pt->y && y <= 258)
 	{
-		if (434 <= pt->x && pt->x <= 629)
+		if (434 <= x && x <= 629)
 		{
 			return 7;
 		}
-		else if (734 <= pt->x && pt->x <= 865)
+		else if (734 <= x && x <= 865)
 		{
 			return 8;
 		}
-		else if (884 <= pt->x && pt->x <= 1015)
+		else if (884 <= x && x <= 1015)
 		{
 			return 9;
 		}
-		else if (1034 <= pt->x && pt->x <= 1165)
+		else if (1034 <= x && x <= 1165)
 		{
 			return 10;
 		}
-		else if (1184 <= pt->x && pt->x <= 1315)
+		else if (1184 <= x && x <= 1315)
 		{
 			return 11;
 		}
@@ -289,33 +312,33 @@ int GameAnalytics::determineIndexOfPressedCard()
 			return -1;
 		}
 	}
-	else if (290 <= pt->y && pt->y <= 850)
+	else if (290 <= y && y <= 850)
 	{
-		if (284 <= pt->x && pt->x <= 415)
+		if (284 <= x && x <= 415)
 		{
 			return 0;
 		}
-		else if (434 <= pt->x && pt->x <= 565)
+		else if (434 <= x && x <= 565)
 		{
 			return 1;
 		}
-		else if (584 <= pt->x && pt->x <= 715)
+		else if (584 <= x && x <= 715)
 		{
 			return 2;
 		}
-		else if (734 <= pt->x && pt->x <= 865)
+		else if (734 <= x && x <= 865)
 		{
 			return 3;
 		}
-		else if (884 <= pt->x && pt->x <= 1015)
+		else if (884 <= x && x <= 1015)
 		{
 			return 4;
 		}
-		else if (1034 <= pt->x && pt->x <= 1165)
+		else if (1034 <= x && x <= 1165)
 		{
 			return 5;
 		}
-		else if (1184 <= pt->x && pt->x <= 1315)
+		else if (1184 <= x && x <= 1315)
 		{
 			return 6;
 		}
@@ -331,41 +354,41 @@ int GameAnalytics::determineIndexOfPressedCard()
 	return -1;
 }
 
-void GameAnalytics::determineNextState()
+void GameAnalytics::determineNextState(const int & x, const int & y)
 {
 	switch (currentState)
 	{
 	case MENU:
-		if ((1 <= pt->x  && pt->x <= 300) && (64 <= pt->y && pt->y <= 108))
+		if ((1 <= x  && x <= 300) && (64 <= y && y <= 108))
 		{
 			std::cout << "HINT PRESSED!" << std::endl;
 			currentState = HINT;
 		}
-		else if (!((1 <= pt->x  && pt->x <= 300) && (54 <= pt->y && pt->y <= 899)))
+		else if (!((1 <= x  && x <= 300) && (54 <= y && y <= 899)))
 		{
 			std::cout << "PLAYING!" << std::endl;
 			currentState = PLAYING;
 		}
 		break;
 	case NEWGAME:
-		if ((1175 <= pt->x  && pt->x <= 1312) && (486 <= pt->y && pt->y <= 516))
+		if ((1175 <= x  && x <= 1312) && (486 <= y && y <= 516))
 		{
 			std::cout << "CANCEL PRESSED!" << std::endl;
 			currentState = PLAYING;
 		}
-		else if ((1010 <= pt->x  && pt->x <= 1146) && (486 <= pt->y && pt->y <= 516))
+		else if ((1010 <= x  && x <= 1146) && (486 <= y && y <= 516))
 		{
 			std::cout << "CONTINUE PRESSED!" << std::endl;
 			currentState = QUIT;
 		}
 		break;
 	case OUTOFMOVES:
-		if ((1175 <= pt->x  && pt->x <= 1312) && (486 <= pt->y && pt->y <= 516))
+		if ((1175 <= x  && x <= 1312) && (486 <= y && y <= 516))
 		{
 			std::cout << "UNDO PRESSED!" << std::endl;
 			currentState = UNDO;
 		}
-		else if ((1010 <= pt->x  && pt->x <= 1146) && (486 <= pt->y && pt->y <= 516))
+		else if ((1010 <= x  && x <= 1146) && (486 <= y && y <= 516))
 		{
 			std::cout << "CONTINUE PRESSED!" << std::endl;
 			currentState = QUIT;
@@ -376,14 +399,14 @@ void GameAnalytics::determineNextState()
 		}
 		break;
 	case MAINMENU:
-		if ((75 <= pt->x  && pt->x <= 360) && (149 <= pt->y && pt->y <= 416))
+		if ((75 <= x  && x <= 360) && (149 <= y && y <= 416))
 		{
 			std::cout << "KLONDIKE PRESSED!" << std::endl;
 			currentState = PLAYING;
 		}
 		break;
 	case PLAYING:
-		if ((12 <= pt->x  && pt->x <= 111) && (837 <= pt->y && pt->y <= 889))
+		if ((12 <= x  && x <= 111) && (837 <= y && y <= 889))
 		{
 			std::cout << "NEWGAME PRESSED!" << std::endl;
 			currentState = NEWGAME;
@@ -393,26 +416,31 @@ void GameAnalytics::determineNextState()
 			std::cout << "OUT OF MOVES!" << std::endl;
 			currentState = OUTOFMOVES;
 		}
-		else if ((1487 <= pt->x  && pt->x <= 1586) && (837 <= pt->y && pt->y <= 889))
+		else if ((1487 <= x  && x <= 1586) && (837 <= y && y <= 889))
 		{
 			std::cout << "UNDO PRESSED!" << std::endl;
 			currentState = UNDO;
 		}
-		else if ((13 <= pt->x  && pt->x <= 82) && (1 <= pt->y && pt->y <= 55))
+		else if ((13 <= x  && x <= 82) && (1 <= y && y <= 55))
 		{
 			std::cout << "MENU PRESSED!" << std::endl;
 			currentState = MENU;
 		}
-		else if ((283 <= pt->x  && pt->x <= 416) && (84 <= pt->y && pt->y <= 258))
+		else if ((283 <= x  && x <= 416) && (84 <= y && y <= 258))
 		{
 			//std::cout << "PILE PRESSED!" << std::endl;
 			++numberOfPilePresses;
 		}
-		else if ((91 <= pt->x  && pt->x <= 161) && (1 <= pt->y && pt->y <= 55))
+		else if ((91 <= x  && x <= 161) && (1 <= y && y <= 55))
 		{
 			std::cout << "BACK PRESSED!" << std::endl;
 			currentState = MAINMENU;
 		}
+		break;
+	case WON:
+		std::cout << "--------------------------------------------------------" << std::endl;
+		std::cout << "Game won!" << std::endl;
+		std::cout << "--------------------------------------------------------" << std::endl;
 		break;
 	default:
 		std::cerr << "Error: currentState is not defined!" << std::endl;
@@ -462,12 +490,12 @@ bool GameAnalytics::handlePlayingState()
 
 void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
 	//Mat src = hwnd2mat(hwnd); // mbuffer;
-	imagecounter++;
-	EnterCriticalSection(&lock);
+	imageCounter++;
+	EnterCriticalSection(&clickLock);
 	//srcBuffer.push(src);
 	xPosBuffer.push(x);
 	yPosBuffer.push(y);
-	LeaveCriticalSection(&lock);
+	LeaveCriticalSection(&clickLock);
 }
 
 void GameAnalytics::classifyExtractedCards()
@@ -492,6 +520,8 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 {
 	Mat src1, src2, graySrc1, graySrc2;
 	double norm = DBL_MAX;
+	std::chrono::time_point<std::chrono::steady_clock> duration1 = Clock::now();
+	std::chrono::time_point<std::chrono::steady_clock> duration2;
 	do {
 		src1 = hwnd2mat(hwnd);
 		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
@@ -499,7 +529,12 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
-	} while (norm > 0.0);
+		duration2 = Clock::now();
+	} while (norm > 0.0 && std::chrono::duration_cast<std::chrono::seconds>(duration2 - duration1).count() < 3);
+	if (std::chrono::duration_cast<std::chrono::seconds>(duration2 - duration1).count() > 2)
+	{
+		currentState = WON;
+	}
 	return src2;
 }
 
@@ -547,7 +582,7 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 
 bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {	
-	int changedIndex1 = -1, changedIndex2 = -1;
+	changedIndex1 = -1, changedIndex2 = -1;
 	findChangedCardLocations(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2);
 	if (changedIndex1 == -1 && changedIndex2 == -1)
 	{

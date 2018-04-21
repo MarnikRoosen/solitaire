@@ -59,8 +59,8 @@ void PlayingBoard::determineROI(const Mat & boardImage)
 			topCardsHeight = tempRect.height;
 		}
 	}
-	ROI = Rect(xmin - 10, ymin - 10, xmax - xmin + 20, standardBoardHeight - ymin);
-	topCardsHeight += 30;
+	ROI = Rect(xmin - 10, ymin - 10, xmax - xmin + 30, standardBoardHeight - ymin);
+	topCardsHeight += 20;
 }
 
 void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
