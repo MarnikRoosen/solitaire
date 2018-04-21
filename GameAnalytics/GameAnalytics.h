@@ -96,6 +96,8 @@ private:
 	int numberOfUndos = 0;
 	int numberOfPilePresses = 0;
 	std::vector<int> numberOfPresses;
+	std::vector<std::pair<int, int>> locationOfPresses;
+	std::pair<int, int> locationOfLastPress;
 	int numberOfHints = 0;
 	int numberOfSuitErrors = 0;
 	int numberOfRankErrors = 0;

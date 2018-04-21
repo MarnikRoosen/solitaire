@@ -131,13 +131,7 @@ void GameAnalytics::Process()
 	bool boardChanged;
 	while (!endOfGameBool)
 	{
-		if (currentPlayingBoard.at(8).knownCards.size() == 13 && currentPlayingBoard.at(9).knownCards.size() == 13
-			&& currentPlayingBoard.at(10).knownCards.size() == 13 && currentPlayingBoard.at(11).knownCards.size() == 13)
-		{
-			currentState = WON;
-			gameWon = true;
-		}
-		else if (!srcBuffer.empty())
+		if (!srcBuffer.empty())
 		{
 			srcData data;
 			EnterCriticalSection(&clickLock);
@@ -245,10 +239,13 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 	int indexOfPressedCardLocation = determineIndexOfPressedCard(x, y);
 	if (indexOfPressedCardLocation != -1)
 	{
-		pb.findCardsFromBoardImage(src);
 		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
 		if (indexOfPressedCard != -1)
 		{
+			if (indexOfPressedCard == 0)
+			{
+				locationOfPresses.push_back(locationOfLastPress);
+			}
 			int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;
 			std::pair<classifiers, classifiers> selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);
 			//std::cout << static_cast<char>(selectedCard.first) << static_cast<char>(selectedCard.second) << " is selected." << std::endl;
@@ -282,6 +279,11 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 			previouslySelectedCard.first = EMPTY;
 			previouslySelectedCard.second = EMPTY;
 		}
+
+		if (7 <= indexOfPressedCardLocation || indexOfPressedCardLocation < 12)
+		{
+			locationOfPresses.push_back(locationOfLastPress);
+		}
 	}
 }
 
@@ -291,22 +293,32 @@ int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)
 	{
 		if (434 <= x && x <= 629)
 		{
+			locationOfLastPress.first = x - 434;
+			locationOfLastPress.second = y - 84;
 			return 7;
 		}
 		else if (734 <= x && x <= 865)
 		{
+			locationOfLastPress.first = x - 734;
+			locationOfLastPress.second = y - 84;
 			return 8;
 		}
 		else if (884 <= x && x <= 1015)
 		{
+			locationOfLastPress.first = x - 884;
+			locationOfLastPress.second = y - 84;
 			return 9;
 		}
 		else if (1034 <= x && x <= 1165)
 		{
+			locationOfLastPress.first = x - 1034;
+			locationOfLastPress.second = y - 84;
 			return 10;
 		}
 		else if (1184 <= x && x <= 1315)
 		{
+			locationOfLastPress.first = x - 1184;
+			locationOfLastPress.second = y - 84;
 			return 11;
 		}
 		else
@@ -318,30 +330,44 @@ int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)
 	{
 		if (284 <= x && x <= 415)
 		{
+			locationOfLastPress.first = x - 284;
+			locationOfLastPress.second = y - 290;
 			return 0;
 		}
 		else if (434 <= x && x <= 565)
 		{
+			locationOfLastPress.first = x - 434;
+			locationOfLastPress.second = y - 290;
 			return 1;
 		}
 		else if (584 <= x && x <= 715)
 		{
+			locationOfLastPress.first = x - 584;
+			locationOfLastPress.second = y - 290;
 			return 2;
 		}
 		else if (734 <= x && x <= 865)
 		{
+			locationOfLastPress.first = x - 734;
+			locationOfLastPress.second = y - 290;
 			return 3;
 		}
 		else if (884 <= x && x <= 1015)
 		{
+			locationOfLastPress.first = x - 884;
+			locationOfLastPress.second = y - 290;
 			return 4;
 		}
 		else if (1034 <= x && x <= 1165)
 		{
+			locationOfLastPress.first = x - 1034;
+			locationOfLastPress.second = y - 290;
 			return 5;
 		}
 		else if (1184 <= x && x <= 1315)
 		{
+			locationOfLastPress.first = x - 1184;
+			locationOfLastPress.second = y - 290;
 			return 6;
 		}
 		else
@@ -431,6 +457,9 @@ void GameAnalytics::determineNextState(const int & x, const int & y)
 		else if ((283 <= x  && x <= 416) && (84 <= y && y <= 258))
 		{
 			//std::cout << "PILE PRESSED!" << std::endl;
+			locationOfLastPress.first = x - 283;
+			locationOfLastPress.second = y - 84;
+			locationOfPresses.push_back(locationOfLastPress);
 			++numberOfPilePresses;
 		}
 		else if ((91 <= x  && x <= 161) && (1 <= y && y <= 55))
@@ -462,6 +491,7 @@ void GameAnalytics::handleEndOfGame()
 	std::cout << "Times undo = " << numberOfUndos << std::endl;
 	std::cout << "Number of rank errors = " << numberOfRankErrors << std::endl;
 	std::cout << "Number of suit errors = " << numberOfSuitErrors << std::endl;
+	std::cout << "--------------------------------------------------------" << std::endl;
 	for (int i = 0; i < 7; i++)
 	{
 		std::cout << "Number of build stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
@@ -472,7 +502,17 @@ void GameAnalytics::handleEndOfGame()
 	{
 		std::cout << "Number of suit stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
 	}
-	Sleep(15000);
+	std::cout << "--------------------------------------------------------" << std::endl;
+	cv::Mat pressLocations = Mat(176 * 2, 133 * 2, CV_8UC3, Scalar(255, 255, 255));
+	for (int i = 0; i < locationOfPresses.size(); i++)
+	{
+		cv::Point point = Point(locationOfPresses.at(i).first * 2, locationOfPresses.at(i).second * 2);
+		cv::circle(pressLocations, point, 2, cv::Scalar(0, 0, 255), 2);
+	}
+	namedWindow("clicklocations", WINDOW_NORMAL);
+	resizeWindow("clicklocations", cv::Size(131 * 2, 174 * 2));
+	imshow("clicklocations", pressLocations);
+	waitKey(0);
 }
 
 bool GameAnalytics::handlePlayingState()
