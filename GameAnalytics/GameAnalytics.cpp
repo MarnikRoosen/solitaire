@@ -113,6 +113,7 @@ void GameAnalytics::Init() {
 
 	classifiedCardsFromPlayingBoard.reserve(12);
 	src = waitForStableImage();
+	pb.determineROI(src);
 	pb.findCardsFromBoardImage(src);
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();

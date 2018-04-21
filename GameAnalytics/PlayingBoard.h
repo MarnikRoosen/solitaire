@@ -28,6 +28,7 @@ public:
 	PlayingBoard();
 	~PlayingBoard();
 	void findCardsFromBoardImage(Mat const & boardImage);
+	void determineROI(const Mat & boardImage);
 	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);
 	void extractCardRegions(const cv::Mat & src);
 	void extractCards();
@@ -42,4 +43,5 @@ private:
 	std::vector<cv::Mat> cards;
 	std::vector<cv::Mat> cardRegions;
 	playingBoardState state;
+	Rect ROI;
 };

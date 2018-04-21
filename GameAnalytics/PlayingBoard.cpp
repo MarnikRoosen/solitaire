@@ -6,7 +6,6 @@
 PlayingBoard::PlayingBoard()
 {
 	cards.resize(12);
-	state = playing;
 }
 
 PlayingBoard::~PlayingBoard()
@@ -17,26 +16,45 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 {
 	cv::Mat adaptedSrc, src, hsv, mask;
 	resizeBoardImage(boardImage, src);
-	cv::Rect ROI = Rect( (int) standardBoardWidth * 0.17, (int) standardBoardHeight * 0.07, (int) standardBoardWidth * 0.67, (int) standardBoardHeight * 0.90);
 	cv::Mat croppedSrc = src(ROI);
-	cv::cvtColor(croppedSrc, hsv, COLOR_BGR2HSV);
-	blur(hsv, hsv, Size(10, 10));
-
-	//removing low intensities
-	/*Scalar lo_int(0, 0, 0);
-	Scalar hi_int(180, 255, 80);
-	inRange(hsv, lo_int, hi_int, mask);
-	croppedSrc.setTo(Scalar(0, 0, 0), mask);*/
-
-	//removing green
-	Scalar lo(72, 184, 105); //(hsv mean, var: 75.5889 199.844 122.861 0.621726 13.5166 8.62088)
-	Scalar hi(76, 215, 140);
-	inRange(hsv, lo, hi, mask);
-	croppedSrc.setTo(Scalar(0, 0, 0), mask);
 
 	// filter out the cardregions, followed by the cards
 	extractCardRegions(croppedSrc);
 	extractCards();
+}
+
+void PlayingBoard::determineROI(const Mat & boardImage)
+{
+	cv::Mat adaptedSrc, src, hsv, mask;
+	resizeBoardImage(boardImage, src);
+	vector<vector<Point>> contours;
+	vector<Vec4i> hierarchy;
+
+	cvtColor(src, adaptedSrc, COLOR_BGR2GRAY);	// convert the image to gray
+	threshold(adaptedSrc, adaptedSrc, 120, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+	findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
+
+	auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) {
+		double area = contourArea(c1, false);	// make sure the contourArea is big enough to be a card
+		Rect bounding_rect = boundingRect(c1);
+		float aspectRatio = (float)bounding_rect.width / (float)bounding_rect.height;	// make sure the contours have an aspect ratio of an average card (to filter out navbar)
+		return ((aspectRatio < 0.1) || (aspectRatio > 10) || (area < 10000)); });
+	contours.erase(new_end, contours.end());
+	std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
+
+	Rect tempRect = boundingRect(contours.at(0));
+	int xmin = tempRect.x;
+	int xmax = tempRect.x + tempRect.width;
+	int ymin = tempRect.y;
+	int ymax = tempRect.y + tempRect.height;
+	for (int i = 1; i < contours.size(); i++)
+	{
+		tempRect = boundingRect(contours.at(i));
+		if (xmin > tempRect.x) { xmin = tempRect.x; }
+		if (xmax < tempRect.x + tempRect.width) { xmax = tempRect.x + tempRect.width; }
+		if (ymin > tempRect.y) { ymin = tempRect.y; }
+	}
+	ROI = Rect(xmin - 10, ymin - 10, xmax - xmin + 20, standardBoardHeight - ymin);
 }
 
 void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
@@ -118,12 +136,10 @@ bool PlayingBoard::checkForOutOfMovesState(const cv::Mat &src)
 	threshold(croppedSrc, croppedSrc, 240, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
 	if (cv::countNonZero(croppedSrc) > croppedSrc.rows * croppedSrc.cols * 0.7)
 	{
-		state = outOfMoves;
 		return true;
 	}
 	else
 	{
-		state = playing;
 		return false;
 	}
 }
