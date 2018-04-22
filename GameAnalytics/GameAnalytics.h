@@ -54,6 +54,8 @@ public:
 	void Init();
 	void Process();
 
+	void toggleClickDownBool();
+
 	void grabSrc();
 
 	void processCardSelection(const int & x, const int & y);
@@ -125,5 +127,9 @@ private:
 	int distortedWindowHeight = 0;
 	HWND hwnd;
 	Mat src;
+	Mat src1, src2, src3, graySrc1, graySrc2, graySrc3;
+	double norm;
+	bool clickDownBool = false;
+	bool waitForStableImageBool = false;
 
 };

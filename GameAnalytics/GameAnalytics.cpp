@@ -177,8 +177,11 @@ void GameAnalytics::Process()
 				boardChanged = handlePlayingState();
 				break;
 			case UNDO:
-				previousPlayingBoards.pop_back();
-				currentPlayingBoard = previousPlayingBoards.back();
+				if (previousPlayingBoards.size() > 1)
+				{
+					previousPlayingBoards.pop_back();
+					currentPlayingBoard = previousPlayingBoards.back();
+				}
 				printPlayingBoardState();
 				++numberOfUndos;			
 				currentState = PLAYING;
@@ -228,13 +231,28 @@ void GameAnalytics::Process()
 	handleEndOfGame();
 }
 
+void GameAnalytics::toggleClickDownBool()
+{
+	if (waitForStableImageBool)
+	{
+		clickDownBool = true;
+	}
+	else
+	{
+		clickDownBool = false;
+	}
+}
+
 void GameAnalytics::grabSrc()
 {
 	while (!endOfGameBool)
 	{
 		if (!xPosBuffer.empty())
 		{
+			waitForStableImageBool = true;
 			cv::Mat img = waitForStableImage();
+			waitForStableImageBool = false;
+
 			srcData data;
 			data.src = img.clone();
 
@@ -586,22 +604,35 @@ void GameAnalytics::classifyExtractedCards()
 
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
-	Mat src1, src2, graySrc1, graySrc2;
-	double norm = DBL_MAX;
+	norm = DBL_MAX;
 	std::chrono::time_point<std::chrono::steady_clock> duration1 = Clock::now();
 	std::chrono::time_point<std::chrono::steady_clock> duration2;
-	do {
-		src1 = hwnd2mat(hwnd);
+	
+	src1 = hwnd2mat(hwnd);
+	cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
+	Sleep(15);
+	src2 = hwnd2mat(hwnd);
+	cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
+	norm = cv::norm(graySrc1, graySrc2, NORM_L1);
+	while (norm > 0.0)
+	{
+		if (std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - duration1).count() > 2)
+		{
+			cv::Mat empty;
+			return empty;
+		}
+		src1 = src2;
 		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-		Sleep(60);
+		Sleep(50);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
-		duration2 = Clock::now();
-	} while (norm > 0.0 && std::chrono::duration_cast<std::chrono::seconds>(duration2 - duration1).count() < 3);
-	if (std::chrono::duration_cast<std::chrono::seconds>(duration2 - duration1).count() > 2)
-	{
-		currentState = WON;
+		if (clickDownBool)
+		{
+			clickDownBool = !clickDownBool;
+			std::cout << "Using clickdown image" << std::endl;
+			return hwnd2mat(hwnd);
+		}
 	}
 	return src2;
 }
@@ -644,7 +675,7 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 		startupLocation.unknownCards = 0;
 		currentPlayingBoard.at(i) = startupLocation;
 	}
-
+	previousPlayingBoards.push_back(currentPlayingBoard);
 	printPlayingBoardState();
 }
 

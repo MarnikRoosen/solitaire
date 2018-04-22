@@ -1,6 +1,8 @@
 #pragma once
 #include <Windows.h>
 #include <iostream>
+#include <ctime>
+#include <chrono>
 
 class ClicksHooks
 {
@@ -20,7 +22,8 @@ public:
 	MSG msg;
 
 	// struct with information about all messages in our queue
-	int Messages(); // function to "deal" with our messages 
+	int Messages(); // function to "deal" with our messages
+
 };
 
 LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam); //callback declaration

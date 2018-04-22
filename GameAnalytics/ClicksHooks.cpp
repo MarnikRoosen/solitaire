@@ -4,6 +4,7 @@
 
 //extern CONDITION_VARIABLE mouseclick;
 extern GameAnalytics ga;
+std::chrono::time_point<std::chrono::steady_clock> clickUpTimer;
 
 //sources: https://www.unknowncheats.me/wiki/C%2B%2B:WindowsHookEx_Mouse
 
@@ -56,10 +57,15 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam)
 
 		switch (wParam) {
 		case WM_LBUTTONUP:
+			clickUpTimer = Clock::now();
 			ga.addCoordinatesToBuffer(pMouseStruct->pt.x, pMouseStruct->pt.y);
 			break;
 
-		case WM_LBUTTONDOWN:			
+		case WM_LBUTTONDOWN:
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - clickUpTimer).count() > 150)
+			{
+				ga.toggleClickDownBool();
+			}
 			break;
 
 		case WM_RBUTTONUP:
