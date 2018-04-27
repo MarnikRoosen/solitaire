@@ -156,19 +156,18 @@ void GameAnalytics::Process()
 	{
 		if (!srcBuffer.empty())
 		{
-			srcData data;
 			EnterCriticalSection(&clickLock);
-			data = srcBuffer.front(); srcBuffer.pop();
+			src = srcBuffer.front(); srcBuffer.pop();
+			pt->x = xPosBuffer.front(); xPosBuffer.pop();
+			pt->y = yPosBuffer.front(); yPosBuffer.pop();
 			LeaveCriticalSection(&clickLock);
-			pt->x = data.x;
-			pt->y = (data.y - (windowHeight - distortedWindowHeight) / 2) / distortedWindowHeight * windowHeight;
+			pt->y = (pt->y - (windowHeight - distortedWindowHeight) / 2) / distortedWindowHeight * windowHeight;
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
 			pt->x = pt->x * standardBoardWidth / windowWidth;
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
-			src = data.src;
 			determineNextState(pt->x, pt->y);
 			switch (currentState)
 			{
@@ -235,6 +234,7 @@ void GameAnalytics::toggleClickDownBool()
 {
 	if (waitForStableImageBool)
 	{
+		std::cout << "CLICK DOWN BOOL" << std::endl;
 		clickDownBool = true;
 	}
 	else
@@ -253,13 +253,10 @@ void GameAnalytics::grabSrc()
 			cv::Mat img = waitForStableImage();
 			waitForStableImageBool = false;
 
-			srcData data;
-			data.src = img.clone();
+			//data.src = img.clone();
 
 			EnterCriticalSection(&clickLock);
-			data.x = xPosBuffer.front(); xPosBuffer.pop();
-			data.y = yPosBuffer.front(); yPosBuffer.pop();
-			srcBuffer.push(data);
+			srcBuffer.push(img.clone());
 			LeaveCriticalSection(&clickLock);
 			dataCounter++;
 
@@ -269,7 +266,23 @@ void GameAnalytics::grabSrc()
 		}
 		else
 		{
-			Sleep(5);
+			cv::Mat img = waitForStableImage();
+			if (currentState == PLAYING && pb.checkForOutOfMovesState(img))
+			{
+				//data.src = img.clone();
+				EnterCriticalSection(&clickLock);
+				srcBuffer.push(img.clone());
+				LeaveCriticalSection(&clickLock);
+				dataCounter++;
+
+				stringstream ss;
+				ss << dataCounter;
+				imwrite("../GameAnalytics/test/" + ss.str() + ".png", img);
+			}
+			else
+			{
+				Sleep(5);
+			}
 		}
 	}
 }
@@ -293,7 +306,7 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 			++numberOfPresses.at(indexOfPressedCardLocation);
 
 			// detection of wrong card placement
-			if (previouslySelectedCard.first != EMPTY)
+			if (previouslySelectedCard.first != EMPTY && previouslySelectedCard != selectedCard)
 			{
 				char prevSuit = static_cast<char>(previouslySelectedCard.second);
 				char newSuit = static_cast<char>(selectedCard.second);
@@ -629,7 +642,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
 		if (clickDownBool)
 		{
-			clickDownBool = !clickDownBool;
+			clickDownBool = false;
 			std::cout << "Using clickdown image" << std::endl;
 			return hwnd2mat(hwnd);
 		}

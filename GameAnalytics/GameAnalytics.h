@@ -108,7 +108,7 @@ private:
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
 	std::vector<long long> averageThinkDurations;
 	
-	std::queue<srcData> srcBuffer;
+	std::queue<cv::Mat> srcBuffer;
 	std::queue<int> xPosBuffer;
 	std::queue<int> yPosBuffer;
 	DWORD   dwThreadIdHook;
@@ -131,5 +131,7 @@ private:
 	double norm;
 	bool clickDownBool = false;
 	bool waitForStableImageBool = false;
+	srcData data;
+
 
 };
