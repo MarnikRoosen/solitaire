@@ -48,9 +48,8 @@ public:
 	classifiers classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest);
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
-	int getAmountOfCorrectThrowAways();
-	int getAmountOfIncorrectThrowAways();
-	int getAmountOfKnns();
+
+	int getTestCounter();
 
 private:
 	Size standardCardSize;
@@ -60,9 +59,7 @@ private:
 	vector<std::pair<classifiers, cv::Mat>> rankImages;
 	vector<std::pair<classifiers, cv::Mat>> red_suitImages;
 	vector<std::pair<classifiers, cv::Mat>> black_suitImages;
-	int amountOfCorrectThrowAways = 0;
-	int amountOfIncorrectThrowAways = 0;
-	int amountOfKnns = 0;
+	int testCounter = 0;
 	Ptr<ml::KNearest>  kNearest_rank;
 	Ptr<ml::KNearest>  kNearest_black_suit;
 	Ptr<ml::KNearest>  kNearest_red_suit;

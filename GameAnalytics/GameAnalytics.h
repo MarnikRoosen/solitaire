@@ -53,6 +53,8 @@ public:
 	~GameAnalytics();
 	void Init();
 	void test();
+	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &points, const string & file);
+	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &points, const string &file);
 	void Process();
 
 	void toggleClickDownBool();

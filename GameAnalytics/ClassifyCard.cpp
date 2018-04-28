@@ -65,6 +65,10 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		}
 
 		// Sort and remove objects that are too small
+		if (contours.size() == 1)
+		{
+			++testCounter;
+		}
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2)
 			-> bool { return contourArea(c1, false) > contourArea(c2, false); });
 
@@ -91,7 +95,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 
 
 			// COMPARISON METHOD
-			int lowestValueOfComparison = INT_MAX;
+			/*int lowestValueOfComparison = INT_MAX;
 			int indexOfLowestValueUsingComparison = classifyTypeUsingComparison(image_list, resizedThreshImg, lowestValueOfComparison);
 			if (type == "rank")
 			{
@@ -101,17 +105,26 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			else
 			{
 				cardType.second = image_list.at(indexOfLowestValueUsingComparison).first;
+			}*/
+
+			// KNN METHOD
+			if (type == "rank")
+			{
+				cardType.first = classifyTypeWithKnn(resizedROI, kNearest_rank);
+			}
+			else
+			{
+				(type == "red_suit") ? cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
 			}
 
-			/*
+			
 			// SHAPE METHOD
-			double lowestValueUsingShape = DBL_MAX;
+			/*double lowestValueUsingShape = DBL_MAX;
 			int indexOfLowestValueUsingShape = classifyTypeUsingShape(image_list, contours, lowestValueUsingShape);			
 			if (lowestValueUsingShape < 0.15 || image_list.at(indexOfLowestValueUsingShape).first != '6' || image_list.at(indexOfLowestValueUsingShape).first != '9')
 			{
 				(type == "rank") ? cardType.first = image_list.at(indexOfLowestValueUsingShape).first : cardType.second = image_list.at(indexOfLowestValueUsingShape).first;
-			}
-			// KNN METHOD
+			}	
 			else
 			{
 				if (type == "rank")
@@ -248,10 +261,10 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 		resize(aCard, card, standardCardSize);
 	}
 	// Get the rank and suit from the resized card
-	Rect myRankROI(4, 4, 22, 26);
+	Rect myRankROI(4, 3, 22, 27);
 	Mat rank(card, myRankROI);
 	cv::resize(rank, rank, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
-	Rect mySuitROI(4, 31, 22, 20);
+	Rect mySuitROI(4, 30, 22, 21);
 	Mat suit(card, mySuitROI);
 	cv::resize(suit, suit, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);
@@ -376,19 +389,9 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 	fsTrainingImages.release();
 }
 
-int ClassifyCard::getAmountOfCorrectThrowAways()
+int ClassifyCard::getTestCounter()
 {
-	return amountOfCorrectThrowAways;
-}
-
-int ClassifyCard::getAmountOfIncorrectThrowAways()
-{
-	return amountOfIncorrectThrowAways;
-}
-
-int ClassifyCard::getAmountOfKnns()
-{
-	return amountOfKnns;
+	return testCounter;
 }
 
 std::pair<classifiers, classifiers> ClassifyCard::classifyCardWithKnn(std::pair<Mat, Mat> cardCharacteristics)

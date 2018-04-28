@@ -2,6 +2,8 @@
 #include "GameAnalytics.h"
 #include <thread>
 #include <cwchar>
+#include <fstream>
+#include <iterator>
 
 GameAnalytics ga;
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam);
@@ -17,6 +19,7 @@ int main(int argc, char** argv)
 	InitializeCriticalSection(&clickLock);
 
 	ga.Init();
+	//ga.test();
 
 	hThreadHook = CreateThread(
 		NULL,                   // default security attributes
@@ -84,7 +87,7 @@ void GameAnalytics::Init() {
 	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
 	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
-	//hwnd = FindWindow(_T("Chrome_WidgetWin_1"), NULL);
+	//hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Google Chrome");	disable hardware acceleration in advanced settings
 
 	if (hwnd == NULL)
 	{
@@ -151,7 +154,135 @@ void GameAnalytics::Init() {
 
 void GameAnalytics::test()
 {
+	// PREPARATION
+	std::vector<cv::Mat> testImages;
+	std::vector<std::vector<std::pair<classifiers, classifiers>>> correctClassifiedOutputVector;
 
+	for (int i = 0; i < 10; i++)
+	{
+		stringstream ss;
+		ss << i;
+		Mat src = imread("../GameAnalytics/test/someMovesPlayed/" + ss.str() + ".png");
+		if (!src.data)	// check for invalid input
+		{
+			cout << "Could not open or find testimage " << ss.str() << std::endl;
+			exit(EXIT_FAILURE);
+		}
+		testImages.push_back(src.clone());
+	}
+
+	/*for (int i = 0; i < testImages.size(); i++)		// ---> used to save testdata of the classified images to a txt file
+	{
+		pb.findCardsFromBoardImage(testImages.at(i)); // -> average 38ms
+		extractedImagesFromPlayingBoard = pb.getCards();
+		classifyExtractedCards();	// -> average d133ms and 550ms
+		correctClassifiedOutputVector.push_back(classifiedCardsFromPlayingBoard);
+	}
+	if (!writeTestData(correctClassifiedOutputVector, "../GameAnalytics/test/someMovesPlayed/correctClassifiedOutputVector.txt"))
+	{
+		std::cout << "Error writing testdata to txt file" << std::endl;
+		exit(EXIT_FAILURE);
+	}*/
+	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/someMovesPlayed/correctClassifiedOutputVector.txt"))
+	{
+		std::cout << "Error reading testdata from txt file" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+
+	// ACTUAL TESTING
+	int wrongRankCounter = 0;
+	int wrongSuitCounter = 0;
+	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+	for (int k = 0; k < 100; k++)
+	{
+		for (int i = 0; i < testImages.size(); i++)
+		{
+			pb.findCardsFromBoardImage(testImages.at(i));
+			extractedImagesFromPlayingBoard = pb.getCards();
+			classifyExtractedCards();
+			for (int j = 0; j < classifiedCardsFromPlayingBoard.size(); j++)
+			{
+				if (correctClassifiedOutputVector.at(i).at(j).first != classifiedCardsFromPlayingBoard.at(j).first) 
+				{ ++wrongRankCounter; }
+				if (correctClassifiedOutputVector.at(i).at(j).second != classifiedCardsFromPlayingBoard.at(j).second) 
+				{ ++wrongSuitCounter; }
+			}
+		}
+	}
+	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << " ns" << std::endl;
+	std::cout << "Rank error counter: " << wrongRankCounter << std::endl;
+	std::cout << "Suit error counter: " << wrongSuitCounter << std::endl;
+	int testcounter = cc.getTestCounter();
+	std::cout << "Test counter: " << testcounter << std::endl;
+	Sleep(10000);
+}
+
+bool GameAnalytics::writeTestData(const vector <vector <pair <classifiers, classifiers> > > &points, const string &file)
+{
+	if (points.empty())
+		return false;
+
+	if (file != "")
+	{
+		stringstream ss;
+		for (int k = 0; k < points.size(); k++)
+		{
+			for (int i = 0; i < points.at(k).size(); i++)
+			{
+				ss << static_cast<char>(points.at(k).at(i).first) << " " << static_cast<char>(points.at(k).at(i).second) << "\n";
+			}
+			ss << "\n";
+		}
+
+		ofstream out(file.c_str());
+		if (out.fail())
+		{
+			out.close();
+			return false;
+		}
+		out << ss.str();
+		out.close();
+	}
+	return true;
+}
+
+bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers> > > &points, const string &file)
+{
+	if (file != "")
+	{
+		stringstream ss;
+		ifstream in(file.c_str());
+		if (in.fail())
+		{
+			in.close();
+			return false;
+		}
+		std::string str;
+		// Read the next line from File untill it reaches the end.
+		points.resize(10);
+		for (int i = 0; i < points.size(); i++)
+		{
+			points.at(i).resize(12);
+		}
+		for (int k = 0; k < 10; k++)
+		{
+			for (int i = 0; i < 12; i++)
+			{
+				std::getline(in, str);
+				istringstream iss(str);
+				string subs, subs2;
+				iss >> subs;
+				iss >> subs2;
+				points.at(k).at(i).first = static_cast<classifiers>(subs[0]);
+				points.at(k).at(i).second = static_cast<classifiers>(subs2[0]);
+			}
+			std::getline(in, str);
+		}
+		in.close();
+	}
+	return true;
 }
 
 void GameAnalytics::Process()
