@@ -52,6 +52,7 @@ public:
 	GameAnalytics();
 	~GameAnalytics();
 	void Init();
+	void test();
 	void Process();
 
 	void toggleClickDownBool();
@@ -92,6 +93,7 @@ private:
 	std::pair<classifiers, classifiers> cardType;
 	std::pair<Mat, Mat> cardCharacteristics;
 	std::pair<classifiers, classifiers> previouslySelectedCard;
+	int previouslySelectedIndex = -1;
 	
 	bool endOfGameBool = false;
 	bool gameWon = false;

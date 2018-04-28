@@ -42,6 +42,25 @@ int main(int argc, char** argv)
 	return 0;
 }
 
+void changeConsoleFontSize(const double & percentageIncrease)
+{
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_FONT_INFOEX font = { sizeof(CONSOLE_FONT_INFOEX) };
+
+	if (!GetCurrentConsoleFontEx(hConsole, 0, &font))
+	{
+		exit(EXIT_FAILURE);
+	}
+	COORD size = font.dwFontSize;
+	size.X += (SHORT)(size.X * percentageIncrease);
+	size.Y += (SHORT)(size.Y * percentageIncrease);
+	font.dwFontSize = size;
+	if (!SetCurrentConsoleFontEx(hConsole, 0, &font))
+	{
+		exit(EXIT_FAILURE);
+	}
+}
+
 DWORD WINAPI ThreadHookFunction(LPVOID lpParam) {
 	
 	ClicksHooks::Instance().InstallHook();
@@ -130,23 +149,9 @@ void GameAnalytics::Init() {
 	}
 }
 
-void changeConsoleFontSize(const double & percentageIncrease)
+void GameAnalytics::test()
 {
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_FONT_INFOEX font = { sizeof(CONSOLE_FONT_INFOEX) };
 
-	if (!GetCurrentConsoleFontEx(hConsole, 0, &font))
-	{
-		exit(EXIT_FAILURE);
-	}
-	COORD size = font.dwFontSize;
-	size.X += (SHORT)(size.X * percentageIncrease);
-	size.Y += (SHORT)(size.Y * percentageIncrease);
-	font.dwFontSize = size;
-	if (!SetCurrentConsoleFontEx(hConsole, 0, &font))
-	{
-		exit(EXIT_FAILURE);
-	}
 }
 
 void GameAnalytics::Process()
@@ -262,22 +267,23 @@ void GameAnalytics::grabSrc()
 
 			stringstream ss;
 			ss << dataCounter;
-			imwrite("../GameAnalytics/test/" + ss.str() + ".png", img);
+			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", img);
 		}
 		else
 		{
 			cv::Mat img = waitForStableImage();
 			if (currentState == PLAYING && pb.checkForOutOfMovesState(img))
 			{
-				//data.src = img.clone();
 				EnterCriticalSection(&clickLock);
 				srcBuffer.push(img.clone());
+				xPosBuffer.push(0);	// push dummy data to inform outOfMoves
+				yPosBuffer.push(0);
 				LeaveCriticalSection(&clickLock);
 				dataCounter++;
 
 				stringstream ss;
 				ss << dataCounter;
-				imwrite("../GameAnalytics/test/" + ss.str() + ".png", img);
+				imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", img);
 			}
 			else
 			{
@@ -313,27 +319,39 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 				char prevRank = static_cast<char>(previouslySelectedCard.first);
 				char newRank = static_cast<char>(selectedCard.first);
 
-				if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))
+				if (8 <= indexOfPressedCardLocation && indexOfPressedCardLocation < 12 && 0 <= previouslySelectedIndex && previouslySelectedIndex < 8)
+				{
+					if ((prevSuit == 'H' && newSuit != 'H') || (prevSuit == 'D' && newSuit != 'D')
+						|| (prevSuit == 'S' && newSuit != 'S') || (prevSuit == 'C' || newSuit != 'C'))
+					{
+						std::cout << "Incompatible suit! " << prevSuit << " can't go on " << newSuit << " to build the suit stack" << std::endl;
+						++numberOfSuitErrors;
+					}
+				}
+				else if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))
 					|| ((prevSuit == 'S' || prevSuit == 'C') && (newSuit == 'S' || newSuit == 'C')))
 				{
-					std::cout << "Incompatible suit! " << prevSuit << " isn't compatible with " << newSuit << std::endl;
+					std::cout << "Incompatible suit! " << prevSuit << " can't go on " << newSuit<< " to build the build stack" << std::endl;
 					++numberOfSuitErrors;
 				}
+
 				if ((prevRank == '2' && newRank != '3') || (prevRank == '3' && newRank != '4') || (prevRank == '4' && newRank != '5')
 					|| (prevRank == '5' && newRank != '6') || (prevRank == '6' && newRank != '7') || (prevRank == '7' && newRank != '8')
 					|| (prevRank == '8' && newRank != '9') || (prevRank == '9' && newRank != ':') || (prevRank == ':' && newRank != 'J')
 					|| (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K') || (prevRank == 'K' && newRank != 'A'))
 				{
-					std::cout << "Incompatible rank! " << prevRank << " isn't compatible with " << newRank << std::endl;
+					std::cout << "Incompatible rank! " << prevRank << " can't go on " << newRank << std::endl;
 					++numberOfRankErrors;
 				}
 			}
 			previouslySelectedCard = selectedCard;
+			previouslySelectedIndex = indexOfPressedCardLocation;
 		}
 		else
 		{
 			previouslySelectedCard.first = EMPTY;
 			previouslySelectedCard.second = EMPTY;
+			previouslySelectedIndex = -1;
 		}
 
 		if (7 <= indexOfPressedCardLocation || indexOfPressedCardLocation < 12)
@@ -623,7 +641,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 	
 	src1 = hwnd2mat(hwnd);
 	cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-	Sleep(15);
+	Sleep(60);
 	src2 = hwnd2mat(hwnd);
 	cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 	norm = cv::norm(graySrc1, graySrc2, NORM_L1);
@@ -636,7 +654,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		}
 		src1 = src2;
 		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-		Sleep(50);
+		Sleep(60);
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
@@ -644,7 +662,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		{
 			clickDownBool = false;
 			std::cout << "Using clickdown image" << std::endl;
-			return hwnd2mat(hwnd);
+			return src1;
 		}
 	}
 	return src2;

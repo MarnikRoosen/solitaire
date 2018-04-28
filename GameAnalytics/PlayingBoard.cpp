@@ -320,7 +320,7 @@ void PlayingBoard::croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::M
 		float scale = ((float)standardCardWidth) / width;
 		roi.width = standardCardWidth;
 		roi.x = 0;
-		roi.height = height * scale;
+		roi.height = height * scale - 1;
 		roi.y = 0;
 	}
 	else
@@ -328,7 +328,7 @@ void PlayingBoard::croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::M
 		float scale = ((float)standardCardHeight) / height;
 		roi.y = 0;
 		roi.height = standardCardHeight;
-		roi.width = width * scale;
+		roi.width = width * scale - 1;
 		roi.x = 0;
 	}
 	cv::resize(croppedRef, resizedCardImage(roi), roi.size());
