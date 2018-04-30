@@ -113,8 +113,11 @@ private:
 	std::vector<long long> averageThinkDurations;
 	
 	std::queue<cv::Mat> srcBuffer;
-	std::queue<int> xPosBuffer;
-	std::queue<int> yPosBuffer;
+	std::queue<cv::Mat> clickDownBuffer;
+	std::queue<int> xPosBuffer1;
+	std::queue<int> yPosBuffer1;
+	std::queue<int> xPosBuffer2;
+	std::queue<int> yPosBuffer2;
 	DWORD   dwThreadIdHook;
 	HANDLE  hThreadHook;
 	int dataCounter = 0, imageCounter = 0;

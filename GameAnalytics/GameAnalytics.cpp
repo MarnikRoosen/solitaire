@@ -106,31 +106,6 @@ void GameAnalytics::Init() {
 		distortedWindowHeight = (windowWidth * 1080 / 1920);
 		//std::cout << "heightOffset = " << distortedWindowHeight << std::endl;
 	}
-	
-	// preparing for screencapture
-
-	hwindowDC = GetDC(hwnd);	//get device context
-	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	//creates a compatible memory device context for the device
-	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	//set bitmap stretching mode, color on color deletes all eliminated lines of pixels
-
-	GetClientRect(hwnd, &windowsize);	//get coordinates of clients window
-	height = windowsize.bottom;
-	width = windowsize.right;
-	src.create(height, width, CV_8UC4);	//creates matrix with a given height and width, CV_ 8 unsigned 4 (color)channels
-										// create a bitmap
-	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
-	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
-	bi.biWidth = width;
-	bi.biHeight = -height;  //origin of the source is the top left corner, height is 'negative'
-	bi.biPlanes = 1;
-	bi.biBitCount = 32;
-	bi.biCompression = BI_RGB;
-	bi.biSizeImage = 0;
-	bi.biXPelsPerMeter = 0;
-	bi.biYPelsPerMeter = 0;
-	bi.biClrUsed = 0;
-	bi.biClrImportant = 0;
-	SelectObject(hwindowCompatibleDC, hbwindow);	// use the previously created device context with the bitmap
 
 	previouslySelectedCard.first = EMPTY;
 	previouslySelectedCard.second = EMPTY;
@@ -294,8 +269,8 @@ void GameAnalytics::Process()
 		{
 			EnterCriticalSection(&clickLock);
 			src = srcBuffer.front(); srcBuffer.pop();
-			pt->x = xPosBuffer.front(); xPosBuffer.pop();
-			pt->y = yPosBuffer.front(); yPosBuffer.pop();
+			pt->x = xPosBuffer2.front(); xPosBuffer2.pop();
+			pt->y = yPosBuffer2.front(); yPosBuffer2.pop();
 			LeaveCriticalSection(&clickLock);
 			pt->y = (pt->y - (windowHeight - distortedWindowHeight) / 2) / distortedWindowHeight * windowHeight;
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
@@ -358,6 +333,11 @@ void GameAnalytics::Process()
 			processCardSelection(pt->x, pt->y);
 
 		}
+		else if (currentState == PLAYING && pb.checkForOutOfMovesState(hwnd2mat(hwnd)))
+		{
+			std::cout << "OUT OF MOVES!" << std::endl;
+			currentState = OUTOFMOVES;
+		}
 		else
 		{
 			Sleep(10);
@@ -371,6 +351,7 @@ void GameAnalytics::toggleClickDownBool()
 	if (waitForStableImageBool)
 	{
 		std::cout << "CLICK DOWN BOOL" << std::endl;
+		clickDownBuffer.push(hwnd2mat(hwnd));
 		clickDownBool = true;
 	}
 	else
@@ -383,15 +364,15 @@ void GameAnalytics::grabSrc()
 {
 	while (!endOfGameBool)
 	{
-		if (!xPosBuffer.empty())
+		if (!xPosBuffer1.empty())
 		{
 			waitForStableImageBool = true;
 			cv::Mat img = waitForStableImage();
 			waitForStableImageBool = false;
 
-			//data.src = img.clone();
-
 			EnterCriticalSection(&clickLock);
+			xPosBuffer2.push(xPosBuffer1.front()); xPosBuffer1.pop();
+			yPosBuffer2.push(yPosBuffer1.front()); yPosBuffer1.pop();
 			srcBuffer.push(img.clone());
 			LeaveCriticalSection(&clickLock);
 			dataCounter++;
@@ -402,24 +383,7 @@ void GameAnalytics::grabSrc()
 		}
 		else
 		{
-			cv::Mat img = waitForStableImage();
-			if (currentState == PLAYING && pb.checkForOutOfMovesState(img))
-			{
-				EnterCriticalSection(&clickLock);
-				srcBuffer.push(img.clone());
-				xPosBuffer.push(0);	// push dummy data to inform outOfMoves
-				yPosBuffer.push(0);
-				LeaveCriticalSection(&clickLock);
-				dataCounter++;
-
-				stringstream ss;
-				ss << dataCounter;
-				imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", img);
-			}
-			else
-			{
-				Sleep(5);
-			}
+			Sleep(5);
 		}
 	}
 }
@@ -741,8 +705,8 @@ void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
 	imageCounter++;
 	EnterCriticalSection(&clickLock);
 	//srcBuffer.push(src);
-	xPosBuffer.push(x);
-	yPosBuffer.push(y);
+	xPosBuffer1.push(x);
+	yPosBuffer1.push(y);
 	LeaveCriticalSection(&clickLock);
 }
 
@@ -793,6 +757,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		{
 			clickDownBool = false;
 			std::cout << "Using clickdown image" << std::endl;
+			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
 			return src1;
 		}
 	}
@@ -883,8 +848,6 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 			(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;
 			return true;
 		}
-		return false;
-
 	}
 
 	// card move between build stack and suit stack
@@ -895,7 +858,6 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 			printPlayingBoardState();
 			return true;
 		}
-		return false;
 	}
 
 	// error with previously detected card
@@ -910,6 +872,7 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		printPlayingBoardState();
 		return true;
 	}
+	return false;
 }
 
 bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2)
@@ -1033,7 +996,7 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 		}
 		else if (i == 7)
 		{
-			if (currentPlayingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7))
+			if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY && currentPlayingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7))
 			{
 				changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
 			}
@@ -1118,8 +1081,49 @@ void GameAnalytics::printPlayingBoardState()
 
 cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
 {
+	HDC hwindowDC, hwindowCompatibleDC;
+
+	int height, width, srcheight, srcwidth;
+	HBITMAP hbwindow;
+	Mat src;
+	BITMAPINFOHEADER  bi;
+
+	hwindowDC = GetDC(hwnd);
+	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);
+	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);
+
+	RECT windowsize;    // get the height and width of the screen
+	GetClientRect(hwnd, &windowsize);
+
+	srcheight = windowsize.bottom;
+	srcwidth = windowsize.right;
+	height = windowsize.bottom;  //change this to whatever size you want to resize to
+	width = windowsize.right;
+
+	src.create(height, width, CV_8UC4);
+
+	// create a bitmap
+	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
+	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
+	bi.biWidth = width;
+	bi.biHeight = -height;  //this is the line that makes it draw upside down or not
+	bi.biPlanes = 1;
+	bi.biBitCount = 32;
+	bi.biCompression = BI_RGB;
+	bi.biSizeImage = 0;
+	bi.biXPelsPerMeter = 0;
+	bi.biYPelsPerMeter = 0;
+	bi.biClrUsed = 0;
+	bi.biClrImportant = 0;
+
+	// use the previously created device context with the bitmap
+	SelectObject(hwindowCompatibleDC, hbwindow);
 	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, width, height, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
+
+																									   // avoid memory leak
+	DeleteObject(hbwindow); DeleteDC(hwindowCompatibleDC); ReleaseDC(hwnd, hwindowDC);
+
 	return src;
 }

@@ -65,7 +65,7 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam)
 			if (std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - clickUpTimer).count() > 150)
 			{
 				ga.toggleClickDownBool();
-			}
+ 			}
 			break;
 
 		case WM_RBUTTONUP:

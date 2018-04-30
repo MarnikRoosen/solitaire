@@ -14,13 +14,51 @@ PlayingBoard::~PlayingBoard()
 
 void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 {
-	cv::Mat adaptedSrc, src, hsv, mask;
-	resizeBoardImage(boardImage, src);
-	cv::Mat croppedSrc = src(ROI);
-
-	// filter out the cardregions, followed by the cards
-	extractCardRegions(croppedSrc);
-	extractCards();
+	cv::Mat adaptedSrc, src, hsv, mask, croppedSrc;
+	try
+	{
+		resizeBoardImage(boardImage, src);
+	}
+	catch (const std::exception&)
+	{
+		cv::Mat test;
+		cvtColor(boardImage, test, COLOR_BGR2GRAY);
+		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+		std::cout << "resize " << cv::countNonZero(test) << std::endl;
+	}
+	try
+	{
+		croppedSrc = src(ROI);
+	}
+	catch (const std::exception&)
+	{
+		cv::Mat test;
+		cvtColor(boardImage, test, COLOR_BGR2GRAY);
+		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+		std::cout << "crop " << cv::countNonZero(test) << std::endl;
+	}
+	try
+	{
+		extractCardRegions(croppedSrc);
+	}
+	catch (const std::exception&)
+	{
+		cv::Mat test;
+		cvtColor(boardImage, test, COLOR_BGR2GRAY);
+		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+		std::cout << "extract regions " << cv::countNonZero(test) << std::endl;
+	}
+	try
+	{
+		extractCards();
+	}
+	catch (const std::exception&)
+	{
+		cv::Mat test;
+		cvtColor(boardImage, test, COLOR_BGR2GRAY);
+		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+		std::cout << "extract cards " << cv::countNonZero(test) << std::endl;
+	}
 }
 
 void PlayingBoard::determineROI(const Mat & boardImage)
