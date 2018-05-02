@@ -18,38 +18,8 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	try
 	{
 		resizeBoardImage(boardImage, src);
-	}
-	catch (const std::exception&)
-	{
-		cv::Mat test;
-		cvtColor(boardImage, test, COLOR_BGR2GRAY);
-		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cout << "resize " << cv::countNonZero(test) << std::endl;
-	}
-	try
-	{
 		croppedSrc = src(ROI);
-	}
-	catch (const std::exception&)
-	{
-		cv::Mat test;
-		cvtColor(boardImage, test, COLOR_BGR2GRAY);
-		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cout << "crop " << cv::countNonZero(test) << std::endl;
-	}
-	try
-	{
 		extractCardRegions(croppedSrc);
-	}
-	catch (const std::exception&)
-	{
-		cv::Mat test;
-		cvtColor(boardImage, test, COLOR_BGR2GRAY);
-		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cout << "extract regions " << cv::countNonZero(test) << std::endl;
-	}
-	try
-	{
 		extractCards();
 	}
 	catch (const std::exception&)
@@ -57,7 +27,7 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 		cv::Mat test;
 		cvtColor(boardImage, test, COLOR_BGR2GRAY);
 		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cout << "extract cards " << cv::countNonZero(test) << std::endl;
+		std::cout << "resize " << cv::countNonZero(test) << std::endl;
 	}
 }
 
@@ -224,7 +194,12 @@ void PlayingBoard::extractCards()
 			Mat card = Mat(cardRegions[i], br);		
 			Mat croppedRef, resizedCardImage;
 			extractTopCardUsingSobel(card, croppedRef, i);
-			//extractTopCardUsingAspectRatio(card, croppedRef);
+
+			Size cardSize = croppedRef.size();
+			if (cardSize.width * 1.3 > cardSize.height || cardSize.width * 1.4 < cardSize.height)
+			{
+				extractTopCardUsingAspectRatio(card, croppedRef);
+			}
 			croppedTopCardToStandardSize(croppedRef, resizedCardImage);
 			cards.at(i) = resizedCardImage.clone();
 		}
@@ -318,7 +293,7 @@ void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 		/// Gradient X
 		cv::Sobel(gray, grad, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);
 		cv::convertScaleAbs(grad, abs_grad);
-		cv::threshold(abs_grad, thresh_grad, 70, 255, THRESH_BINARY);
+		cv::threshold(abs_grad, thresh_grad, 50, 255, THRESH_BINARY);
 		lowest_pt1.y = 0;
 		HoughLinesP(thresh_grad, linesP, 1, CV_PI / 180, 30, cardSize.height * 0.9, 10);
 		for (size_t i = 0; i < linesP.size(); i++)

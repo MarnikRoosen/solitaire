@@ -59,6 +59,7 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam)
 		case WM_LBUTTONUP:
 			clickUpTimer = Clock::now();
 			ga.addCoordinatesToBuffer(pMouseStruct->pt.x, pMouseStruct->pt.y);
+
 			break;
 
 		case WM_LBUTTONDOWN:

@@ -262,7 +262,7 @@ bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers>
 
 void GameAnalytics::Process()
 {
-	bool boardChanged;
+	int processedSrcCounter = 0;
 	while (!endOfGameBool)
 	{
 		if (!srcBuffer.empty())
@@ -279,12 +279,16 @@ void GameAnalytics::Process()
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
+			stringstream ss;
+			ss << ++processedSrcCounter;
+			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", src);
+
 			determineNextState(pt->x, pt->y);
 			switch (currentState)
 			{
 			case PLAYING:
 				pb.findCardsFromBoardImage(src); // -> average 38ms
-				boardChanged = handlePlayingState();
+				handlePlayingState();
 				break;
 			case UNDO:
 				if (previousPlayingBoards.size() > 1)
@@ -333,6 +337,15 @@ void GameAnalytics::Process()
 			processCardSelection(pt->x, pt->y);
 
 		}
+		else if (currentPlayingBoard.at(8).knownCards.size() == 13 && currentPlayingBoard.at(9).knownCards.size() == 13 &&
+			currentPlayingBoard.at(10).knownCards.size() == 13 && currentPlayingBoard.at(11).knownCards.size() == 13)
+		{
+			std::cout << "--------------------------------------------------------" << std::endl;
+			std::cout << "Game won!" << std::endl;
+			std::cout << "--------------------------------------------------------" << std::endl;
+			gameWon = true;
+			endOfGameBool = true;
+		}
 		else if (currentState == PLAYING && pb.checkForOutOfMovesState(hwnd2mat(hwnd)))
 		{
 			std::cout << "OUT OF MOVES!" << std::endl;
@@ -376,10 +389,6 @@ void GameAnalytics::grabSrc()
 			srcBuffer.push(img.clone());
 			LeaveCriticalSection(&clickLock);
 			dataCounter++;
-
-			stringstream ss;
-			ss << dataCounter;
-			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", img);
 		}
 		else
 		{
@@ -638,9 +647,6 @@ void GameAnalytics::determineNextState(const int & x, const int & y)
 		}
 		break;
 	case WON:
-		std::cout << "--------------------------------------------------------" << std::endl;
-		std::cout << "Game won!" << std::endl;
-		std::cout << "--------------------------------------------------------" << std::endl;
 		break;
 	default:
 		std::cerr << "Error: currentState is not defined!" << std::endl;
@@ -866,7 +872,10 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		if (currentPlayingBoard.at(changedIndex1).knownCards.empty())
 		{
 			score += 5;
-			--currentPlayingBoard.at(changedIndex1).unknownCards;
+			if (currentPlayingBoard.at(changedIndex1).unknownCards > 0)
+			{
+				--currentPlayingBoard.at(changedIndex1).unknownCards;
+			}
 		}
 		currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 		printPlayingBoardState();
