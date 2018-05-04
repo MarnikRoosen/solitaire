@@ -24,6 +24,10 @@
 #include <cstdio>
 #include <chrono>
 #include <numeric>
+#include <thread>
+#include <cwchar>
+#include <fstream>
+#include <iterator>
 
 typedef std::chrono::high_resolution_clock Clock;
 using namespace cv;
@@ -43,19 +47,22 @@ struct srcData
 
 enum SolitaireState { PLAYING, UNDO, QUIT, NEWGAME, MENU, MAINMENU, OUTOFMOVES, WON, HINT, AUTOCOMPLETE };
 
+void changeConsoleFontSize(const double & percentageIncrease);
+
 class PlayingBoard;
 class ClassifyCard;
 
 class GameAnalytics
 {
 public:
+	void hookMouseFunction();
 	GameAnalytics();
 	~GameAnalytics();
-	void Init();
+	void init();
 	void test();
 	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &points, const string & file);
 	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &points, const string &file);
-	void Process();
+	void process();
 
 	void toggleClickDownBool();
 
@@ -118,9 +125,7 @@ private:
 	std::queue<int> yPosBuffer1;
 	std::queue<int> xPosBuffer2;
 	std::queue<int> yPosBuffer2;
-	DWORD   dwThreadIdHook;
-	HANDLE  hThreadHook;
-	int dataCounter = 0, imageCounter = 0;
+	int processedSrcCounter = 0;
 	int changedIndex1, changedIndex2;
 
 	HDC hwindowDC, hwindowCompatibleDC;
@@ -139,6 +144,4 @@ private:
 	bool clickDownBool = false;
 	bool waitForStableImageBool = false;
 	srcData data;
-
-
 };
