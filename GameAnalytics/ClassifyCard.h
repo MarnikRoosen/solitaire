@@ -44,7 +44,6 @@ public:
 	int classifyTypeUsingComparison(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue);
 	void generateImageVector();
 	std::pair<Mat, Mat> segmentRankAndSuitFromCard(const Mat & aCard);
-	std::pair<classifiers, classifiers> classifyCardWithKnn(std::pair<Mat, Mat> cardCharacteristics);
 	classifiers classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest);
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
@@ -64,6 +63,19 @@ private:
 	Ptr<ml::KNearest>  kNearest_black_suit;
 	Ptr<ml::KNearest>  kNearest_red_suit;
 
+	std::pair<classifiers, classifiers> cardType;
+	std::vector<std::pair<classifiers, cv::Mat>> image_list;
+	std::string type;
+	std::vector<std::vector<cv::Point> > contours;
+	std::vector<cv::Vec4i> hierarchy;
+	cv::Mat src, blurredImg, grayImg, threshImg, diff, resizedBlurredImg, resizedThreshImg;
+	cv::Mat ROI, resizedROI;
+	cv::Mat3b hsv;
+	cv::Mat1b mask1, mask2, mask;
+	int nonZero;
+
+	Mat ROIFloat, ROIFlattenedFloat;
+	float fltCurrentChar;
 };
 
 inline bool fileExists(const std::string& name) {
