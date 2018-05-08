@@ -936,25 +936,6 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 	}
 }
 
-void GameAnalytics::updateTalonStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard)
-{
-	auto result = std::find(	// check if the card is already in the list
-		currentPlayingBoard.at(7).knownCards.begin(),
-		currentPlayingBoard.at(7).knownCards.end(),
-		classifiedCardsFromPlayingBoard.at(7));
-	if (result == currentPlayingBoard.at(7).knownCards.end())	// if not, push it to the list and update unknowncards
-	{
-		currentPlayingBoard.at(7).knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
-		--currentPlayingBoard.at(7).unknownCards;
-	}
-	else	// if so, remove it from the list and push it to the back (topcard)
-	{
-		currentPlayingBoard.at(7).knownCards.erase(result);
-		currentPlayingBoard.at(7).knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
-	}
-	currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);
-}
-
 void GameAnalytics::test()
 {
 	// PREPARATION
@@ -1104,7 +1085,7 @@ void GameAnalytics::printPlayingBoardState()
 	}
 	std::cout << "		Cards left: " << currentPlayingBoard.at(7).unknownCards << std::endl;
 
-	std::cout << "Solved cards: " << std::endl;
+	std::cout << "Solved cards: " << std::endl;		// print all cards from the suit stack
 	for (int i = 8; i < currentPlayingBoard.size(); i++)
 	{
 		std::cout << "   Pos " << i - 8 << ": ";
@@ -1119,7 +1100,7 @@ void GameAnalytics::printPlayingBoardState()
 		std::cout << "     Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
 	}
 
-	std::cout << "Bottom cards: " << std::endl;
+	std::cout << "Bottom cards: " << std::endl;		// print all cards from the build stack
 	for (int i = 0; i < 7; i++)
 	{
 		std::cout << "   Pos " << i << ": ";
@@ -1134,7 +1115,7 @@ void GameAnalytics::printPlayingBoardState()
 		std::cout << "     Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
 	}
 
-	auto averageThinkTime2 = Clock::now();
+	auto averageThinkTime2 = Clock::now();	// add the average think duration to the list
 	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfMove).count());
 	startOfMove = Clock::now();
 	std::cout << std::endl;
@@ -1149,19 +1130,19 @@ cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense a
 	Mat src;
 	BITMAPINFOHEADER  bi;
 
-	hwindowDC = GetDC(hwnd);
-	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);
-	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);
+	hwindowDC = GetDC(hwnd);	// get the device context of the window handle 
+	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	// get a handle to the memory of the device context
+	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	// set the stretching mode of the bitmap so that when the image gets resized to a smaller size, the eliminated pixels get deleted w/o preserving information
 
 	RECT windowsize;    // get the height and width of the screen
 	GetClientRect(hwnd, &windowsize);
 
-	srcheight = windowsize.bottom;
+	srcheight = windowsize.bottom;	// get the screensize of the window
 	srcwidth = windowsize.right;
-	height = windowsize.bottom;  //change this to whatever size you want to resize to
+	height = windowsize.bottom;
 	width = windowsize.right;
 
-	src.create(height, width, CV_8UC4);
+	src.create(height, width, CV_8UC4);	// create an a color image (R,G,B and alpha for transparency)
 
 	// create a bitmap
 	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
@@ -1184,7 +1165,9 @@ cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense a
 	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
 
 																									   // avoid memory leak
-	DeleteObject(hbwindow); DeleteDC(hwindowCompatibleDC); ReleaseDC(hwnd, hwindowDC);
+	DeleteObject(hbwindow);
+	DeleteDC(hwindowCompatibleDC);
+	ReleaseDC(hwnd, hwindowDC);
 
 	return src;
 }

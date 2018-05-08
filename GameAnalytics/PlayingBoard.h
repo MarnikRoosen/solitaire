@@ -29,6 +29,7 @@ public:
 	~PlayingBoard();
 	void findCardsFromBoardImage(Mat const & boardImage);
 	void determineROI(const Mat & boardImage);
+	void calculateOuterRect(std::vector<std::vector<cv::Point>> &contours);
 	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);
 	void extractCardRegions(const cv::Mat & src);
 	void extractCards();
