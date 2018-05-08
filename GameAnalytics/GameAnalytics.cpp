@@ -275,9 +275,16 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);	// check which card(s) on that index have been selected using a blue filter
 		if (indexOfPressedCard != -1)													//	-> returns an index from bottom->top of how many cards have been selected
 		{
-			int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
-			std::pair<classifiers, classifiers> selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);	// check which card has been selected
-
+			std::pair<classifiers, classifiers> selectedCard;
+			if (indexOfPressedCardLocation != 7)
+			{
+				int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
+				selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);	// check which card has been selected
+			}
+			else
+			{
+				selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).topCard;
+			}
 			detectPlayerMoveErrors(selectedCard, indexOfPressedCardLocation);	// detection of wrong card placement using previous and current selected card
 
 			previouslySelectedCard = selectedCard;	// update previously detected card
@@ -511,8 +518,24 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 		}
 		else if ((1487 <= x  && x <= 1586) && (837 <= y && y <= 889))
 		{
-			std::cout << "UNDO PRESSED!" << std::endl;
-			currentState = UNDO;
+			int cardsLeft = 0;
+			for (int i = 0; i < 8; i++)
+			{
+				if (currentPlayingBoard.at(i).unknownCards > 0)
+				{
+					++cardsLeft;
+				}
+			}
+			if (cardsLeft > 0)
+			{
+				std::cout << "UNDO PRESSED!" << std::endl;
+				currentState = UNDO;
+			}
+			else
+			{
+				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
+				currentState = AUTOCOMPLETE;
+			}
 		}
 		else if ((13 <= x  && x <= 82) && (1 <= y && y <= 55))
 		{
@@ -674,12 +697,8 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 
 	// talon
 	startupLocation.knownCards.clear();
-	if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
-	{
-		startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
-		startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
-	}
-	startupLocation.unknownCards = 24;
+	startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
+	startupLocation.unknownCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
 	currentPlayingBoard.at(7) = startupLocation;
 
 	// suit stack
@@ -709,17 +728,8 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	// pile pressed (only talon changed)
 	if (changedIndex1 == 7 && changedIndex2 == -1)
 	{
-		if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)	// new card isn't empty (after full cycle through talon)
-		{
-			updateTalonStack(classifiedCardsFromPlayingBoard);
-			printPlayingBoardState();
-			return true;
-		}
-		else
-		{
-			currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);
-			printPlayingBoardState();
-		}
+		currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);
+		printPlayingBoardState();
 		return true;
 	}
 
@@ -729,23 +739,13 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	{
 		int tempIndex;	// contains the other index
 		(changedIndex1 == 7) ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
-		auto result = std::find(	// find the index of the card in the vector of the talon
-			currentPlayingBoard.at(7).knownCards.begin(),
-			currentPlayingBoard.at(7).knownCards.end(),
-			classifiedCardsFromPlayingBoard.at(tempIndex));
-		if (result != currentPlayingBoard.at(7).knownCards.end())	// if the card is in the list, then the card has indeed moved from the talon to the new location
-		{
-			currentPlayingBoard.at(7).knownCards.erase(result);	// remove the card from the talon
-			currentPlayingBoard.at(tempIndex).knownCards.push_back(classifiedCardsFromPlayingBoard.at(tempIndex));	// add the card to the new location
-			if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
-			{
-				updateTalonStack(classifiedCardsFromPlayingBoard);	// update the talon if a new card has been turned over
-			}
-			printPlayingBoardState();
-			++numberOfPresses.at(tempIndex);	// update the number of presses on that index
-			(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;	// update the score
-			return true;
-		}
+		currentPlayingBoard.at(tempIndex).knownCards.push_back(currentPlayingBoard.at(7).topCard);	// add the card to the new location
+		currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);	// update the card at the talon
+		--currentPlayingBoard.at(7).unknownCards;
+		printPlayingBoardState();
+		++numberOfPresses.at(tempIndex);	// update the number of presses on that index
+		(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;	// update the score
+		return true;
 	}
 
 	// card move between build stack and suit stack
@@ -911,18 +911,18 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 {
 	for (int i = 0; i < currentPlayingBoard.size(); i++)
 	{
-		if (currentPlayingBoard.at(i).knownCards.empty())	// adding card to an empty location
+		if (i == 7)	// card is different from the topcard of the talon AND the card isn't empty
+		{
+			if (classifiedCardsFromPlayingBoard.at(7) != currentPlayingBoard.at(7).topCard)
+			{
+				changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
+			}
+		}
+		else if (currentPlayingBoard.at(i).knownCards.empty())	// adding card to an empty location
 		{
 			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)	// new card isn't empty
 			{
 				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
-			}
-		}
-		else if (i == 7)	// card is different from the topcard of the talon AND the card isn't empty
-		{
-			if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY && currentPlayingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7))
-			{
-				changedIndex1 == -1 ? (changedIndex1 = 7) : (changedIndex2 = 7);
 			}
 		}
 		else
@@ -1094,14 +1094,15 @@ bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers>
 void GameAnalytics::printPlayingBoardState()
 {
 	std::cout << "Deck: ";	// print the current topcard from deck
-	if (classifiedCardsFromPlayingBoard.at(7).first == EMPTY)
+	if (currentPlayingBoard.at(7).topCard.first == EMPTY)
 	{
-		std::cout << "// " << std::endl;
+		std::cout << "// ";
 	}
 	else
 	{
-		std::cout << static_cast<char>(currentPlayingBoard.at(7).knownCards.back().first) << static_cast<char>(currentPlayingBoard.at(7).knownCards.back().second) << std::endl;
+		std::cout << static_cast<char>(currentPlayingBoard.at(7).topCard.first) << static_cast<char>(currentPlayingBoard.at(7).topCard.second);
 	}
+	std::cout << "		Cards left: " << currentPlayingBoard.at(7).unknownCards << std::endl;
 
 	std::cout << "Solved cards: " << std::endl;
 	for (int i = 8; i < currentPlayingBoard.size(); i++)
