@@ -352,8 +352,8 @@ void GameAnalytics::detectPlayerMoveErrors(std::pair<classifiers, classifiers> &
 	}
 }
 
-int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)
-{
+int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)	// check if a cardlocation has been pressed and remap the coordinate to that cardlocation
+{																				// -> uses hardcoded values (possible because the screen is always an identical 1600x900)
 	if (84 <= pt->y && y <= 258)
 	{
 		if (434 <= x && x <= 629)
@@ -447,8 +447,8 @@ int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)
 	return -1;
 }
 
-void GameAnalytics::determineNextState(const int & x, const int & y)
-{
+void GameAnalytics::determineNextState(const int & x, const int & y)	// update the statemachine by checking if a special location has been pressed (menu, hint, undo, etc.)
+{																		// -> uses hardcoded values (possible because the screen is always an identical 1600x900)
 	switch (currentState)
 	{
 	case MENU:
@@ -519,9 +519,8 @@ void GameAnalytics::determineNextState(const int & x, const int & y)
 			std::cout << "MENU PRESSED!" << std::endl;
 			currentState = MENU;
 		}
-		else if ((283 <= x  && x <= 416) && (84 <= y && y <= 258))
+		else if ((283 <= x  && x <= 416) && (84 <= y && y <= 258))	// pile pressed
 		{
-			//std::cout << "PILE PRESSED!" << std::endl;
 			locationOfLastPress.first = x - 283;
 			locationOfLastPress.second = y - 84;
 			locationOfPresses.push_back(locationOfLastPress);
@@ -541,7 +540,7 @@ void GameAnalytics::determineNextState(const int & x, const int & y)
 	}
 }
 
-void GameAnalytics::handleEndOfGame()
+void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 {
 	std::cout << "--------------------------------------------------------" << std::endl;
 	(gameWon) ? std::cout << "Game won!" << std::endl : std::cout << "Game over!" << std::endl;	
@@ -568,7 +567,7 @@ void GameAnalytics::handleEndOfGame()
 		std::cout << "Number of suit stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
 	}
 	std::cout << "--------------------------------------------------------" << std::endl;
-	cv::Mat pressLocations = Mat(176 * 2, 133 * 2, CV_8UC3, Scalar(255, 255, 255));
+	cv::Mat pressLocations = Mat(176 * 2, 133 * 2, CV_8UC3, Scalar(255, 255, 255));	// output an image with location of presses on a topcard
 	for (int i = 0; i < locationOfPresses.size(); i++)
 	{
 		cv::Point point = Point(locationOfPresses.at(i).first * 2, locationOfPresses.at(i).second * 2);
@@ -582,12 +581,12 @@ void GameAnalytics::handleEndOfGame()
 
 bool GameAnalytics::handlePlayingState()
 {
-	pb.findCardsFromBoardImage(src); // -> average 38ms
+	pb.findCardsFromBoardImage(src); // extract the cards from the board
 	extractedImagesFromPlayingBoard = pb.getCards();
-	classifyExtractedCards();	// -> average d133ms and 550ms
-	if (updateBoard(classifiedCardsFromPlayingBoard))
+	classifyExtractedCards();	// classify the extracted cards
+	if (updateBoard(classifiedCardsFromPlayingBoard))	// check if the board needs to be updated
 	{
-		previousPlayingBoards.push_back(currentPlayingBoard);
+		previousPlayingBoards.push_back(currentPlayingBoard);	// if so, add the new playingboard to the list
 		return true;
 	}
 	else
@@ -598,7 +597,7 @@ bool GameAnalytics::handlePlayingState()
 }
 
 void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
-	EnterCriticalSection(&threadLock);
+	EnterCriticalSection(&threadLock);	// function called by the clickHooksThread, pushes the coordinates of a click to the first buffer
 	xPosBuffer1.push(x);
 	yPosBuffer1.push(y);
 	LeaveCriticalSection(&threadLock);
@@ -606,19 +605,19 @@ void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
 
 void GameAnalytics::classifyExtractedCards()
 {
-	classifiedCardsFromPlayingBoard.clear();
+	classifiedCardsFromPlayingBoard.clear();	// reset the variable
 	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [this](cv::Mat mat) {
-		if (mat.empty())
+		if (mat.empty())	// extracted card was an empty image -> no card on this location
 		{
 			cardType.first = EMPTY;
 			cardType.second = EMPTY;
 		}
-		else
+		else	// segment the rank and suit + classify this rank and suit
 		{
 			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
 			cardType = cc.classifyCard(cardCharacteristics);
 		}
-		classifiedCardsFromPlayingBoard.push_back(cardType);
+		classifiedCardsFromPlayingBoard.push_back(cardType);	// push the classified card to the variable
 	});
 }
 
@@ -630,20 +629,24 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 	src2 = hwnd2mat(hwnd);
 	while (norm > 0.0)
 	{
-		if (std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - duration1).count() > 2)
+		if (std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - duration1).count() > 2)	// function takes longer than 2 seconds -> end of game animation
 		{
 			cv::Mat empty;
 			return empty;
 		}
 		src1 = src2;
 		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-		Sleep(60);
+		Sleep(60);	// wait for a certain duration to check for a difference (animation)
+					// -> too short? issue: first animation of cardmove, second animation of new card turning around
+					//					the second animation takes a small duration to kick in, which will be missed if the Sleep duration is too short
+					// -> too long? the process takes longer, which can give issues when a player plays fast (more exception cases using clickDownBuffer)
 		src2 = hwnd2mat(hwnd);
 		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
-		norm = cv::norm(graySrc1, graySrc2, NORM_L1);
+		norm = cv::norm(graySrc1, graySrc2, NORM_L1);	// calculates the manhattan distance (sum of absolute values) of two grayimages
 		if (clickDownBool)
 		{
-			clickDownBool = false;
+			clickDownBool = false;	// new click registered while waitForStableImage isn't done yet
+									//  -> use the image at the moment of the new click (just before the new animation) for the previous move
 			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
 			return src1;
 		}
@@ -658,7 +661,7 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 	cardLocation startupLocation;
 
 	// build stack
-	for (i = 0; i < 7; i++)
+	for (i = 0; i < 7; i++)	// add the classified cards as the only item of known cards and set the amount of unknown cards of each location
 	{
 		startupLocation.knownCards.clear();
 		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
@@ -674,6 +677,7 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 	if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
 	{
 		startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
+		startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
 	}
 	startupLocation.unknownCards = 24;
 	currentPlayingBoard.at(7) = startupLocation;
@@ -689,24 +693,31 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 		startupLocation.unknownCards = 0;
 		currentPlayingBoard.at(i) = startupLocation;
 	}
-	previousPlayingBoards.push_back(currentPlayingBoard);
-	printPlayingBoardState();
+	previousPlayingBoards.push_back(currentPlayingBoard);	// add the first game state to the list of all game states
+	printPlayingBoardState();	// print the board
 }
 
 bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {	
 	changedIndex1 = -1, changedIndex2 = -1;
-	findChangedCardLocations(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2);
+	findChangedCardLocations(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2);	// check which card locations have changed, this is maximum 2 (move from loc1 to loc2, or click on deck)
 	if (changedIndex1 == -1 && changedIndex2 == -1)
 	{
-		return false;
+		return false;	// no locations changed, no update needed
 	}
+	
 	// pile pressed (only talon changed)
 	if (changedIndex1 == 7 && changedIndex2 == -1)
 	{
-		if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
+		if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)	// new card isn't empty (after full cycle through talon)
 		{
 			updateTalonStack(classifiedCardsFromPlayingBoard);
+			printPlayingBoardState();
+			return true;
+		}
+		else
+		{
+			currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);
 			printPlayingBoardState();
 		}
 		return true;
@@ -718,21 +729,21 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	{
 		int tempIndex;	// contains the other index
 		(changedIndex1 == 7) ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
-		auto result = std::find(
+		auto result = std::find(	// find the index of the card in the vector of the talon
 			currentPlayingBoard.at(7).knownCards.begin(),
 			currentPlayingBoard.at(7).knownCards.end(),
 			classifiedCardsFromPlayingBoard.at(tempIndex));
-		if (result != currentPlayingBoard.at(7).knownCards.end())
+		if (result != currentPlayingBoard.at(7).knownCards.end())	// if the card is in the list, then the card has indeed moved from the talon to the new location
 		{
-			currentPlayingBoard.at(7).knownCards.erase(result);
-			currentPlayingBoard.at(tempIndex).knownCards.push_back(classifiedCardsFromPlayingBoard.at(tempIndex));
+			currentPlayingBoard.at(7).knownCards.erase(result);	// remove the card from the talon
+			currentPlayingBoard.at(tempIndex).knownCards.push_back(classifiedCardsFromPlayingBoard.at(tempIndex));	// add the card to the new location
 			if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY)
 			{
-				updateTalonStack(classifiedCardsFromPlayingBoard);
+				updateTalonStack(classifiedCardsFromPlayingBoard);	// update the talon if a new card has been turned over
 			}
 			printPlayingBoardState();
-			++numberOfPresses.at(tempIndex);
-			(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;
+			++numberOfPresses.at(tempIndex);	// update the number of presses on that index
+			(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;	// update the score
 			return true;
 		}
 	}
@@ -748,28 +759,33 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 	}
 
 	// error with previously detected card
-	if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)
+	if (changedIndex1 != -1 && changedIndex1 != 7 && changedIndex2 == -1)	// one card location changed which wasn't a talon change
 	{
-		if (currentPlayingBoard.at(changedIndex1).knownCards.empty())
+		if (currentPlayingBoard.at(changedIndex1).knownCards.empty())	// animation of previous state ended too fast, a card was still turning over which was missed
+																		// -> no known cards in the list, but there is a card at that location: update knownCards
 		{
-			score += 5;
 			if (currentPlayingBoard.at(changedIndex1).unknownCards > 0)
 			{
 				--currentPlayingBoard.at(changedIndex1).unknownCards;
 			}
+			currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
+			printPlayingBoardState();
+			score += 5;
+			return true;
 		}
-		currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
-		printPlayingBoardState();
-		return true;
+		return false;		
 	}
 	return false;
 }
 
 bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2)
 {
-	// current visible card was already in the list of known cards
+	// 1. CURRENT VISIBLE CARD WAS ALREADY IN THE LIST OF KNOWN CARDS -> ONE OR MORE TOPCARDS WERE MOVED TO A OTHER LOCATION
 	auto inList1 = std::find(currentPlayingBoard.at(changedIndex1).knownCards.begin(), currentPlayingBoard.at(changedIndex1).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
 	auto inList2 = std::find(currentPlayingBoard.at(changedIndex2).knownCards.begin(), currentPlayingBoard.at(changedIndex2).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex2));
+	
+	// 1.1 The card was in the list of the card at index "changedIndex2"
+	//		-> remove all cards after this index (iterator++) from knowncards at index "changedIndex2" and add them to the knowncards at index "changedIndex1"
 	if (inList1 != currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 == currentPlayingBoard.at(changedIndex2).knownCards.end())
 	{
 		inList1++;
@@ -781,6 +797,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			inList1,
 			currentPlayingBoard.at(changedIndex1).knownCards.end());
 		
+		// update the score
 		if (8 <= changedIndex2 && changedIndex2 < 12 && 0 <= changedIndex1 && changedIndex1 < 7)	// build to suit stack
 		{
 			score += 10;
@@ -792,6 +809,9 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 		++numberOfPresses.at(changedIndex2);
 		return true;
 	}
+
+	// 1.2 The card was in the list of the card at index "changedIndex1"
+	//		-> remove all cards after this index (iterator++) from knowncards at index "changedIndex1"  and add them to the knowncards at index "changedIndex2"
 	if (inList1 == currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 != currentPlayingBoard.at(changedIndex2).knownCards.end())
 	{
 		inList2++;
@@ -803,6 +823,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			inList2,
 			currentPlayingBoard.at(changedIndex2).knownCards.end());
 
+		// update the score
 		if (8 <= changedIndex1 && changedIndex1 < 12 && 0 <= changedIndex2 && changedIndex2 < 7)	// build to suit stack
 		{
 			score += 10;
@@ -814,11 +835,18 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 		++numberOfPresses.at(changedIndex1);
 		return true;
 	}
-	// current visible card wasn't in the list of already known cards
+
+	// 2. CURRENT VISIBLE CARD WAS NOT IN THE LIST OF KNOWN CARDS -> ALL TOPCARDS WERE MOVED TO A OTHER LOCATION AND A NEW CARD TURNED OVER
+	//		-> check if the current topcard was in the list of the other cardlocation, if so, all cards of the other cardlocation were moved to this location
+	
 	if (inList1 == currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 == currentPlayingBoard.at(changedIndex2).knownCards.end())
 	{
 		auto inList1 = std::find(currentPlayingBoard.at(changedIndex1).knownCards.begin(), currentPlayingBoard.at(changedIndex1).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex2));
 		auto inList2 = std::find(currentPlayingBoard.at(changedIndex2).knownCards.begin(), currentPlayingBoard.at(changedIndex2).knownCards.end(), classifiedCardsFromPlayingBoard.at(changedIndex1));
+		
+		// 2.1 The topcard at index "changedIndex2" was in the list of the card at index "changedIndex1"
+		//		-> all cards from "changedIndex1" were moved to "changedIndex2" AND "changedIndex1" got a new card
+		//		-> remove all knowncards "changedIndex1" and add them to the knowncards at "changedIndex2" AND add the new card to "changedIndex1"
 		if (inList1 != currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 == currentPlayingBoard.at(changedIndex2).knownCards.end())
 		{
 			currentPlayingBoard.at(changedIndex2).knownCards.insert(
@@ -833,6 +861,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 				--currentPlayingBoard.at(changedIndex1).unknownCards;
 			}
 
+			// update the score
 			if (8 <= changedIndex2 && changedIndex2 < 12 && 0 <= changedIndex1 && changedIndex1 < 7)	// build to suit stack
 			{
 				score += 10;
@@ -844,6 +873,10 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			++numberOfPresses.at(changedIndex2);
 			return true;
 		}
+
+		// 2.2 The topcard at index "changedIndex1" was in the list of the card at index "changedIndex2"
+		//		-> all cards from "changedIndex2" were moved to "changedIndex1" AND "changedIndex2" got a new card
+		//		-> remove all knowncards "changedIndex2" and add them to the knowncards at "changedIndex1" AND add the new card to "changedIndex2"
 		if (inList1 == currentPlayingBoard.at(changedIndex1).knownCards.end() && inList2 != currentPlayingBoard.at(changedIndex2).knownCards.end())
 		{
 			currentPlayingBoard.at(changedIndex1).knownCards.insert(
@@ -858,6 +891,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 				--currentPlayingBoard.at(changedIndex2).unknownCards;
 			}
 
+			// update the score
 			if (8 <= changedIndex1 && changedIndex1 < 12 && 0 <= changedIndex2 && changedIndex2 < 7)	// build to suit stack
 			{
 				score += 10;
@@ -879,12 +913,12 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 	{
 		if (currentPlayingBoard.at(i).knownCards.empty())	// adding card to an empty location
 		{
-			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
+			if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)	// new card isn't empty
 			{
 				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
 			}
 		}
-		else if (i == 7)
+		else if (i == 7)	// card is different from the topcard of the talon AND the card isn't empty
 		{
 			if (classifiedCardsFromPlayingBoard.at(7).first != EMPTY && currentPlayingBoard.at(7).knownCards.back() != classifiedCardsFromPlayingBoard.at(7))
 			{
@@ -893,31 +927,32 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 		}
 		else
 		{
-			if (currentPlayingBoard.at(i).knownCards.back() != classifiedCardsFromPlayingBoard.at(i))
+			if (currentPlayingBoard.at(i).knownCards.back() != classifiedCardsFromPlayingBoard.at(i))	// classified topcard is different from the previous topcard
 			{
 				changedIndex1 == -1 ? (changedIndex1 = i) : (changedIndex2 = i);
 			}
 		}
-		if (changedIndex2 != -1) { return; }
+		if (changedIndex2 != -1) { return; }	// if 2 changed location were detected, return
 	}
 }
 
 void GameAnalytics::updateTalonStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard)
 {
-	auto result = std::find(
+	auto result = std::find(	// check if the card is already in the list
 		currentPlayingBoard.at(7).knownCards.begin(),
 		currentPlayingBoard.at(7).knownCards.end(),
 		classifiedCardsFromPlayingBoard.at(7));
-	if (result == currentPlayingBoard.at(7).knownCards.end())
+	if (result == currentPlayingBoard.at(7).knownCards.end())	// if not, push it to the list and update unknowncards
 	{
 		currentPlayingBoard.at(7).knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
 		--currentPlayingBoard.at(7).unknownCards;
 	}
-	else
+	else	// if so, remove it from the list and push it to the back (topcard)
 	{
 		currentPlayingBoard.at(7).knownCards.erase(result);
 		currentPlayingBoard.at(7).knownCards.push_back(classifiedCardsFromPlayingBoard.at(7));
 	}
+	currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);
 }
 
 void GameAnalytics::test()
@@ -926,7 +961,7 @@ void GameAnalytics::test()
 	std::vector<cv::Mat> testImages;
 	std::vector<std::vector<std::pair<classifiers, classifiers>>> correctClassifiedOutputVector;
 
-	for (int i = 0; i < 10; i++)
+	for (int i = 0; i < 10; i++)	// read in all testimages and push them to the vector
 	{
 		stringstream ss;
 		ss << i;
@@ -951,7 +986,7 @@ void GameAnalytics::test()
 	std::cout << "Error writing testdata to txt file" << std::endl;
 	exit(EXIT_FAILURE);
 	}*/
-	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/someMovesPlayed/correctClassifiedOutputVector.txt"))
+	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/someMovesPlayed/correctClassifiedOutputVector.txt"))	// read in the correct classified output
 	{
 		std::cout << "Error reading testdata from txt file" << std::endl;
 		exit(EXIT_FAILURE);
@@ -962,16 +997,16 @@ void GameAnalytics::test()
 	int wrongRankCounter = 0;
 	int wrongSuitCounter = 0;
 	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
-	for (int k = 0; k < 100; k++)
+	for (int k = 0; k < 100; k++)	// repeat for k loops
 	{
-		for (int i = 0; i < testImages.size(); i++)
+		for (int i = 0; i < testImages.size(); i++)	// repeat for all testimages
 		{
 			pb.findCardsFromBoardImage(testImages.at(i));
 			extractedImagesFromPlayingBoard = pb.getCards();
 			classifyExtractedCards();
 			for (int j = 0; j < classifiedCardsFromPlayingBoard.size(); j++)
 			{
-				if (correctClassifiedOutputVector.at(i).at(j).first != classifiedCardsFromPlayingBoard.at(j).first)
+				if (correctClassifiedOutputVector.at(i).at(j).first != classifiedCardsFromPlayingBoard.at(j).first)	// compare the classified output with the correct classified output
 				{
 					++wrongRankCounter;
 				}
@@ -982,30 +1017,30 @@ void GameAnalytics::test()
 			}
 		}
 	}
-	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();
+	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();	// test the duration of the classification of 10*100 loops
 	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << " ns" << std::endl;
-	std::cout << "Rank error counter: " << wrongRankCounter << std::endl;
+	std::cout << "Rank error counter: " << wrongRankCounter << std::endl;	// print the amount of faulty classifications
 	std::cout << "Suit error counter: " << wrongSuitCounter << std::endl;
-	int testcounter = cc.getTestCounter();
-	std::cout << "Test counter: " << testcounter << std::endl;
+	int amountOfPerfectSegmentations = cc.getAmountOfPerfectSegmentations();
+	std::cout << "Amount of perfect segmentations: " << amountOfPerfectSegmentations << std::endl;	// print amount of good segmentations
 	Sleep(10000);
 }
 
-bool GameAnalytics::writeTestData(const vector <vector <pair <classifiers, classifiers> > > &points, const string &file)
+bool GameAnalytics::writeTestData(const vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file)
 {
-	if (points.empty())
+	if (classifiedBoards.empty())
 		return false;
 
 	if (file != "")
 	{
 		stringstream ss;
-		for (int k = 0; k < points.size(); k++)
+		for (int k = 0; k < classifiedBoards.size(); k++)	// push each classified card as rank + space + suit, each card on seperate lines, to a stringstream
 		{
-			for (int i = 0; i < points.at(k).size(); i++)
+			for (int i = 0; i < classifiedBoards.at(k).size(); i++)
 			{
-				ss << static_cast<char>(points.at(k).at(i).first) << " " << static_cast<char>(points.at(k).at(i).second) << "\n";
+				ss << static_cast<char>(classifiedBoards.at(k).at(i).first) << " " << static_cast<char>(classifiedBoards.at(k).at(i).second) << "\n";	// cast the classified rank/suit to a char for readability
 			}
-			ss << "\n";
+			ss << "\n";	// leave a whitespace for a new classified board
 		}
 
 		ofstream out(file.c_str());
@@ -1014,13 +1049,13 @@ bool GameAnalytics::writeTestData(const vector <vector <pair <classifiers, class
 			out.close();
 			return false;
 		}
-		out << ss.str();
+		out << ss.str();	// push the stringstream of all classified cards to the file
 		out.close();
 	}
 	return true;
 }
 
-bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers> > > &points, const string &file)
+bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file)
 {
 	if (file != "")
 	{
@@ -1032,25 +1067,24 @@ bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers>
 			return false;
 		}
 		std::string str;
-		// Read the next line from File untill it reaches the end.
-		points.resize(10);
-		for (int i = 0; i < points.size(); i++)
+		classifiedBoards.resize(10);
+		for (int i = 0; i < classifiedBoards.size(); i++)	// prepare the classifiedBoards vector
 		{
-			points.at(i).resize(12);
+			classifiedBoards.at(i).resize(12);
 		}
 		for (int k = 0; k < 10; k++)
 		{
 			for (int i = 0; i < 12; i++)
 			{
-				std::getline(in, str);
-				istringstream iss(str);
+				std::getline(in, str);	// read line by line
+				istringstream iss(str);	// separates each word in the string
 				string subs, subs2;
-				iss >> subs;
-				iss >> subs2;
-				points.at(k).at(i).first = static_cast<classifiers>(subs[0]);
-				points.at(k).at(i).second = static_cast<classifiers>(subs2[0]);
+				iss >> subs;	// push the rank to a temporary string
+				iss >> subs2;	// push the suit to a temporary string
+				classifiedBoards.at(k).at(i).first = static_cast<classifiers>(subs[0]);	// cast the chars to classifiers and push them to the classifiedBoards vector
+				classifiedBoards.at(k).at(i).second = static_cast<classifiers>(subs2[0]);
 			}
-			std::getline(in, str);
+			std::getline(in, str);	// at the end of a board, bump one extra line for a new board
 		}
 		in.close();
 	}
@@ -1059,16 +1093,15 @@ bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers>
 
 void GameAnalytics::printPlayingBoardState()
 {
-	std::cout << "Deck: ";
-	if (currentPlayingBoard.at(7).knownCards.empty())
+	std::cout << "Deck: ";	// print the current topcard from deck
+	if (classifiedCardsFromPlayingBoard.at(7).first == EMPTY)
 	{
-		std::cout << "// ";
+		std::cout << "// " << std::endl;
 	}
-	for (int i = 0; i < currentPlayingBoard.at(7).knownCards.size(); i++)
+	else
 	{
-		std::cout << static_cast<char>(currentPlayingBoard.at(7).knownCards.at(i).first) << static_cast<char>(currentPlayingBoard.at(7).knownCards.at(i).second) << " ";
+		std::cout << static_cast<char>(currentPlayingBoard.at(7).knownCards.back().first) << static_cast<char>(currentPlayingBoard.at(7).knownCards.back().second) << std::endl;
 	}
-	std::cout << "     Hidden cards = " << currentPlayingBoard.at(7).unknownCards << std::endl;
 
 	std::cout << "Solved cards: " << std::endl;
 	for (int i = 8; i < currentPlayingBoard.size(); i++)

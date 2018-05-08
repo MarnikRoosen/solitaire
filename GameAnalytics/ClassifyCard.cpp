@@ -67,7 +67,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		// Sort and remove objects that are too small
 		if (contours.size() == 1)
 		{
-			++testCounter;
+			++amountOfPerfectSegmentations;
 		}
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2)
 			-> bool { return contourArea(c1, false) > contourArea(c2, false); });
@@ -75,6 +75,7 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		if (type == "rank" && contours.size() > 1 && contourArea(contours.at(1), false) > 30.0)
 		{
 			cardType.first = TEN;
+			++amountOfPerfectSegmentations;	// TEN is also a good segmentation
 		}
 		else
 		{
@@ -389,9 +390,9 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 	fsTrainingImages.release();
 }
 
-int ClassifyCard::getTestCounter()
+int ClassifyCard::getAmountOfPerfectSegmentations()
 {
-	return testCounter;
+	return amountOfPerfectSegmentations;
 }
 
 std::pair<classifiers, classifiers> ClassifyCard::classifyCardWithKnn(std::pair<Mat, Mat> cardCharacteristics)

@@ -49,7 +49,7 @@ public:
 	void getTrainedData(String type);
 	void generateTrainingData(cv::Mat trainingImage, String outputPreName);
 
-	int getTestCounter();
+	int getAmountOfPerfectSegmentations();
 
 private:
 	Size standardCardSize;
@@ -59,7 +59,7 @@ private:
 	vector<std::pair<classifiers, cv::Mat>> rankImages;
 	vector<std::pair<classifiers, cv::Mat>> red_suitImages;
 	vector<std::pair<classifiers, cv::Mat>> black_suitImages;
-	int testCounter = 0;
+	int amountOfPerfectSegmentations = 0;
 	Ptr<ml::KNearest>  kNearest_rank;
 	Ptr<ml::KNearest>  kNearest_black_suit;
 	Ptr<ml::KNearest>  kNearest_red_suit;

@@ -37,6 +37,7 @@ struct cardLocation
 {
 	int unknownCards;
 	std::vector<std::pair<classifiers, classifiers>> knownCards;
+	std::pair<classifiers, classifiers> topCard;
 };
 
 struct srcData
@@ -61,8 +62,8 @@ public:
 	void initScreenCapture();
 	void initGameLogic();
 	void test();
-	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &points, const string & file);
-	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &points, const string &file);
+	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string & file);
+	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file);
 	void process();
 
 	void handleUndoState();
