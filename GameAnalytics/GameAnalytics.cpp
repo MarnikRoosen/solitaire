@@ -6,18 +6,24 @@ GameAnalytics ga;
 
 int main(int argc, char** argv)
 {
+	// increasing the console font size by 50 %
 	changeConsoleFontSize(0.5);
 
+	// initializing lock for shared variables, screencapture and game logic
 	InitializeCriticalSection(&threadLock);
+	ga.initScreenCapture();
+	ga.initGameLogic();
+	
+	//ga.test();	// --> used for benchmarking functions
 
-	ga.init();
-	//ga.test();
-
+	// initializing thread to capture mouseclicks and a thread dedicated to capturing the screen of the game 
 	std::thread clickThread(&GameAnalytics::hookMouseFunction, &ga);
 	std::thread srcGrabber(&GameAnalytics::grabSrc, &ga);
 
+	// main processing function of the main thread
 	ga.process();
 
+	// terminate threads
 	srcGrabber.join();
 	clickThread.join();
 
@@ -33,10 +39,12 @@ void changeConsoleFontSize(const double & percentageIncrease)
 	{
 		exit(EXIT_FAILURE);
 	}
+
 	COORD size = font.dwFontSize;
 	size.X += (SHORT)(size.X * percentageIncrease);
 	size.Y += (SHORT)(size.Y * percentageIncrease);
 	font.dwFontSize = size;
+	
 	if (!SetCurrentConsoleFontEx(hConsole, 0, &font))
 	{
 		exit(EXIT_FAILURE);
@@ -45,58 +53,69 @@ void changeConsoleFontSize(const double & percentageIncrease)
 
 void GameAnalytics::hookMouseFunction()
 {
+	// installing the click hook
 	ClicksHooks::Instance().InstallHook();
+
+	// handeling the incoming mouse data
 	ClicksHooks::Instance().Messages();
 }
 
 GameAnalytics::GameAnalytics() : cc(), pb()
 {
+	// initializing ClassifyCard.cpp and PlayingBoard.cpp
 }
 
 GameAnalytics::~GameAnalytics()
 {
 }
 
-void GameAnalytics::init()
+void GameAnalytics::initScreenCapture()
 {
-	currentState = PLAYING;
-	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+	SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);	// making sure the screensize isn't altered automatically by Windows
 
-	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");
-	//hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Google Chrome");	disable hardware acceleration in advanced settings
-
+	hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Firefox Developer Edition");	// find the handle of a window using the FULL name
+	// hwnd = FindWindow(NULL, L"Microsoft Solitaire Collection - Google Chrome");	// disable hardware acceleration in advanced settings
+	
 	if (hwnd == NULL)
 	{
-		std::cout << "Cant find window" << std::endl;
+		std::cout << "Cant find Firefox window" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	HMONITOR appMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+
+	HMONITOR appMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);	// check on which monitor Solitaire is being played
 	MONITORINFO appMonitorInfo;
 	appMonitorInfo.cbSize = sizeof(appMonitorInfo);
-	GetMonitorInfo(appMonitor, &appMonitorInfo);
-	appRect = appMonitorInfo.rcMonitor;
+	GetMonitorInfo(appMonitor, &appMonitorInfo);	// get the location of that monitor in respect to the primary window
+	appRect = appMonitorInfo.rcMonitor;	// getting the data of the monitor on which Solitaire is being played
+	
 	windowWidth = abs(appRect.right - appRect.left);
 	windowHeight = abs(appRect.bottom - appRect.top);
-	if (1.75 < windowWidth / windowHeight < 1.80)
+	if (1.75 < windowWidth / windowHeight < 1.80)	// if the monitor doesn't have 16:9 aspect ratio, calculate the distorted coordinates
 	{
 		distortedWindowHeight = (windowWidth * 1080 / 1920);
-		//std::cout << "heightOffset = " << distortedWindowHeight << std::endl;
 	}
+}
 
-	previouslySelectedCard.first = EMPTY;
+void GameAnalytics::initGameLogic()
+{
+	currentState = PLAYING;	// initialize the statemachine
+
+	previouslySelectedCard.first = EMPTY;	// initialize selected card logic
 	previouslySelectedCard.second = EMPTY;
-	startOfGame = Clock::now();
+
+	startOfGame = Clock::now();	// tracking the time between moves and total game time
 	startOfMove = Clock::now();
 
 	classifiedCardsFromPlayingBoard.reserve(12);
-	src = waitForStableImage();
-	pb.determineROI(src);
-	pb.findCardsFromBoardImage(src);
+	src = waitForStableImage();	// get the first image of the board
+	pb.determineROI(src);	// calculating the important region within this board image
+	
+	pb.findCardsFromBoardImage(src);	// setup the starting board
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();
 	initializePlayingBoard(classifiedCardsFromPlayingBoard);
 
-	numberOfPresses.resize(12);
+	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
 	for (int i = 0; i < numberOfPresses.size(); i++)
 	{
 		numberOfPresses.at(i) = 0;
@@ -107,13 +126,15 @@ void GameAnalytics::process()
 {
 	while (!endOfGameBool)
 	{
-		if (!srcBuffer.empty())
+		if (!srcBuffer.empty())	// click registered
 		{
-			EnterCriticalSection(&threadLock);
+			EnterCriticalSection(&threadLock);	// get the coordinates of the click and image of the board
 			src = srcBuffer.front(); srcBuffer.pop();
 			pt->x = xPosBuffer2.front(); xPosBuffer2.pop();
 			pt->y = yPosBuffer2.front(); yPosBuffer2.pop();
 			LeaveCriticalSection(&threadLock);
+
+			// recalculate the coordinates to the correct window and rescale to the standardBoard
 			pt->y = (pt->y - (windowHeight - distortedWindowHeight) / 2) / distortedWindowHeight * windowHeight;
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[0], 1);
 			MapWindowPoints(GetDesktopWindow(), hwnd, &pt[1], 1);
@@ -121,31 +142,21 @@ void GameAnalytics::process()
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
-			stringstream ss;
+			stringstream ss;	// write the image to the disk for debugging or aditional testing
 			ss << ++processedSrcCounter;
 			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", src);
 
-			determineNextState(pt->x, pt->y);
+			determineNextState(pt->x, pt->y);	// check if a special location was pressed (menu, new game, undo, etc.) and change to the respecting game state
+			
 			switch (currentState)
 			{
 			case PLAYING:
-				pb.findCardsFromBoardImage(src); // -> average 38ms
 				handlePlayingState();
 				break;
 			case UNDO:
-				if (previousPlayingBoards.size() > 1)
-				{
-					previousPlayingBoards.pop_back();
-					currentPlayingBoard = previousPlayingBoards.back();
-				}
-				printPlayingBoardState();
-				++numberOfUndos;			
-				currentState = PLAYING;
+				handleUndoState();
 				break;
 			case QUIT:
-				std::cout << "--------------------------------------------------------" << std::endl;
-				std::cout << "Game over" << std::endl;
-				std::cout << "--------------------------------------------------------" << std::endl;
 				gameWon = false;
 				endOfGameBool = true;
 				break;
@@ -154,9 +165,6 @@ void GameAnalytics::process()
 				endOfGameBool = true;
 				break;
 			case AUTOCOMPLETE:
-				std::cout << "--------------------------------------------------------" << std::endl;
-				std::cout << "Game won! Finished using autocomplete." << std::endl;
-				std::cout << "--------------------------------------------------------" << std::endl;
 				gameWon = true;
 				endOfGameBool = true;
 				break;
@@ -176,22 +184,22 @@ void GameAnalytics::process()
 				std::cerr << "Error: currentState is not defined!" << std::endl;
 				break;
 			}
-			processCardSelection(pt->x, pt->y);
-
+			processCardSelection(pt->x, pt->y);	// check which card has been pressed and whether game errors have been made
 		}
-		else if (currentPlayingBoard.at(8).knownCards.size() == 13 && currentPlayingBoard.at(9).knownCards.size() == 13 &&
-			currentPlayingBoard.at(10).knownCards.size() == 13 && currentPlayingBoard.at(11).knownCards.size() == 13)
+
+		else if (currentState == WON)	// waitForStableImage took too long, game won
 		{
-			std::cout << "--------------------------------------------------------" << std::endl;
-			std::cout << "Game won!" << std::endl;
-			std::cout << "--------------------------------------------------------" << std::endl;
 			gameWon = true;
 			endOfGameBool = true;
 		}
-		else if (currentState == PLAYING && pb.checkForOutOfMovesState(hwnd2mat(hwnd)))
+		else if (currentState == PLAYING)	// check for out of moves using a static image
 		{
-			std::cout << "OUT OF MOVES!" << std::endl;
-			currentState = OUTOFMOVES;
+			cv::Mat img = hwnd2mat(hwnd);
+			if (pb.checkForOutOfMovesState(img))
+			{
+				std::cout << "OUT OF MOVES!" << std::endl;
+				currentState = OUTOFMOVES;
+			}
 		}
 		else
 		{
@@ -201,13 +209,25 @@ void GameAnalytics::process()
 	handleEndOfGame();
 }
 
+void GameAnalytics::handleUndoState()
+{
+	if (previousPlayingBoards.size() > 1)	// at least one move has been played in the game
+	{
+		previousPlayingBoards.pop_back();	// take the previous board state as the current board state
+		currentPlayingBoard = previousPlayingBoards.back();
+	}
+	printPlayingBoardState();
+	++numberOfUndos;
+	currentState = PLAYING;
+}
+
 void GameAnalytics::toggleClickDownBool()
 {
-	if (waitForStableImageBool)
+	if (waitForStableImageBool)	// if the main process is waiting for a stable image (no animations), but a new click comes in
 	{
-		std::cout << "CLICK DOWN BOOL" << std::endl;
+		std::cout << "CLICK DOWN BOOL" << std::endl;	// take the image right on the new click as the image of the previous move
 		clickDownBuffer.push(hwnd2mat(hwnd));
-		clickDownBool = true;
+		clickDownBool = true;	// notify waitForStableImage that it can use this image
 	}
 	else
 	{
@@ -217,19 +237,28 @@ void GameAnalytics::toggleClickDownBool()
 
 void GameAnalytics::grabSrc()
 {
-	while (!endOfGameBool)
+	while (!endOfGameBool)	// while game not over
 	{
-		if (!xPosBuffer1.empty())
+		if (!xPosBuffer1.empty())	// click registered
 		{
 			waitForStableImageBool = true;
-			cv::Mat img = waitForStableImage();
+			cv::Mat img = waitForStableImage();	// grab a still image
 			waitForStableImageBool = false;
 
-			EnterCriticalSection(&threadLock);
-			xPosBuffer2.push(xPosBuffer1.front()); xPosBuffer1.pop();
-			yPosBuffer2.push(yPosBuffer1.front()); yPosBuffer1.pop();
-			srcBuffer.push(img.clone());
-			LeaveCriticalSection(&threadLock);
+			if (!img.empty())	// empty image if the animation takes longer than 3 seconds (= game won animation)
+			{
+				EnterCriticalSection(&threadLock);
+				xPosBuffer2.push(xPosBuffer1.front()); xPosBuffer1.pop();	// push coordinates and image to a second buffer for processing
+				yPosBuffer2.push(yPosBuffer1.front()); yPosBuffer1.pop();
+				srcBuffer.push(img.clone());
+				LeaveCriticalSection(&threadLock);
+			}
+			else // game won -> pop buffers
+			{
+				currentState = WON;
+				xPosBuffer1.pop();
+				yPosBuffer1.pop();
+			}
 		}
 		else
 		{
@@ -240,68 +269,85 @@ void GameAnalytics::grabSrc()
 
 void GameAnalytics::processCardSelection(const int & x, const int & y)
 {
-	int indexOfPressedCardLocation = determineIndexOfPressedCard(x, y);
+	int indexOfPressedCardLocation = determineIndexOfPressedCard(x, y);	// check which cardlocation has been pressed using coordinates
 	if (indexOfPressedCardLocation != -1)
 	{
-		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);
-		if (indexOfPressedCard != -1)
+		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);	// check which card(s) on that index have been selected using a blue filter
+		if (indexOfPressedCard != -1)													//	-> returns an index from bottom->top of how many cards have been selected
 		{
-			if (indexOfPressedCard == 0)
-			{
-				locationOfPresses.push_back(locationOfLastPress);
-			}
-			int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;
-			std::pair<classifiers, classifiers> selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);
-			//std::cout << static_cast<char>(selectedCard.first) << static_cast<char>(selectedCard.second) << " is selected." << std::endl;
+			int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
+			std::pair<classifiers, classifiers> selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);	// check which card has been selected
 
-			++numberOfPresses.at(indexOfPressedCardLocation);
+			detectPlayerMoveErrors(selectedCard, indexOfPressedCardLocation);	// detection of wrong card placement using previous and current selected card
 
-			// detection of wrong card placement
-			if (previouslySelectedCard.first != EMPTY && previouslySelectedCard != selectedCard)
-			{
-				char prevSuit = static_cast<char>(previouslySelectedCard.second);
-				char newSuit = static_cast<char>(selectedCard.second);
-				char prevRank = static_cast<char>(previouslySelectedCard.first);
-				char newRank = static_cast<char>(selectedCard.first);
-
-				if (8 <= indexOfPressedCardLocation && indexOfPressedCardLocation < 12 && 0 <= previouslySelectedIndex && previouslySelectedIndex < 8)
-				{
-					if ((prevSuit == 'H' && newSuit != 'H') || (prevSuit == 'D' && newSuit != 'D')
-						|| (prevSuit == 'S' && newSuit != 'S') || (prevSuit == 'C' || newSuit != 'C'))
-					{
-						std::cout << "Incompatible suit! " << prevSuit << " can't go on " << newSuit << " to build the suit stack" << std::endl;
-						++numberOfSuitErrors;
-					}
-				}
-				else if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))
-					|| ((prevSuit == 'S' || prevSuit == 'C') && (newSuit == 'S' || newSuit == 'C')))
-				{
-					std::cout << "Incompatible suit! " << prevSuit << " can't go on " << newSuit<< " to build the build stack" << std::endl;
-					++numberOfSuitErrors;
-				}
-
-				if ((prevRank == '2' && newRank != '3') || (prevRank == '3' && newRank != '4') || (prevRank == '4' && newRank != '5')
-					|| (prevRank == '5' && newRank != '6') || (prevRank == '6' && newRank != '7') || (prevRank == '7' && newRank != '8')
-					|| (prevRank == '8' && newRank != '9') || (prevRank == '9' && newRank != ':') || (prevRank == ':' && newRank != 'J')
-					|| (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K') || (prevRank == 'K' && newRank != 'A'))
-				{
-					std::cout << "Incompatible rank! " << prevRank << " can't go on " << newRank << std::endl;
-					++numberOfRankErrors;
-				}
-			}
-			previouslySelectedCard = selectedCard;
+			previouslySelectedCard = selectedCard;	// update previously detected card
 			previouslySelectedIndex = indexOfPressedCardLocation;
+
+			// +++metrics+++
+			if (indexOfPressedCard == 0)	// topcard has been pressed
+			{
+				locationOfPresses.push_back(locationOfLastPress);	// add the coordinate to the vector of all presses for visualisation in the end
+			}
+			++numberOfPresses.at(indexOfPressedCardLocation);	// increment the pressed card location
 		}
-		else
+		else	// no card has been selected (just a click on the screen below the card)
 		{
 			previouslySelectedCard.first = EMPTY;
 			previouslySelectedCard.second = EMPTY;
 			previouslySelectedIndex = -1;
 		}
 
-		if (7 <= indexOfPressedCardLocation || indexOfPressedCardLocation < 12)
+		// +++metrics+++
+		if (7 <= indexOfPressedCardLocation || indexOfPressedCardLocation < 12)	// the talon and suit stack are all 'topcards' and can immediately be added to locationOfPresses
 		{
 			locationOfPresses.push_back(locationOfLastPress);
+		}
+	}
+}
+
+void GameAnalytics::detectPlayerMoveErrors(std::pair<classifiers, classifiers> &selectedCard, int indexOfPressedCardLocation)
+{
+	if (previouslySelectedCard.first != EMPTY && previouslySelectedCard != selectedCard)	// current selected card is different from the previous, and there was a card previously selected
+	{
+		char prevSuit = static_cast<char>(previouslySelectedCard.second);
+		char newSuit = static_cast<char>(selectedCard.second);
+		char prevRank = static_cast<char>(previouslySelectedCard.first);
+		char newRank = static_cast<char>(selectedCard.first);
+
+		if (8 <= indexOfPressedCardLocation && indexOfPressedCardLocation < 12 && 0 <= previouslySelectedIndex && previouslySelectedIndex < 8)	// suit stack
+		{
+			if ((prevSuit == 'H' && newSuit != 'H') || (prevSuit == 'D' && newSuit != 'D')	// check for suit error
+				|| (prevSuit == 'S' && newSuit != 'S') || (prevSuit == 'C' || newSuit != 'C'))
+			{
+				std::cout << "Incompatible suit! " << prevSuit << " can't go on " << newSuit << " to build the suit stack" << std::endl;
+				++numberOfSuitErrors;
+			}
+			if ((prevRank == '2' && newRank != 'A') || (prevRank == '3' && newRank != '2') || (prevRank == '4' && newRank != '3')	// check for number error 
+				|| (prevRank == '5' && newRank != '4') || (prevRank == '6' && newRank != '5') || (prevRank == '7' && newRank != '6')
+				|| (prevRank == '8' && newRank != '7') || (prevRank == '9' && newRank != ':') || (prevRank == ':' && newRank != 'J')
+				|| (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K') || (prevRank == 'Q' && newRank != 'K'))
+			{
+				std::cout << "Incompatible rank! " << prevRank << " can't go on " << newRank << std::endl;
+				++numberOfRankErrors;
+			}
+		}
+		else	// build stack
+		{
+			if (((prevSuit == 'H' || prevSuit == 'D') && (newSuit == 'H' || newSuit == 'D'))	// check for color error
+				|| ((prevSuit == 'S' || prevSuit == 'C') && (newSuit == 'S' || newSuit == 'C')))
+			{
+				std::cout << "Incompatible suit! " << prevSuit << " can't go on " << newSuit << " to build the build stack" << std::endl;
+				++numberOfSuitErrors;
+			}
+			if ((prevRank == 'A' && newRank != '2') || (prevRank == '2' && newRank != '3') || (prevRank == '3' && newRank != '4')	// check for number error 
+				|| (prevRank == '4' && newRank != '5') || (prevRank == '5' && newRank != '6') || (prevRank == '6' && newRank != '7')
+				|| (prevRank == '7' && newRank != '8') || (prevRank == '8' && newRank != '9') || (prevRank == '9' && newRank != ':')
+				|| (prevRank == ':' && newRank != 'J') || (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K')
+				|| (prevRank == 'K' && newRank != ' '))
+			{
+				std::cout << "Incompatible rank! " << prevRank << " can't go on " << newRank << std::endl;
+				++numberOfRankErrors;
+			}
 		}
 	}
 }
@@ -497,6 +543,9 @@ void GameAnalytics::determineNextState(const int & x, const int & y)
 
 void GameAnalytics::handleEndOfGame()
 {
+	std::cout << "--------------------------------------------------------" << std::endl;
+	(gameWon) ? std::cout << "Game won!" << std::endl : std::cout << "Game over!" << std::endl;	
+	std::cout << "--------------------------------------------------------" << std::endl;
 	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
 	std::cout << "Game solved: " << std::boolalpha << gameWon << std::endl;
 	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
@@ -533,6 +582,7 @@ void GameAnalytics::handleEndOfGame()
 
 bool GameAnalytics::handlePlayingState()
 {
+	pb.findCardsFromBoardImage(src); // -> average 38ms
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();	// -> average d133ms and 550ms
 	if (updateBoard(classifiedCardsFromPlayingBoard))
@@ -576,14 +626,8 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 {
 	norm = DBL_MAX;
 	std::chrono::time_point<std::chrono::steady_clock> duration1 = Clock::now();
-	std::chrono::time_point<std::chrono::steady_clock> duration2;
 	
-	src1 = hwnd2mat(hwnd);
-	cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-	Sleep(60);
 	src2 = hwnd2mat(hwnd);
-	cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
-	norm = cv::norm(graySrc1, graySrc2, NORM_L1);
 	while (norm > 0.0)
 	{
 		if (std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - duration1).count() > 2)
@@ -600,7 +644,6 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		if (clickDownBool)
 		{
 			clickDownBool = false;
-			std::cout << "Using clickdown image" << std::endl;
 			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
 			return src1;
 		}

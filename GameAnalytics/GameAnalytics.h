@@ -58,17 +58,22 @@ public:
 	void hookMouseFunction();
 	GameAnalytics();
 	~GameAnalytics();
-	void init();
+	void initScreenCapture();
+	void initGameLogic();
 	void test();
 	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &points, const string & file);
 	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &points, const string &file);
 	void process();
+
+	void handleUndoState();
 
 	void toggleClickDownBool();
 
 	void grabSrc();
 
 	void processCardSelection(const int & x, const int & y);
+
+	void detectPlayerMoveErrors(std::pair<classifiers, classifiers> &selectedCard, int indexOfPressedCardLocation);
 
 	int determineIndexOfPressedCard(const int & x, const int & y);
 
@@ -138,8 +143,7 @@ private:
 	int height, width;
 	int distortedWindowHeight = 0;
 	HWND hwnd;
-	Mat src;
-	Mat src1, src2, src3, graySrc1, graySrc2, graySrc3;
+	Mat src, src1, src2, graySrc1, graySrc2;
 	double norm;
 	bool clickDownBool = false;
 	bool waitForStableImageBool = false;
