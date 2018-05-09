@@ -1074,7 +1074,7 @@ bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers>
 
 void GameAnalytics::printPlayingBoardState()
 {
-	std::cout << "Deck: ";	// print the current topcard from deck
+	std::cout << "Talon: ";	// print the current topcard from deck
 	if (currentPlayingBoard.at(7).topCard.first == EMPTY)
 	{
 		std::cout << "// ";
@@ -1083,9 +1083,9 @@ void GameAnalytics::printPlayingBoardState()
 	{
 		std::cout << static_cast<char>(currentPlayingBoard.at(7).topCard.first) << static_cast<char>(currentPlayingBoard.at(7).topCard.second);
 	}
-	std::cout << "		Cards left: " << currentPlayingBoard.at(7).unknownCards << std::endl;
+	std::cout << "	Remaining: " << currentPlayingBoard.at(7).unknownCards << std::endl;
 
-	std::cout << "Solved cards: " << std::endl;		// print all cards from the suit stack
+	std::cout << "Suit stack: " << std::endl;		// print all cards from the suit stack
 	for (int i = 8; i < currentPlayingBoard.size(); i++)
 	{
 		std::cout << "   Pos " << i - 8 << ": ";
@@ -1097,10 +1097,10 @@ void GameAnalytics::printPlayingBoardState()
 		{
 			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
 		}
-		std::cout << "     Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
+		std::cout << std::endl;
 	}
 
-	std::cout << "Bottom cards: " << std::endl;		// print all cards from the build stack
+	std::cout << "Build stack: " << std::endl;		// print all cards from the build stack
 	for (int i = 0; i < 7; i++)
 	{
 		std::cout << "   Pos " << i << ": ";
@@ -1112,7 +1112,7 @@ void GameAnalytics::printPlayingBoardState()
 		{
 			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
 		}
-		std::cout << "     Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
+		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
 	}
 
 	auto averageThinkTime2 = Clock::now();	// add the average think duration to the list
