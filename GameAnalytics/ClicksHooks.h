@@ -26,4 +26,4 @@ public:
 
 };
 
-LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam); //callback declaration
+LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam); // callback declaration
