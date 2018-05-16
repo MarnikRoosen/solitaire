@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 	ga.makeDBConn();
 	
 	
-	ga.test();	// --> used for benchmarking functions
+	//ga.test();	// --> used for benchmarking functions
 
 	// initializing thread to capture mouseclicks and a thread dedicated to capturing the screen of the game 
 	std::thread clickThread(&GameAnalytics::hookMouseFunction, &ga);
@@ -42,14 +42,15 @@ void GameAnalytics::makeDBConn() {
 
 	driver = get_driver_instance();
 	con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+	con->setSchema("game_data");
 
 	if (con->isValid()) {
 
 		std::cout << "Connection made with database" << std::endl;
 		stmt = con->createStatement();
-		//stmt->execute("DROP TABLE IF EXISTS test");
-		stmt->execute("CREATE TABLE test(id INT, label CHAR(1))");
-		stmt->execute("INSERT INTO test(id, label) VALUES (1, 'a')");
+		stmt->execute("DROP TABLE IF EXISTS game_data");
+		stmt->execute("CREATE TABLE game_data(id INT, label CHAR(1))");
+		stmt->execute("INSERT INTO game_data(id, label) VALUES (1, 'a')");
 
 		delete stmt;
 		delete con;
@@ -566,6 +567,12 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			else
 			{
 				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
+				int remainingCards = 0;
+				for (int i = 0; i < 7; ++i)
+				{
+					remainingCards += currentPlayingBoard.at(i).knownCards.size();
+				}
+				score += (remainingCards * 10);
 				currentState = AUTOCOMPLETE;
 			}
 		}
@@ -978,7 +985,7 @@ void GameAnalytics::test()
 	{
 		stringstream ss;
 		ss << i;
-		Mat src = imread("../GameAnalytics/test/" + ss.str() + ".png");
+		Mat src = imread("../GameAnalytics/test/noMovesPlayed/" + ss.str() + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			cout << "Could not open or find testimage " << ss.str() << std::endl;
@@ -999,7 +1006,7 @@ void GameAnalytics::test()
 	std::cout << "Error writing testdata to txt file" << std::endl;
 	exit(EXIT_FAILURE);
 	}*/
-	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/correctClassifiedOutputVector.txt"))	// read in the correct classified output
+	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/noMovesPlayed/correctClassifiedOutputVector.txt"))	// read in the correct classified output
 	{
 		std::cout << "Error reading testdata from txt file" << std::endl;
 		exit(EXIT_FAILURE);
