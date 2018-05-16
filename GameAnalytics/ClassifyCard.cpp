@@ -6,7 +6,7 @@ ClassifyCard::ClassifyCard()
 {
 	standardCardSize.width = 150;	// initialize the standard card size
 	standardCardSize.height = 200;
-	//generateImageVector();	// initialize the images used for classification using comparison
+	generateImageVector();	// initialize the images used for classification using comparison
 	std::vector<string> type = { "rank", "black_suit", "red_suit" };
 	for (int i = 0; i < type.size(); i++)
 	{
@@ -59,10 +59,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			return cardType;
 		}
 
-		if (contours.size() == 1)
-		{
-			++amountOfPerfectSegmentations;	// used for testing
-		}
 		// sort the contours on contourArea
 		std::sort(contours.begin(), contours.end(), [] (const vector<Point>& c1, const vector<Point>& c2)
 			-> bool { return contourArea(c1, false) > contourArea(c2, false); });
@@ -70,7 +66,6 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 		if (type == "rank" && contours.size() > 1 && contourArea(contours.at(1), false) > 30.0)	// multiple contours and the second contour isn't small (noise)
 		{
 			cardType.first = TEN;
-			++amountOfPerfectSegmentations;	// used for testing - TEN is also a good segmentation
 		}
 		else
 		{
@@ -85,13 +80,13 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 				cv::resize(ROI, resizedROI, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));	// suits are rather squared, keep this characteristic
 				(type == "red_suit") ? image_list = red_suitImages : image_list = black_suitImages;
 			}
-			/*cv::GaussianBlur(resizedROI, resizedBlurredImg, cv::Size(3, 3), 0);	// used for shape analysis
+			cv::GaussianBlur(resizedROI, resizedBlurredImg, cv::Size(3, 3), 0);	// used for shape analysis
 			cv::threshold(resizedBlurredImg, resizedThreshImg, 140, 255, THRESH_BINARY);
-			cv::findContours(resizedThreshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);*/
+			//cv::findContours(resizedThreshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
 
 			// COMPARISON METHOD
-			/*int lowestValueOfComparison = INT_MAX;
+			int lowestValueOfComparison = INT_MAX;
 			int indexOfLowestValueUsingComparison = classifyTypeUsingComparison(image_list, resizedThreshImg, lowestValueOfComparison);
 			if (type == "rank")
 			{
@@ -101,17 +96,18 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			else
 			{
 				cardType.second = image_list.at(indexOfLowestValueUsingComparison).first;
-			}*/
+			}
+			++amountOfPerfectSegmentations;	// used for testing - TEN is also a good segmentation
 
 			// KNN METHOD
-			if (type == "rank")
+			/*if (type == "rank")
 			{
 				cardType.first = classifyTypeWithKnn(resizedROI, kNearest_rank);
 			}
 			else
 			{
 				(type == "red_suit") ? cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
-			}
+			}*/
 
 			
 			// SHAPE METHOD
@@ -195,9 +191,9 @@ void ClassifyCard::generateImageVector()
 			std::cerr << "Could not open or find the image" << std::endl;
 			exit(EXIT_FAILURE);
 		}
-		cv::Mat grayImg, blurredImg, threshImg;	// identical processing as the segmented images for improved robustness
+		cv::Mat grayImg, threshImg;	// identical processing as the segmented images for improved robustness
 		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::threshold(blurredImg, threshImg, 140, 255, THRESH_BINARY);
+		cv::threshold(grayImg, threshImg, 140, 255, THRESH_BINARY);
 		std::pair<classifiers, cv::Mat> pair;
 		pair.first = classifiers(char(rankClassifiersList.at(i).at(0)));
 		pair.second = threshImg.clone();
@@ -212,9 +208,9 @@ void ClassifyCard::generateImageVector()
 			exit(EXIT_FAILURE);
 		}
 
-		cv::Mat grayImg, blurredImg, threshImg;
+		cv::Mat grayImg, threshImg;
 		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::threshold(blurredImg, threshImg, 140, 255, THRESH_BINARY);
+		cv::threshold(grayImg, threshImg, 140, 255, THRESH_BINARY);
 		std::pair<classifiers, cv::Mat> pair;
 		pair.first = classifiers(char(red_suitClassifiersList.at(i).at(0)));
 		pair.second = threshImg.clone();
@@ -229,9 +225,9 @@ void ClassifyCard::generateImageVector()
 			exit(EXIT_FAILURE);
 		}
 
-		cv::Mat grayImg, blurredImg, threshImg;
+		cv::Mat grayImg, threshImg;
 		cv::cvtColor(src, grayImg, COLOR_BGR2GRAY);
-		cv::threshold(blurredImg, threshImg, 140, 255, THRESH_BINARY);
+		cv::threshold(grayImg, threshImg, 140, 255, THRESH_BINARY);
 		std::pair<classifiers, cv::Mat> pair;
 		pair.first = classifiers(char(black_suitClassifiersList.at(i).at(0)));
 		pair.second = threshImg.clone();

@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 	ga.initScreenCapture();
 	ga.initGameLogic();
 	
-	//ga.test();	// --> used for benchmarking functions
+	ga.test();	// --> used for benchmarking functions
 
 	// initializing thread to capture mouseclicks and a thread dedicated to capturing the screen of the game 
 	std::thread clickThread(&GameAnalytics::hookMouseFunction, &ga);
@@ -142,9 +142,9 @@ void GameAnalytics::process()
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
-			stringstream ss;	// write the image to the disk for debugging or aditional testing
+			/*stringstream ss;	// write the image to the disk for debugging or aditional testing
 			ss << ++processedSrcCounter;
-			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", src);
+			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", src);*/
 
 			determineNextState(pt->x, pt->y);	// check if a special location was pressed (menu, new game, undo, etc.) and change to the respecting game state
 			
@@ -946,7 +946,7 @@ void GameAnalytics::test()
 	{
 		stringstream ss;
 		ss << i;
-		Mat src = imread("../GameAnalytics/test/someMovesPlayed/" + ss.str() + ".png");
+		Mat src = imread("../GameAnalytics/test/" + ss.str() + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			cout << "Could not open or find testimage " << ss.str() << std::endl;
@@ -967,7 +967,7 @@ void GameAnalytics::test()
 	std::cout << "Error writing testdata to txt file" << std::endl;
 	exit(EXIT_FAILURE);
 	}*/
-	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/someMovesPlayed/correctClassifiedOutputVector.txt"))	// read in the correct classified output
+	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/correctClassifiedOutputVector.txt"))	// read in the correct classified output
 	{
 		std::cout << "Error reading testdata from txt file" << std::endl;
 		exit(EXIT_FAILURE);
@@ -975,8 +975,10 @@ void GameAnalytics::test()
 
 
 	// ACTUAL TESTING
-	int wrongRankCounter = 0;
-	int wrongSuitCounter = 0;
+
+	// 1. Test for card extraction
+
+	/*int wrongExtraction = 0;
 	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	for (int k = 0; k < 100; k++)	// repeat for k loops
 	{
@@ -984,7 +986,54 @@ void GameAnalytics::test()
 		{
 			pb.findCardsFromBoardImage(testImages.at(i));
 			extractedImagesFromPlayingBoard = pb.getCards();
-			classifyExtractedCards();
+			for (int j = 0; j < extractedImagesFromPlayingBoard.size(); j++)
+			{
+				cv::Mat test = extractedImagesFromPlayingBoard.at(j);
+				Size cardSize = extractedImagesFromPlayingBoard.at(j).size();	// finally, if sobel edge doesn't extract the card correctly, try using hardcoded values (cardheight = 1.33 * cardwidth)
+				if (cardSize.width * 1.3 > cardSize.height || cardSize.width * 1.4 < cardSize.height)
+				{
+					++wrongExtraction;
+				}
+			}
+		}
+	}
+	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();	// test the duration of the classification of 10*100 loops
+	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << " ns" << std::endl;
+	std::cout << "Wrong extraction counter: " << wrongExtraction << std::endl;
+	Sleep(10000);*/
+
+
+	// 1. Test for card classification
+
+	int wrongRankCounter = 0;
+	int wrongSuitCounter = 0;
+	std::vector<std::vector<cv::Mat>> allExtractedImages;
+	allExtractedImages.resize(testImages.size());
+	for (int i = 0; i < testImages.size(); i++)	// first, get all cards extracted correctly
+	{
+		pb.findCardsFromBoardImage(testImages.at(i));
+
+		allExtractedImages.at(i) = pb.getCards();
+	}
+	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+	for (int k = 0; k < 100; k++)	// repeat for k loops
+	{
+		for (int i = 0; i < allExtractedImages.size(); i++)
+		{
+			classifiedCardsFromPlayingBoard.clear();	// reset the variable
+			for_each(allExtractedImages.at(i).begin(), allExtractedImages.at(i).end(), [this](cv::Mat mat) {
+				if (mat.empty())	// extracted card was an empty image -> no card on this location
+				{
+					cardType.first = EMPTY;
+					cardType.second = EMPTY;
+				}
+				else	// segment the rank and suit + classify this rank and suit
+				{
+					cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
+					cardType = cc.classifyCard(cardCharacteristics);
+				}
+				classifiedCardsFromPlayingBoard.push_back(cardType);	// push the classified card to the variable
+			});	
 			for (int j = 0; j < classifiedCardsFromPlayingBoard.size(); j++)
 			{
 				if (correctClassifiedOutputVector.at(i).at(j).first != classifiedCardsFromPlayingBoard.at(j).first)	// compare the classified output with the correct classified output
@@ -998,8 +1047,9 @@ void GameAnalytics::test()
 			}
 		}
 	}
+
 	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();	// test the duration of the classification of 10*100 loops
-	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << " ns" << std::endl;
+	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(test2 - test1).count() << " ms" << std::endl;
 	std::cout << "Rank error counter: " << wrongRankCounter << std::endl;	// print the amount of faulty classifications
 	std::cout << "Suit error counter: " << wrongSuitCounter << std::endl;
 	int amountOfPerfectSegmentations = cc.getAmountOfPerfectSegmentations();
