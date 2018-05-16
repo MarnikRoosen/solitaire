@@ -16,10 +16,19 @@
 #include "opencv2/features2d.hpp"
 #include "opencv2/imgcodecs.hpp"
 
+#include "mysql_connection.h"
+
+#include <cppconn/driver.h>
+#include <cppconn/exception.h>
+#include <cppconn/resultset.h>
+#include <cppconn/statement.h>
+
+
 #include <vector>
 #include <utility>
 #include <Windows.h>
 #include <iostream>
+#include <stdlib.h>
 #include <string>
 #include <cstdio>
 #include <chrono>
@@ -65,6 +74,8 @@ public:
 	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string & file);
 	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file);
 	void process();
+
+	void makeDBConn();
 
 	void handleUndoState();
 
