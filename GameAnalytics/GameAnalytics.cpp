@@ -13,6 +13,8 @@ int main(int argc, char** argv)
 	InitializeCriticalSection(&threadLock);
 	ga.initScreenCapture();
 	ga.initGameLogic();
+	ga.makeDBConn();
+	
 	
 	//ga.test();	// --> used for benchmarking functions
 
@@ -27,7 +29,37 @@ int main(int argc, char** argv)
 	srcGrabber.join();
 	clickThread.join();
 
+	
 	return 0;
+}
+
+void GameAnalytics::makeDBConn() {
+	
+
+	sql::Driver *driver;
+	sql::Connection *con;
+	sql::Statement *stmt;
+
+	driver = get_driver_instance();
+	con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+
+	if (con->isValid()) {
+
+		std::cout << "Connection made with database" << std::endl;
+		stmt = con->createStatement();
+		//stmt->execute("DROP TABLE IF EXISTS test");
+		stmt->execute("CREATE TABLE test(id INT, label CHAR(1))");
+		stmt->execute("INSERT INTO test(id, label) VALUES (1, 'a')");
+
+		delete stmt;
+		delete con;
+	}
+	else {
+		std::cout << "No connection could be made with the database" << std::endl;
+		con->reconnect();
+	}
+	
+
 }
 
 void changeConsoleFontSize(const double & percentageIncrease)
