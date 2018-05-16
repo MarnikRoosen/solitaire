@@ -13,14 +13,15 @@ int main(int argc, char** argv)
 	InitializeCriticalSection(&threadLock);
 	ga.initScreenCapture();
 	ga.initGameLogic();
-	ga.makeDBConn();
+	ga.initDBConn();
 	
 	
 	//ga.test();	// --> used for benchmarking functions
 
 	// initializing thread to capture mouseclicks and a thread dedicated to capturing the screen of the game 
-	std::thread clickThread(&GameAnalytics::hookMouseFunction, &ga);
+	std::thread clickThread(&GameAnalytics::hookMouseClicks, &ga);
 	std::thread srcGrabber(&GameAnalytics::grabSrc, &ga);
+	std::thread betaErrorCalculator(&GameAnalytics::calculateBetaErrors, &ga);
 
 	// main processing function of the main thread
 	ga.process();
@@ -28,12 +29,12 @@ int main(int argc, char** argv)
 	// terminate threads
 	srcGrabber.join();
 	clickThread.join();
-
+	betaErrorCalculator.join();
 	
 	return 0;
 }
 
-void GameAnalytics::makeDBConn() {
+void GameAnalytics::initDBConn() {
 	
 
 	sql::Driver *driver;
@@ -84,7 +85,7 @@ void changeConsoleFontSize(const double & percentageIncrease)
 	}
 }
 
-void GameAnalytics::hookMouseFunction()
+void GameAnalytics::hookMouseClicks()
 {
 	// installing the click hook
 	ClicksHooks::Instance().InstallHook();
@@ -146,7 +147,7 @@ void GameAnalytics::initGameLogic()
 	pb.findCardsFromBoardImage(src);	// setup the starting board
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();
-	initializePlayingBoard(classifiedCardsFromPlayingBoard);
+	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
 	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
 	for (int i = 0; i < numberOfPresses.size(); i++)
@@ -554,7 +555,7 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			int cardsLeft = 0;
 			for (int i = 0; i < 8; i++)
 			{
-				if (currentPlayingBoard.at(i).unknownCards > 0)
+				if (currentPlayingBoard.at(i).remainingCards > 0)
 				{
 					++cardsLeft;
 				}
@@ -716,7 +717,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 	return src2;
 }
 
-void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
+void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {
 	currentPlayingBoard.resize(12);
 	int i;
@@ -730,14 +731,14 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 		{
 			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
 		}
-		startupLocation.unknownCards = i;
+		startupLocation.remainingCards = i;
 		currentPlayingBoard.at(i) = startupLocation;
 	}
 
 	// talon
 	startupLocation.knownCards.clear();
 	startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
-	startupLocation.unknownCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
+	startupLocation.remainingCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
 	currentPlayingBoard.at(7) = startupLocation;
 
 	// suit stack
@@ -748,7 +749,7 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 		{
 			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
 		}
-		startupLocation.unknownCards = 0;
+		startupLocation.remainingCards = 0;
 		currentPlayingBoard.at(i) = startupLocation;
 	}
 	previousPlayingBoards.push_back(currentPlayingBoard);	// add the first game state to the list of all game states
@@ -780,7 +781,7 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		(changedIndex1 == 7) ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
 		currentPlayingBoard.at(tempIndex).knownCards.push_back(currentPlayingBoard.at(7).topCard);	// add the card to the new location
 		currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);	// update the card at the talon
-		--currentPlayingBoard.at(7).unknownCards;
+		--currentPlayingBoard.at(7).remainingCards;
 		printPlayingBoardState();
 		++numberOfPresses.at(tempIndex);	// update the number of presses on that index
 		(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;	// update the score
@@ -803,9 +804,9 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		if (currentPlayingBoard.at(changedIndex1).knownCards.empty())	// animation of previous state ended too fast, a card was still turning over which was missed
 																		// -> no known cards in the list, but there is a card at that location: update knownCards
 		{
-			if (currentPlayingBoard.at(changedIndex1).unknownCards > 0)
+			if (currentPlayingBoard.at(changedIndex1).remainingCards > 0)
 			{
-				--currentPlayingBoard.at(changedIndex1).unknownCards;
+				--currentPlayingBoard.at(changedIndex1).remainingCards;
 			}
 			currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 			printPlayingBoardState();
@@ -897,7 +898,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			{
 				currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 				score += 5;
-				--currentPlayingBoard.at(changedIndex1).unknownCards;
+				--currentPlayingBoard.at(changedIndex1).remainingCards;
 			}
 
 			// update the score
@@ -927,7 +928,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			{
 				currentPlayingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
 				score += 5;
-				--currentPlayingBoard.at(changedIndex2).unknownCards;
+				--currentPlayingBoard.at(changedIndex2).remainingCards;
 			}
 
 			// update the score
@@ -973,6 +974,10 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 		}
 		if (changedIndex2 != -1) { return; }	// if 2 changed location were detected, return
 	}
+}
+
+void GameAnalytics::calculateBetaErrors()
+{
 }
 
 void GameAnalytics::test()
@@ -1172,7 +1177,7 @@ void GameAnalytics::printPlayingBoardState()
 	{
 		std::cout << static_cast<char>(currentPlayingBoard.at(7).topCard.first) << static_cast<char>(currentPlayingBoard.at(7).topCard.second);
 	}
-	std::cout << "	Remaining: " << currentPlayingBoard.at(7).unknownCards << std::endl;
+	std::cout << "	Remaining: " << currentPlayingBoard.at(7).remainingCards << std::endl;
 
 	std::cout << "Suit stack: " << std::endl;		// print all cards from the suit stack
 	for (int i = 8; i < currentPlayingBoard.size(); i++)
@@ -1201,7 +1206,7 @@ void GameAnalytics::printPlayingBoardState()
 		{
 			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
 		}
-		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
+		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).remainingCards << std::endl;
 	}
 
 	auto averageThinkTime2 = Clock::now();	// add the average think duration to the list
