@@ -21,7 +21,6 @@ int main(int argc, char** argv)
 	// initializing thread to capture mouseclicks and a thread dedicated to capturing the screen of the game 
 	std::thread clickThread(&GameAnalytics::hookMouseClicks, &ga);
 	std::thread srcGrabber(&GameAnalytics::grabSrc, &ga);
-	std::thread betaErrorCalculator(&GameAnalytics::calculateBetaErrors, &ga);
 
 	// main processing function of the main thread
 	ga.process();
@@ -29,7 +28,6 @@ int main(int argc, char** argv)
 	// terminate threads
 	srcGrabber.join();
 	clickThread.join();
-	betaErrorCalculator.join();
 	
 	return 0;
 }
@@ -974,10 +972,6 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 		}
 		if (changedIndex2 != -1) { return; }	// if 2 changed location were detected, return
 	}
-}
-
-void GameAnalytics::calculateBetaErrors()
-{
 }
 
 void GameAnalytics::test()

@@ -130,7 +130,7 @@ private:
 	std::vector<std::pair<classifiers, classifiers>> classifiedCardsFromPlayingBoard;	// classified cards resulting from the extracted cards
 	std::vector<cardLocation> currentPlayingBoard;	// current playing board identical to the state of the game
 	std::vector<std::vector<cardLocation>> previousPlayingBoards;	// all playing board states that came before the current playing board
-	
+
 
 	// KEEPING TRACK OF THE SELECTED CARDS BY THE PLAYER
 
