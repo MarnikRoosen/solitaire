@@ -71,7 +71,9 @@ void GameAnalytics::makeDBConn() {
 		sql::ResultSet *res;
 		sql::PreparedStatement  *prep_stmt;
 
-		int var = 5;
+		int id = 0;
+
+
 
 		// Create a connection
 		driver = get_driver_instance();
@@ -85,11 +87,21 @@ void GameAnalytics::makeDBConn() {
 		con->setSchema("ga");
 
 
-		//stmt->execute("DROP TABLE IF EXISTS test");
+		//stmt->execute("DROP TABLE IF EXISTS GameStats");
 		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
 
+		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
+		while (res->next()) {
+			if (res->getInt(1) >= 0) {
+
+				id = res->getInt(1) + 1;
+			}
+			else id = 0;
+		}
+
+
 		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
-		prep_stmt->setInt(1, 1);
+		prep_stmt->setInt(1, id);
 		prep_stmt->setInt(2, numberOfUndos);
 		prep_stmt->setInt(3, numberOfPilePresses);
 		prep_stmt->setInt(4, numberOfHints);
