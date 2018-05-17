@@ -13,13 +13,13 @@ int main(int argc, char** argv)
 	InitializeCriticalSection(&threadLock);
 	ga.initScreenCapture();
 	ga.initGameLogic();
-	ga.makeDBConn();
+	ga.initDBConn();
 	
 	
 	//ga.test();	// --> used for benchmarking functions
 
 	// initializing thread to capture mouseclicks and a thread dedicated to capturing the screen of the game 
-	std::thread clickThread(&GameAnalytics::hookMouseFunction, &ga);
+	std::thread clickThread(&GameAnalytics::hookMouseClicks, &ga);
 	std::thread srcGrabber(&GameAnalytics::grabSrc, &ga);
 
 	// main processing function of the main thread
@@ -28,12 +28,11 @@ int main(int argc, char** argv)
 	// terminate threads
 	srcGrabber.join();
 	clickThread.join();
-
 	
 	return 0;
 }
 
-void GameAnalytics::makeDBConn() {
+void GameAnalytics::initDBConn() {
 	
 
 	/*
@@ -43,14 +42,15 @@ void GameAnalytics::makeDBConn() {
 
 	driver = get_driver_instance();
 	con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+	con->setSchema("game_data");
 
 	if (con->isValid()) {
 
 		std::cout << "Connection made with database" << std::endl;
 		stmt = con->createStatement();
-		//stmt->execute("DROP TABLE IF EXISTS test");
-		stmt->execute("CREATE TABLE test(id INT, label CHAR(1))");
-		stmt->execute("INSERT INTO test(id, label) VALUES (1, 'a')");
+		stmt->execute("DROP TABLE IF EXISTS game_data");
+		stmt->execute("CREATE TABLE game_data(id INT, label CHAR(1))");
+		stmt->execute("INSERT INTO game_data(id, label) VALUES (1, 'a')");
 
 		delete stmt;
 		delete con;
@@ -165,7 +165,7 @@ void changeConsoleFontSize(const double & percentageIncrease)
 	}
 }
 
-void GameAnalytics::hookMouseFunction()
+void GameAnalytics::hookMouseClicks()
 {
 	// installing the click hook
 	ClicksHooks::Instance().InstallHook();
@@ -227,7 +227,7 @@ void GameAnalytics::initGameLogic()
 	pb.findCardsFromBoardImage(src);	// setup the starting board
 	extractedImagesFromPlayingBoard = pb.getCards();
 	classifyExtractedCards();
-	initializePlayingBoard(classifiedCardsFromPlayingBoard);
+	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
 	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
 	for (int i = 0; i < numberOfPresses.size(); i++)
@@ -256,9 +256,9 @@ void GameAnalytics::process()
 			pt->y = pt->y * standardBoardHeight / windowHeight;
 			std::cout << "Click registered at position (" << pt->x << "," << pt->y << ")" << std::endl;
 
-			stringstream ss;	// write the image to the disk for debugging or aditional testing
+			/*stringstream ss;	// write the image to the disk for debugging or aditional testing
 			ss << ++processedSrcCounter;
-			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", src);
+			imwrite("../GameAnalytics/screenshots/" + ss.str() + ".png", src);*/
 
 			determineNextState(pt->x, pt->y);	// check if a special location was pressed (menu, new game, undo, etc.) and change to the respecting game state
 			
@@ -635,7 +635,7 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			int cardsLeft = 0;
 			for (int i = 0; i < 8; i++)
 			{
-				if (currentPlayingBoard.at(i).unknownCards > 0)
+				if (currentPlayingBoard.at(i).remainingCards > 0)
 				{
 					++cardsLeft;
 				}
@@ -648,6 +648,12 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			else
 			{
 				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
+				int remainingCards = 0;
+				for (int i = 0; i < 7; ++i)
+				{
+					remainingCards += currentPlayingBoard.at(i).knownCards.size();
+				}
+				score += (remainingCards * 10);
 				currentState = AUTOCOMPLETE;
 			}
 		}
@@ -791,7 +797,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 	return src2;
 }
 
-void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
+void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {
 	currentPlayingBoard.resize(12);
 	int i;
@@ -805,14 +811,14 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 		{
 			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
 		}
-		startupLocation.unknownCards = i;
+		startupLocation.remainingCards = i;
 		currentPlayingBoard.at(i) = startupLocation;
 	}
 
 	// talon
 	startupLocation.knownCards.clear();
 	startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
-	startupLocation.unknownCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
+	startupLocation.remainingCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
 	currentPlayingBoard.at(7) = startupLocation;
 
 	// suit stack
@@ -823,7 +829,7 @@ void GameAnalytics::initializePlayingBoard(const std::vector<std::pair<classifie
 		{
 			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
 		}
-		startupLocation.unknownCards = 0;
+		startupLocation.remainingCards = 0;
 		currentPlayingBoard.at(i) = startupLocation;
 	}
 	previousPlayingBoards.push_back(currentPlayingBoard);	// add the first game state to the list of all game states
@@ -855,7 +861,7 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		(changedIndex1 == 7) ? (tempIndex = changedIndex2) : (tempIndex = changedIndex1);
 		currentPlayingBoard.at(tempIndex).knownCards.push_back(currentPlayingBoard.at(7).topCard);	// add the card to the new location
 		currentPlayingBoard.at(7).topCard = classifiedCardsFromPlayingBoard.at(7);	// update the card at the talon
-		--currentPlayingBoard.at(7).unknownCards;
+		--currentPlayingBoard.at(7).remainingCards;
 		printPlayingBoardState();
 		++numberOfPresses.at(tempIndex);	// update the number of presses on that index
 		(0 <= tempIndex && tempIndex < 7) ? score += 5 : score += 10;	// update the score
@@ -878,9 +884,9 @@ bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classif
 		if (currentPlayingBoard.at(changedIndex1).knownCards.empty())	// animation of previous state ended too fast, a card was still turning over which was missed
 																		// -> no known cards in the list, but there is a card at that location: update knownCards
 		{
-			if (currentPlayingBoard.at(changedIndex1).unknownCards > 0)
+			if (currentPlayingBoard.at(changedIndex1).remainingCards > 0)
 			{
-				--currentPlayingBoard.at(changedIndex1).unknownCards;
+				--currentPlayingBoard.at(changedIndex1).remainingCards;
 			}
 			currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 			printPlayingBoardState();
@@ -972,7 +978,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			{
 				currentPlayingBoard.at(changedIndex1).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex1));
 				score += 5;
-				--currentPlayingBoard.at(changedIndex1).unknownCards;
+				--currentPlayingBoard.at(changedIndex1).remainingCards;
 			}
 
 			// update the score
@@ -1002,7 +1008,7 @@ bool GameAnalytics::cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair
 			{
 				currentPlayingBoard.at(changedIndex2).knownCards.push_back(classifiedCardsFromPlayingBoard.at(changedIndex2));
 				score += 5;
-				--currentPlayingBoard.at(changedIndex2).unknownCards;
+				--currentPlayingBoard.at(changedIndex2).remainingCards;
 			}
 
 			// update the score
@@ -1060,7 +1066,7 @@ void GameAnalytics::test()
 	{
 		stringstream ss;
 		ss << i;
-		Mat src = imread("../GameAnalytics/test/someMovesPlayed/" + ss.str() + ".png");
+		Mat src = imread("../GameAnalytics/test/noMovesPlayed/" + ss.str() + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			cout << "Could not open or find testimage " << ss.str() << std::endl;
@@ -1081,7 +1087,7 @@ void GameAnalytics::test()
 	std::cout << "Error writing testdata to txt file" << std::endl;
 	exit(EXIT_FAILURE);
 	}*/
-	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/someMovesPlayed/correctClassifiedOutputVector.txt"))	// read in the correct classified output
+	if (!readTestData(correctClassifiedOutputVector, "../GameAnalytics/test/noMovesPlayed/correctClassifiedOutputVector.txt"))	// read in the correct classified output
 	{
 		std::cout << "Error reading testdata from txt file" << std::endl;
 		exit(EXIT_FAILURE);
@@ -1089,8 +1095,10 @@ void GameAnalytics::test()
 
 
 	// ACTUAL TESTING
-	int wrongRankCounter = 0;
-	int wrongSuitCounter = 0;
+
+	// 1. Test for card extraction
+
+	/*int wrongExtraction = 0;
 	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	for (int k = 0; k < 100; k++)	// repeat for k loops
 	{
@@ -1098,7 +1106,54 @@ void GameAnalytics::test()
 		{
 			pb.findCardsFromBoardImage(testImages.at(i));
 			extractedImagesFromPlayingBoard = pb.getCards();
-			classifyExtractedCards();
+			for (int j = 0; j < extractedImagesFromPlayingBoard.size(); j++)
+			{
+				cv::Mat test = extractedImagesFromPlayingBoard.at(j);
+				Size cardSize = extractedImagesFromPlayingBoard.at(j).size();	// finally, if sobel edge doesn't extract the card correctly, try using hardcoded values (cardheight = 1.33 * cardwidth)
+				if (cardSize.width * 1.3 > cardSize.height || cardSize.width * 1.4 < cardSize.height)
+				{
+					++wrongExtraction;
+				}
+			}
+		}
+	}
+	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();	// test the duration of the classification of 10*100 loops
+	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << " ns" << std::endl;
+	std::cout << "Wrong extraction counter: " << wrongExtraction << std::endl;
+	Sleep(10000);*/
+
+
+	// 1. Test for card classification
+
+	int wrongRankCounter = 0;
+	int wrongSuitCounter = 0;
+	std::vector<std::vector<cv::Mat>> allExtractedImages;
+	allExtractedImages.resize(testImages.size());
+	for (int i = 0; i < testImages.size(); i++)	// first, get all cards extracted correctly
+	{
+		pb.findCardsFromBoardImage(testImages.at(i));
+
+		allExtractedImages.at(i) = pb.getCards();
+	}
+	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
+	for (int k = 0; k < 100; k++)	// repeat for k loops
+	{
+		for (int i = 0; i < allExtractedImages.size(); i++)
+		{
+			classifiedCardsFromPlayingBoard.clear();	// reset the variable
+			for_each(allExtractedImages.at(i).begin(), allExtractedImages.at(i).end(), [this](cv::Mat mat) {
+				if (mat.empty())	// extracted card was an empty image -> no card on this location
+				{
+					cardType.first = EMPTY;
+					cardType.second = EMPTY;
+				}
+				else	// segment the rank and suit + classify this rank and suit
+				{
+					cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
+					cardType = cc.classifyCard(cardCharacteristics);
+				}
+				classifiedCardsFromPlayingBoard.push_back(cardType);	// push the classified card to the variable
+			});	
 			for (int j = 0; j < classifiedCardsFromPlayingBoard.size(); j++)
 			{
 				if (correctClassifiedOutputVector.at(i).at(j).first != classifiedCardsFromPlayingBoard.at(j).first)	// compare the classified output with the correct classified output
@@ -1112,8 +1167,9 @@ void GameAnalytics::test()
 			}
 		}
 	}
+
 	std::chrono::time_point<std::chrono::steady_clock> test2 = Clock::now();	// test the duration of the classification of 10*100 loops
-	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::nanoseconds>(test2 - test1).count() << " ns" << std::endl;
+	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(test2 - test1).count() << " ms" << std::endl;
 	std::cout << "Rank error counter: " << wrongRankCounter << std::endl;	// print the amount of faulty classifications
 	std::cout << "Suit error counter: " << wrongSuitCounter << std::endl;
 	int amountOfPerfectSegmentations = cc.getAmountOfPerfectSegmentations();
@@ -1197,7 +1253,7 @@ void GameAnalytics::printPlayingBoardState()
 	{
 		std::cout << static_cast<char>(currentPlayingBoard.at(7).topCard.first) << static_cast<char>(currentPlayingBoard.at(7).topCard.second);
 	}
-	std::cout << "	Remaining: " << currentPlayingBoard.at(7).unknownCards << std::endl;
+	std::cout << "	Remaining: " << currentPlayingBoard.at(7).remainingCards << std::endl;
 
 	std::cout << "Suit stack: " << std::endl;		// print all cards from the suit stack
 	for (int i = 8; i < currentPlayingBoard.size(); i++)
@@ -1226,7 +1282,7 @@ void GameAnalytics::printPlayingBoardState()
 		{
 			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
 		}
-		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).unknownCards << std::endl;
+		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).remainingCards << std::endl;
 	}
 
 	auto averageThinkTime2 = Clock::now();	// add the average think duration to the list
