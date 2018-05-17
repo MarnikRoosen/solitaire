@@ -72,6 +72,7 @@ void GameAnalytics::initDBConn() {
 		sql::PreparedStatement  *prep_stmt;
 
 		int id = 0;
+		//bool won = true;
 
 		// Create a connection
 		driver = get_driver_instance();
@@ -86,20 +87,21 @@ void GameAnalytics::initDBConn() {
 
 		//Create the table for the Game Statistics
 		//stmt->execute("DROP TABLE IF EXISTS GameStats");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4))");
 
 		//Fetch the max ID and increment it in order to get an unique ID
 		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
-		while (res->next()) {
-			if (res->getInt(1) >= 0) {
+		
+		res->next();
+		if (res->getInt(1) >= 0) {
 
-				id = res->getInt(1) + 1;
-			}
-			else id = 0;
+			id = res->getInt(1) +1;
 		}
+		else id = 0;
+	
 
 		//Insert data into the GameStats table
-		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score, gamewon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
 		prep_stmt->setInt(1, id);
 		prep_stmt->setInt(2, numberOfUndos);
 		prep_stmt->setInt(3, numberOfPilePresses);
@@ -107,6 +109,11 @@ void GameAnalytics::initDBConn() {
 		prep_stmt->setInt(5, numberOfSuitErrors);
 		prep_stmt->setInt(6, numberOfRankErrors);
 		prep_stmt->setInt(7, score);
+
+		if(gameWon == true)
+		prep_stmt->setString(8, "WON");
+		else
+		prep_stmt->setString(8, "LOST");
 
 		prep_stmt->execute();
 
