@@ -36,6 +36,7 @@ int main(int argc, char** argv)
 void GameAnalytics::makeDBConn() {
 	
 
+	/*
 	sql::Driver *driver;
 	sql::Connection *con;
 	sql::Statement *stmt;
@@ -58,7 +59,76 @@ void GameAnalytics::makeDBConn() {
 		std::cout << "No connection could be made with the database" << std::endl;
 		con->reconnect();
 	}
+	*/
+
+	 cout << endl;
+	cout << "Running 'SELECT 'Hello World!' AS _message'..." << endl;
+
+		try {
+		sql::Driver *driver;
+		sql::Connection *con;
+		sql::Statement *stmt;
+		sql::ResultSet *res;
+		sql::PreparedStatement  *prep_stmt;
+
+		int var = 5;
+
+		// Create a connection
+		driver = get_driver_instance();
+		con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+		// Connect to the MySQL test database 
+		//con->setSchema("demo");
+
+		stmt = con->createStatement();
+
+		stmt->execute("CREATE SCHEMA IF NOT EXISTS ga");
+		con->setSchema("ga");
+
+
+		//stmt->execute("DROP TABLE IF EXISTS test");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
+
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt->setInt(1, 1);
+		prep_stmt->setInt(2, numberOfUndos);
+		prep_stmt->setInt(3, numberOfPilePresses);
+		prep_stmt->setInt(4, numberOfHints);
+		prep_stmt->setInt(5, numberOfSuitErrors);
+		prep_stmt->setInt(6, numberOfRankErrors);
+		prep_stmt->setInt(7, score);
+
+		prep_stmt->execute();
+
+//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
+
+
+		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
+		while (res->next()) {
+			cout << "\t... MySQL replies: ";
+			// Access column data by alias or column name 
+			cout << res->getString("_message") << endl;
+			cout << "\t... MySQL says it again: ";
+			// Access column data by numeric offset, 1 is the first column 
+			cout << res->getString(1) << endl;
+		}
+		delete res;
+		delete prep_stmt;
+		delete stmt;
+		delete con;
+
+	}
+	catch (sql::SQLException &e) {
+		cout << "# ERR: SQLException in " << __FILE__;
+		cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+		cout << "# ERR: " << e.what();
+		cout << " (MySQL error code: " << e.getErrorCode();
+		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+	}
+
+	cout << endl;
+
 	
+
 
 }
 
