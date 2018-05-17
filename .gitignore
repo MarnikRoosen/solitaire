@@ -69,6 +69,8 @@ artifacts/
 *.pidb
 *.svclog
 *.scc
+*.vcxproj.filters merge=union
+
 
 # Chutzpah Test files
 _Chutzpah*
