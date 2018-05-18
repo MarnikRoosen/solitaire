@@ -10,24 +10,9 @@ ExtractCards::~ExtractCards()
 {
 }
 
-void ExtractCards::findCardsFromBoardImage(Mat const & boardImage)
-{
-	cv::Mat adaptedSrc, src, hsv, mask, croppedSrc;
-	try
-	{
-		resizeBoardImage(boardImage, src);	// resize the board to 1600x900 for consistency
-		croppedSrc = src(ROI);	// get the region of interest (area of cards) using the Rectangle calculated at the initialization
-		extractCardRegions(croppedSrc);	// extract the regions of the cards
-		extractCards();	// extract the topcard from the regions
-	}
-	catch (const std::exception&)	// if the board image wasn't captured correctly
-	{
-		cv::Mat test;
-		cvtColor(boardImage, test, COLOR_BGR2GRAY);
-		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cerr << "ERROR: Amount of not captured pixels in the image = " << cv::countNonZero(test) << std::endl;
-	}
-}
+/****************************************************
+ *	INITIALIZATIONS
+ ****************************************************/
 
 void ExtractCards::determineROI(const Mat & boardImage)
 {
@@ -71,6 +56,29 @@ void ExtractCards::calculateOuterRect(std::vector<std::vector<cv::Point>> &conto
 	}
 	ROI = Rect(xmin - 10, ymin - 10, xmax - xmin + 30, standardBoardHeight - ymin);	// add a small margin on each side and a large margin on the bottom for stacked cards later on
 	topCardsHeight += 20;	// value used for the extraction of cardregions later on, namingly to split the top cards and bottom cards
+}
+
+/****************************************************
+ *	MAIN FUNCTIONS
+ ****************************************************/
+
+void ExtractCards::findCardsFromBoardImage(Mat const & boardImage)
+{
+	cv::Mat adaptedSrc, src, hsv, mask, croppedSrc;
+	try
+	{
+		resizeBoardImage(boardImage, src);	// resize the board to 1600x900 for consistency
+		croppedSrc = src(ROI);	// get the region of interest (area of cards) using the Rectangle calculated at the initialization
+		extractCardRegions(croppedSrc);	// extract the regions of the cards
+		extractCards();	// extract the topcard from the regions
+	}
+	catch (const std::exception&)	// if the board image wasn't captured correctly
+	{
+		cv::Mat test;
+		cvtColor(boardImage, test, COLOR_BGR2GRAY);
+		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+		std::cerr << "ERROR: Amount of not captured pixels in the image = " << cv::countNonZero(test) << std::endl;
+	}
 }
 
 void ExtractCards::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
@@ -133,29 +141,10 @@ void ExtractCards::extractCardRegions(const cv::Mat &src)
 	}
 }
 
-bool ExtractCards::checkForOutOfMovesState(const cv::Mat &src)
-{
-	// split the image in 3 horizontal parts and take the middle part
-	// if the middle part is mostly white (at least 70%), then the board image shows an outOfMoves image (big horizontal white bar in the middle)
-	Size imageSize = src.size();
-	Rect middle = Rect(0, imageSize.height / 3, imageSize.width, imageSize.height / 3);
-	Mat croppedSrc(src, middle);
-	cvtColor(croppedSrc, croppedSrc, COLOR_BGR2GRAY);
-	threshold(croppedSrc, croppedSrc, 240, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-	if (cv::countNonZero(croppedSrc) > croppedSrc.rows * croppedSrc.cols * 0.7)
-	{
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
 void ExtractCards::extractCards()
 {
 	for (int i = 0; i < cardRegions.size(); i++)
-	{		
+	{
 		Mat adaptedSrc;
 		vector<vector<Point>> contours;
 		vector<Vec4i> hierarchy;
@@ -175,19 +164,19 @@ void ExtractCards::extractCards()
 			// the biggest contour is the biggest card, place at the bottom
 			std::sort(contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2) -> bool { return contourArea(c1, false) > contourArea(c2, false); });
 		}
-		
-		if ( contours.size() > 0 )	// if the size is zero, then there is no card at that cardlocation
+
+		if (contours.size() > 0)	// if the size is zero, then there is no card at that cardlocation
 		{
 			Rect br = boundingRect(contours.at(0));
-			
-			Mat card = Mat(cardRegions[i], br);		
+
+			Mat card = Mat(cardRegions[i], br);
 			Mat croppedRef, resizedCardImage;
 			//extractTopCardUsingSobel(card, croppedRef, i);	// if the strong threshold doesn't extract the card correctly, the card can be extracted using sobel edge detection
 
 			/*Size cardSize = croppedRef.size();	// finally, if sobel edge doesn't extract the card correctly, try using hardcoded values (cardheight = 1.33 * cardwidth)
 			if (cardSize.width * 1.3 > cardSize.height || cardSize.width * 1.4 < cardSize.height)
 			{
-				extractTopCardUsingAspectRatio(card, croppedRef);
+			extractTopCardUsingAspectRatio(card, croppedRef);
 			}*/
 			croppedTopCardToStandardSize(card, resizedCardImage);	// resize the card to 150x200 for consistency
 			cards.at(i) = resizedCardImage.clone();
@@ -201,42 +190,16 @@ void ExtractCards::extractCards()
 	}
 }
 
-int ExtractCards::getIndexOfSelectedCard(int i)	// use the cardlocation that has been clicked on (using coordinates)
-{
-	Mat selectedCard = cardRegions.at(i).clone();
-	Mat hsv, mask;
-	cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);	// convert the RBG spectrum (BGR for opencv) to HSV spectrum
-	Scalar lo_int(91, 95, 214);	// filter light blue (color of a selected card)
-	Scalar hi_int(96, 160, 255);
-	inRange(hsv, lo_int, hi_int, mask);	// a mask of all the pixels that contain the light blue color, useful to see how many cards are selected
-	cv::GaussianBlur(mask, mask, cv::Size(5, 5), 0);
-	vector<vector<Point>> selected_contours;
-	vector<Vec4i> selected_hierarchy;
-	findContours(mask, selected_contours, selected_hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE, Point(0, 0));
-	if (selected_contours.size() > 1)	// remove potential noise
-	{
-		auto new_end = std::remove_if(selected_contours.begin(), selected_contours.end(), [](const std::vector<cv::Point> & c1) { return (contourArea(c1, false) < 1000); });
-		selected_contours.erase(new_end, selected_contours.end());
-	}
-	if (selected_contours.size() > 1)	// multiple cards were selected: outeredge is one contours + inneredge for other contours
-										// so if one card was selected (the topcard), we see 2 contours: the outer- and innercontour
-										// if three cards were selected, we see 4 contours: 1 outercontour, 3 innercontours
-	{
-		int index = selected_contours.size() - 2;	// to get the index (from topcard to bottomcard, we need to substract 1 for the outercontour and again one for the index (size 1 = index 0)
-		return index;
-	}
-	else
-	{
-		return -1;
-	}
-}
+/****************************************************
+ *	PROCESSING OF STACK CARDS WITHIN extractCards()
+ ****************************************************/
 
 void ExtractCards::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, int i)
 {
 	Mat gray, grad, abs_grad, thresh_grad;
 	cv::cvtColor(src, gray, COLOR_BGR2GRAY);
 	vector<Vec4i> linesP;
-	Vec4i l;	
+	Vec4i l;
 	cv::Point lowest_pt1, lowest_pt2;
 	cv::Point pt1, pt2;
 	float rho, theta;
@@ -276,7 +239,7 @@ void ExtractCards::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 			myROI.y = lowest_pt2.y;
 			myROI.height = cardSize.height - lowest_pt2.y;
 		}
-			
+
 	}
 	else
 	{
@@ -306,7 +269,7 @@ void ExtractCards::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 		{
 			myROI.x = lowest_pt2.x;
 			myROI.width = cardSize.width - lowest_pt2.x;
-		}			
+		}
 		myROI.y = 0, myROI.height = cardSize.height;
 	}
 	Mat croppedRef(src, myROI);	// extract the card using the region
@@ -348,6 +311,63 @@ void ExtractCards::extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat &
 
 	Mat croppedRef(src, myROI);
 	dest = croppedRef.clone();
+}
+
+/****************************************************
+ *	PROCESSING OF SELECTED CARDS BY THE PLAYER
+ ****************************************************/
+
+int ExtractCards::getIndexOfSelectedCard(int i)	// use the cardlocation that has been clicked on (using coordinates)
+{
+	Mat selectedCard = cardRegions.at(i).clone();
+	Mat hsv, mask;
+	cv::cvtColor(selectedCard, hsv, COLOR_BGR2HSV);	// convert the RBG spectrum (BGR for opencv) to HSV spectrum
+	Scalar lo_int(91, 95, 214);	// filter light blue (color of a selected card)
+	Scalar hi_int(96, 160, 255);
+	inRange(hsv, lo_int, hi_int, mask);	// a mask of all the pixels that contain the light blue color, useful to see how many cards are selected
+	cv::GaussianBlur(mask, mask, cv::Size(5, 5), 0);
+	vector<vector<Point>> selected_contours;
+	vector<Vec4i> selected_hierarchy;
+	findContours(mask, selected_contours, selected_hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE, Point(0, 0));
+	if (selected_contours.size() > 1)	// remove potential noise
+	{
+		auto new_end = std::remove_if(selected_contours.begin(), selected_contours.end(), [](const std::vector<cv::Point> & c1) { return (contourArea(c1, false) < 1000); });
+		selected_contours.erase(new_end, selected_contours.end());
+	}
+	if (selected_contours.size() > 1)	// multiple cards were selected: outeredge is one contours + inneredge for other contours
+										// so if one card was selected (the topcard), we see 2 contours: the outer- and innercontour
+										// if three cards were selected, we see 4 contours: 1 outercontour, 3 innercontours
+	{
+		int index = selected_contours.size() - 2;	// to get the index (from topcard to bottomcard, we need to substract 1 for the outercontour and again one for the index (size 1 = index 0)
+		return index;
+	}
+	else
+	{
+		return -1;
+	}
+}
+
+/****************************************************
+ *	 GAMEANALYTICS GETTERS AND CHECKS
+ ****************************************************/
+
+bool ExtractCards::checkForOutOfMovesState(const cv::Mat &src)
+{
+	// split the image in 3 horizontal parts and take the middle part
+	// if the middle part is mostly white (at least 70%), then the board image shows an outOfMoves image (big horizontal white bar in the middle)
+	Size imageSize = src.size();
+	Rect middle = Rect(0, imageSize.height / 3, imageSize.width, imageSize.height / 3);
+	Mat croppedSrc(src, middle);
+	cvtColor(croppedSrc, croppedSrc, COLOR_BGR2GRAY);
+	threshold(croppedSrc, croppedSrc, 240, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+	if (cv::countNonZero(croppedSrc) > croppedSrc.rows * croppedSrc.cols * 0.7)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 const std::vector<cv::Mat> & ExtractCards::getCards()

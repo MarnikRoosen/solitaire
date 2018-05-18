@@ -70,7 +70,6 @@ public:
 	~GameAnalytics();
 
 	// INITIALIZATIONS
-
 	void initScreenCapture();	// initialize the screen capture relative to the correct monitor
 	void initGameLogic();	// intialize tracking variables and the state of the game 
 	void initDBConn();	// initialize the database connection
@@ -78,7 +77,6 @@ public:
 
 
 	// MAIN FUNCTIONS
-
 	void process();	// main function of the application
 	void determineNextState(const int & x, const int & y);	// check what the main function should do next
 	void handleUndoState();	// take the previous state of the playing board if undo was pressed
@@ -88,7 +86,6 @@ public:
 
 
 	// MULTITHREADED FUNCTIONS + SCREEN CAPTURE
-
 	void hookMouseClicks();	// multithreaded function for capturing mouse clicks
 	void grabSrc();	// multithreaded function that only captures screens after mouse clicks
 	void toggleClickDownBool();	// on click before previous screen is captured, notify for immediate screengrab
@@ -98,14 +95,12 @@ public:
 
 
 	// PROCESSING OF SELECTED CARDS BY THE PLAYER
-
 	void processCardSelection(const int & x, const int & y);	// process if a card was selected and handle player error checking
 	void detectPlayerMoveErrors(std::pair<classifiers, classifiers> &selectedCard, int indexOfPressedCardLocation);	// check for player errors if a card was selected
 	int determineIndexOfPressedCard(const int & x, const int & y);	// check if a cardlocation was pressed using coordinates
 
 
 	// PROCESSING THE GAME STATE OF THE PLAYING BOARD
-
 	bool updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);	// general function to update the playing board
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);	// check which cards have been moved
 	bool cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2);	// handle card move between build and suit stacks
@@ -113,7 +108,6 @@ public:
 	
 
 	// TEST FUNCTIONS
-
 	void test();	// test function for card extraction and classification
 	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string & file);	// easily write new testdata to a textfile for later use
 	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file);	// read in previously saved testdata from a textfile
