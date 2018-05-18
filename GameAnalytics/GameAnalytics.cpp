@@ -271,6 +271,10 @@ void GameAnalytics::process()
 			case UNDO:
 				handleUndoState();
 				break;
+			case HINT:
+				++numberOfHints;
+				currentState = PLAYING;
+				break;
 			case QUIT:
 				gameWon = false;
 				endOfGameBool = true;
@@ -282,10 +286,6 @@ void GameAnalytics::process()
 			case AUTOCOMPLETE:
 				gameWon = true;
 				endOfGameBool = true;
-				break;
-			case HINT:
-				++numberOfHints;
-				currentState = PLAYING;
 				break;
 			case NEWGAME:
 				break;
@@ -328,6 +328,62 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 {																		// -> uses hardcoded values (possible because the screen is always an identical 1600x900)
 	switch (currentState)
 	{
+	case PLAYING:
+		if ((283 <= x && x <= 416) && (84 <= y && y <= 258))	// pile pressed
+		{
+			locationOfLastPress.first = x - 283;
+			locationOfLastPress.second = y - 84;
+			locationOfPresses.push_back(locationOfLastPress);
+			++numberOfPilePresses;
+		}
+		else if ((12 <= x && x <= 111) && (837 <= y && y <= 889))
+		{
+			std::cout << "NEWGAME PRESSED!" << std::endl;
+			currentState = NEWGAME;
+		}
+		else if (ec.checkForOutOfMovesState(src))
+		{
+			std::cout << "OUT OF MOVES!" << std::endl;
+			currentState = OUTOFMOVES;
+		}
+		else if ((1487 <= x && x <= 1586) && (837 <= y && y <= 889))
+		{
+			int cardsLeft = 0;
+			for (int i = 0; i < 8; i++)
+			{
+				if (currentPlayingBoard.at(i).remainingCards > 0)
+				{
+					++cardsLeft;
+				}
+			}
+			if (cardsLeft > 0)
+			{
+				std::cout << "UNDO PRESSED!" << std::endl;
+				currentState = UNDO;
+			}
+			else
+			{
+				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
+				int remainingCards = 0;
+				for (int i = 0; i < 7; ++i)
+				{
+					remainingCards += currentPlayingBoard.at(i).knownCards.size();
+				}
+				score += (remainingCards * 10);
+				currentState = AUTOCOMPLETE;
+			}
+		}
+		else if ((13 <= x && x <= 82) && (1 <= y && y <= 55))
+		{
+			std::cout << "MENU PRESSED!" << std::endl;
+			currentState = MENU;
+		}
+		else if ((91 <= x && x <= 161) && (1 <= y && y <= 55))
+		{
+			std::cout << "BACK PRESSED!" << std::endl;
+			currentState = MAINMENU;
+		}
+		break;
 	case MENU:
 		if ((1 <= x && x <= 300) && (64 <= y && y <= 108))
 		{
@@ -373,62 +429,6 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 		{
 			std::cout << "KLONDIKE PRESSED!" << std::endl;
 			currentState = PLAYING;
-		}
-		break;
-	case PLAYING:
-		if ((12 <= x && x <= 111) && (837 <= y && y <= 889))
-		{
-			std::cout << "NEWGAME PRESSED!" << std::endl;
-			currentState = NEWGAME;
-		}
-		else if (ec.checkForOutOfMovesState(src))
-		{
-			std::cout << "OUT OF MOVES!" << std::endl;
-			currentState = OUTOFMOVES;
-		}
-		else if ((1487 <= x && x <= 1586) && (837 <= y && y <= 889))
-		{
-			int cardsLeft = 0;
-			for (int i = 0; i < 8; i++)
-			{
-				if (currentPlayingBoard.at(i).remainingCards > 0)
-				{
-					++cardsLeft;
-				}
-			}
-			if (cardsLeft > 0)
-			{
-				std::cout << "UNDO PRESSED!" << std::endl;
-				currentState = UNDO;
-			}
-			else
-			{
-				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
-				int remainingCards = 0;
-				for (int i = 0; i < 7; ++i)
-				{
-					remainingCards += currentPlayingBoard.at(i).knownCards.size();
-				}
-				score += (remainingCards * 10);
-				currentState = AUTOCOMPLETE;
-			}
-		}
-		else if ((13 <= x && x <= 82) && (1 <= y && y <= 55))
-		{
-			std::cout << "MENU PRESSED!" << std::endl;
-			currentState = MENU;
-		}
-		else if ((283 <= x && x <= 416) && (84 <= y && y <= 258))	// pile pressed
-		{
-			locationOfLastPress.first = x - 283;
-			locationOfLastPress.second = y - 84;
-			locationOfPresses.push_back(locationOfLastPress);
-			++numberOfPilePresses;
-		}
-		else if ((91 <= x && x <= 161) && (1 <= y && y <= 55))
-		{
-			std::cout << "BACK PRESSED!" << std::endl;
-			currentState = MAINMENU;
 		}
 		break;
 	case WON:
@@ -1260,8 +1260,6 @@ void GameAnalytics::test()
 	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::milliseconds>(test2 - test1).count() << " ms" << std::endl;
 	std::cout << "Rank error counter: " << wrongRankCounter << std::endl;	// print the amount of faulty classifications
 	std::cout << "Suit error counter: " << wrongSuitCounter << std::endl;
-	int amountOfPerfectSegmentations = cc.getAmountOfPerfectSegmentations();
-	std::cout << "Amount of perfect segmentations: " << amountOfPerfectSegmentations << std::endl;	// print amount of good segmentations
 	Sleep(10000);
 }
 

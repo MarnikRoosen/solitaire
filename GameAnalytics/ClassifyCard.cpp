@@ -4,8 +4,6 @@
 
 ClassifyCard::ClassifyCard()
 {
-	standardCardSize.width = 150;	// initialize the standard card size
-	standardCardSize.height = 200;
 	generateImageVector();	// initialize the images used for classification using comparison
 	std::vector<string> type = { "rank", "black_suit", "red_suit" };
 	for (int i = 0; i < type.size(); i++)
@@ -16,7 +14,7 @@ ClassifyCard::ClassifyCard()
 			getTrainedData(type.at(i));
 		}
 	}
-	kNearest_rank = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_rank.yml");
+	kNearest_rank = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_rank.yml");	// load frequently used knn algorithms as variables in the header file
 	kNearest_black_suit = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_black_suit.yml");
 	kNearest_red_suit = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_red_suit.yml");
 }
@@ -82,12 +80,11 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			}
 			cv::GaussianBlur(resizedROI, resizedBlurredImg, cv::Size(3, 3), 0);	// used for shape analysis
 			cv::threshold(resizedBlurredImg, resizedThreshImg, 140, 255, THRESH_BINARY);
-			//cv::findContours(resizedThreshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 
 
 			// COMPARISON METHOD
 			int lowestValueOfComparison = INT_MAX;
-			int indexOfLowestValueUsingComparison = classifyTypeUsingComparison(image_list, resizedThreshImg, lowestValueOfComparison);
+			int indexOfLowestValueUsingComparison = classifyTypeUsingSubtraction(image_list, resizedThreshImg, lowestValueOfComparison);
 			if (type == "rank")
 			{
 				cardType.first = image_list.at(indexOfLowestValueUsingComparison).first;
@@ -97,21 +94,22 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			{
 				cardType.second = image_list.at(indexOfLowestValueUsingComparison).first;
 			}
-			++amountOfPerfectSegmentations;	// used for testing - TEN is also a good segmentation
 
 			// KNN METHOD
 			/*if (type == "rank")
 			{
-				cardType.first = classifyTypeWithKnn(resizedROI, kNearest_rank);
+				cardType.first = classifyTypeUsingKnn(resizedROI, kNearest_rank);
 			}
 			else
 			{
-				(type == "red_suit") ? cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
+				(type == "red_suit") ? cardType.second = classifyTypeUsingKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeUsingKnn(resizedROI, kNearest_black_suit);
 			}*/
 
 			
 			// SHAPE METHOD
-			/*double lowestValueUsingShape = DBL_MAX;
+			/*
+			cv::findContours(resizedThreshImg, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+			double lowestValueUsingShape = DBL_MAX;
 			int indexOfLowestValueUsingShape = classifyTypeUsingShape(image_list, contours, lowestValueUsingShape);			
 			if (lowestValueUsingShape < 0.15 || image_list.at(indexOfLowestValueUsingShape).first != '6' || image_list.at(indexOfLowestValueUsingShape).first != '9')
 			{
@@ -121,11 +119,11 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			{
 				if (type == "rank")
 				{
-					cardType.first = classifyTypeWithKnn(resizedROI, kNearest_rank);
+					cardType.first = classifyTypeUsingKnn(resizedROI, kNearest_rank);
 				}
 				else
 				{
-					(type == "red_suit") ? cardType.second = classifyTypeWithKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeWithKnn(resizedROI, kNearest_black_suit);
+					(type == "red_suit") ? cardType.second = classifyTypeUsingKnn(resizedROI, kNearest_red_suit) : cardType.second = classifyTypeUsingKnn(resizedROI, kNearest_black_suit);
 				}
 			}*/
 		}
@@ -159,7 +157,7 @@ int ClassifyCard::classifyTypeUsingShape(std::vector<std::pair<classifiers, cv::
 											// multiple equally low values mean uncertain classification
 }
 
-int ClassifyCard::classifyTypeUsingComparison(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue)
+int ClassifyCard::classifyTypeUsingSubtraction(std::vector<std::pair<classifiers, cv::Mat>> &image_list, cv::Mat &resizedROI, int &lowestValue)
 {
 	cv::Mat diff;
 	int lowestIndex = INT_MAX;
@@ -235,7 +233,7 @@ void ClassifyCard::generateImageVector()
 	}
 }
 
-classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest)
+classifiers ClassifyCard::classifyTypeUsingKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest)
 {
 	image.convertTo(ROIFloat, CV_32FC1);	// converts 8 bit int gray image to binary float image
 	ROIFlattenedFloat = ROIFloat.reshape(1, 1);	// reshape the image to 1 line (all rows pasted behind each other)
@@ -247,17 +245,10 @@ classifiers ClassifyCard::classifyTypeWithKnn(const Mat & image, const Ptr<ml::K
 
 std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 {
-	Mat card;
-	if (card.size() != standardCardSize)
-	{
-		resize(aCard, card, standardCardSize);	// if the card wasn't resized yet, do so
-	}
 	// Get the rank and suit from the resized card
-	Rect myRankROI(4, 3, 22, 27);	// hardcoded values, but thanks to the resizing and consistent cardextraction, that is possible
-	Mat rank(card, myRankROI);
+	Mat rank(aCard, myRankROI);
 	cv::resize(rank, rank, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));	// resize a first time to increase pixeldensity
-	Rect mySuitROI(4, 30, 22, 21);
-	Mat suit(card, mySuitROI);
+	Mat suit(aCard, mySuitROI);
 	cv::resize(suit, suit, cv::Size(RESIZED_TYPE_HEIGHT, RESIZED_TYPE_HEIGHT));	// resize a first time to increase pixeldensity
 	std::pair<Mat, Mat> cardCharacteristics = std::make_pair(rank, suit);	// package as a pair of rank and suit for classification
 	return cardCharacteristics;
@@ -380,9 +371,4 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 
 	fsTrainingImages << outputPreName + "_images" << trainingImagesAsFlattenedFloats;
 	fsTrainingImages.release();
-}
-
-int ClassifyCard::getAmountOfPerfectSegmentations()
-{
-	return amountOfPerfectSegmentations;	// used for testing
 }
