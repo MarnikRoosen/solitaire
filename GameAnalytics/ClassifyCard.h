@@ -38,15 +38,9 @@ public:
 	
 	
 	// CLASSIFICATION METHODS
-	int classifyTypeUsingShape(										// return: the index of image_list of the best match
-		std::vector<std::pair<classifiers, cv::Mat>> &image_list,	// input: list of known (already classified) images
-		std::vector<std::vector<cv::Point>> &contours,				// input: the contour of the unknown image
-		double &lowestValueUsingShape);								// output: the certainty of the classification (lower is better)
-
 	int classifyTypeUsingSubtraction(								// return: the index of image_list of the best match
 		std::vector<std::pair<classifiers, cv::Mat>> &image_list,	// input: list of known (already classified) images
-		cv::Mat &resizedROI,										// input: the unknown image
-		int &lowestValue);											// output: the certainty of the classification (lower is better)
+		cv::Mat &resizedROI);
 
 	classifiers classifyTypeUsingKnn(								// return: the classified type
 		const Mat & image,											// input: the unknown image
@@ -54,33 +48,19 @@ public:
 
 
 private:
-	Rect myRankROI = Rect(4, 3, 22, 27);	// hardcoded values, but thanks to the resizing and consistent cardextraction, that is possible
+	// hardcoded values, but thanks to the resizing and consistent cardextraction, that is possible
+	Rect myRankROI = Rect(4, 3, 22, 27);	
 	Rect mySuitROI = Rect(4, 30, 22, 21);
 
-	vector<std::pair<classifiers, std::vector<double>>> rankHuMoments;
-	vector<std::pair<classifiers, std::vector<double>>> red_suitHuMoments;
-	vector<std::pair<classifiers, std::vector<double>>> black_suitHuMoments;
+	// images used for subtraction method
 	vector<std::pair<classifiers, cv::Mat>> rankImages;
 	vector<std::pair<classifiers, cv::Mat>> red_suitImages;
 	vector<std::pair<classifiers, cv::Mat>> black_suitImages;
-	int amountOfPerfectSegmentations = 0;
+
+	// knn data
 	Ptr<ml::KNearest>  kNearest_rank;
 	Ptr<ml::KNearest>  kNearest_black_suit;
 	Ptr<ml::KNearest>  kNearest_red_suit;
-
-	std::pair<classifiers, classifiers> cardType;
-	std::vector<std::pair<classifiers, cv::Mat>> image_list;
-	std::string type;
-	std::vector<std::vector<cv::Point> > contours;
-	std::vector<cv::Vec4i> hierarchy;
-	cv::Mat src, blurredImg, grayImg, threshImg, diff, resizedBlurredImg, resizedThreshImg;
-	cv::Mat ROI, resizedROI;
-	cv::Mat3b hsv;
-	cv::Mat1b mask1, mask2, mask;
-	int nonZero;
-
-	Mat ROIFloat, ROIFlattenedFloat;
-	float fltCurrentChar;
 };
 
 inline bool fileExists(const std::string& name) {
