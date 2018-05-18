@@ -69,7 +69,7 @@ public:
 	GameAnalytics();
 	~GameAnalytics();
 
-	// INITIALIZATION
+	// INITIALIZATIONS
 
 	void initScreenCapture();	// initialize the screen capture relative to the correct monitor
 	void initGameLogic();	// intialize tracking variables and the state of the game 

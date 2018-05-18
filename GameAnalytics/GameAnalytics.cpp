@@ -29,137 +29,7 @@ int main(int argc, char** argv)
 	srcGrabber.join();
 	clickThread.join();
 	
-	return 0;
-}
-
-void GameAnalytics::initDBConn() {
-	
-
-	/*
-	sql::Driver *driver;
-	sql::Connection *con;
-	sql::Statement *stmt;
-
-	driver = get_driver_instance();
-	con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
-	con->setSchema("game_data");
-
-	if (con->isValid()) {
-
-		std::cout << "Connection made with database" << std::endl;
-		stmt = con->createStatement();
-		stmt->execute("DROP TABLE IF EXISTS game_data");
-		stmt->execute("CREATE TABLE game_data(id INT, label CHAR(1))");
-		stmt->execute("INSERT INTO game_data(id, label) VALUES (1, 'a')");
-
-		delete stmt;
-		delete con;
-	}
-	else {
-		std::cout << "No connection could be made with the database" << std::endl;
-		con->reconnect();
-	}
-	*/
-
-	 cout << endl;
-	cout << "Running 'SELECT 'Hello World!' AS _message'..." << endl;
-
-		try {
-		sql::Driver *driver;
-		sql::Connection *con;
-		sql::Statement *stmt;
-		sql::ResultSet *res;
-		sql::PreparedStatement  *prep_stmt;
-
-		int var = 5;
-
-		// Create a connection
-		driver = get_driver_instance();
-		con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
-		// Connect to the MySQL test database 
-		//con->setSchema("demo");
-
-		stmt = con->createStatement();
-
-		stmt->execute("CREATE SCHEMA IF NOT EXISTS ga");
-		con->setSchema("ga");
-
-
-		//stmt->execute("DROP TABLE IF EXISTS test");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
-
-		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
-		prep_stmt->setInt(1, 1);
-		prep_stmt->setInt(2, numberOfUndos);
-		prep_stmt->setInt(3, numberOfPilePresses);
-		prep_stmt->setInt(4, numberOfHints);
-		prep_stmt->setInt(5, numberOfSuitErrors);
-		prep_stmt->setInt(6, numberOfRankErrors);
-		prep_stmt->setInt(7, score);
-
-		prep_stmt->execute();
-
-//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
-
-
-		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
-		while (res->next()) {
-			cout << "\t... MySQL replies: ";
-			// Access column data by alias or column name 
-			cout << res->getString("_message") << endl;
-			cout << "\t... MySQL says it again: ";
-			// Access column data by numeric offset, 1 is the first column 
-			cout << res->getString(1) << endl;
-		}
-		delete res;
-		delete prep_stmt;
-		delete stmt;
-		delete con;
-
-	}
-	catch (sql::SQLException &e) {
-		cout << "# ERR: SQLException in " << __FILE__;
-		cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
-		cout << "# ERR: " << e.what();
-		cout << " (MySQL error code: " << e.getErrorCode();
-		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
-	}
-
-	cout << endl;
-
-	
-
-
-}
-
-void changeConsoleFontSize(const double & percentageIncrease)
-{
-	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-	CONSOLE_FONT_INFOEX font = { sizeof(CONSOLE_FONT_INFOEX) };
-
-	if (!GetCurrentConsoleFontEx(hConsole, 0, &font))
-	{
-		exit(EXIT_FAILURE);
-	}
-
-	COORD size = font.dwFontSize;
-	size.X += (SHORT)(size.X * percentageIncrease);
-	size.Y += (SHORT)(size.Y * percentageIncrease);
-	font.dwFontSize = size;
-	
-	if (!SetCurrentConsoleFontEx(hConsole, 0, &font))
-	{
-		exit(EXIT_FAILURE);
-	}
-}
-
-void GameAnalytics::hookMouseClicks()
-{
-	// installing the click hook
-	ClicksHooks::Instance().InstallHook();
-
-	// handeling the incoming mouse data
-	ClicksHooks::Instance().Messages();
+	return EXIT_SUCCESS;
 }
 
 GameAnalytics::GameAnalytics() : cc(), ec()
@@ -170,6 +40,10 @@ GameAnalytics::GameAnalytics() : cc(), ec()
 GameAnalytics::~GameAnalytics()
 {
 }
+
+/****************************************************
+ *	INITIALIZATIONS									
+ ****************************************************/
 
 void GameAnalytics::initScreenCapture()
 {
@@ -223,6 +97,145 @@ void GameAnalytics::initGameLogic()
 		numberOfPresses.at(i) = 0;
 	}
 }
+
+void GameAnalytics::initDBConn() {
+
+
+	/*
+	sql::Driver *driver;
+	sql::Connection *con;
+	sql::Statement *stmt;
+
+	driver = get_driver_instance();
+	con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+	con->setSchema("game_data");
+
+	if (con->isValid()) {
+
+	std::cout << "Connection made with database" << std::endl;
+	stmt = con->createStatement();
+	stmt->execute("DROP TABLE IF EXISTS game_data");
+	stmt->execute("CREATE TABLE game_data(id INT, label CHAR(1))");
+	stmt->execute("INSERT INTO game_data(id, label) VALUES (1, 'a')");
+
+	delete stmt;
+	delete con;
+	}
+	else {
+	std::cout << "No connection could be made with the database" << std::endl;
+	con->reconnect();
+	}
+	*/
+
+	cout << endl;
+	cout << "Running 'SELECT 'Hello World!' AS _message'..." << endl;
+
+	try {
+		sql::Driver *driver;
+		sql::Connection *con;
+		sql::Statement *stmt;
+		sql::ResultSet *res;
+		sql::PreparedStatement  *prep_stmt;
+
+		int var = 5;
+
+		// Create a connection
+		driver = get_driver_instance();
+		con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
+		// Connect to the MySQL test database 
+		//con->setSchema("demo");
+
+		stmt = con->createStatement();
+
+		stmt->execute("CREATE SCHEMA IF NOT EXISTS ga");
+		con->setSchema("ga");
+
+
+		//stmt->execute("DROP TABLE IF EXISTS test");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
+
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt->setInt(1, 1);
+		prep_stmt->setInt(2, numberOfUndos);
+		prep_stmt->setInt(3, numberOfPilePresses);
+		prep_stmt->setInt(4, numberOfHints);
+		prep_stmt->setInt(5, numberOfSuitErrors);
+		prep_stmt->setInt(6, numberOfRankErrors);
+		prep_stmt->setInt(7, score);
+
+		prep_stmt->execute();
+
+		//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
+
+
+		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
+		while (res->next()) {
+			cout << "\t... MySQL replies: ";
+			// Access column data by alias or column name 
+			cout << res->getString("_message") << endl;
+			cout << "\t... MySQL says it again: ";
+			// Access column data by numeric offset, 1 is the first column 
+			cout << res->getString(1) << endl;
+		}
+		delete res;
+		delete prep_stmt;
+		delete stmt;
+		delete con;
+
+	}
+	catch (sql::SQLException &e) {
+		cout << "# ERR: SQLException in " << __FILE__;
+		cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+		cout << "# ERR: " << e.what();
+		cout << " (MySQL error code: " << e.getErrorCode();
+		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+	}
+
+	cout << endl;
+}
+
+void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
+{
+	currentPlayingBoard.resize(12);
+	int i;
+	cardLocation startupLocation;
+
+	// build stack
+	for (i = 0; i < 7; i++)	// add the classified cards as the only item of known cards and set the amount of unknown cards of each location
+	{
+		startupLocation.knownCards.clear();
+		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
+		{
+			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
+		}
+		startupLocation.remainingCards = i;
+		currentPlayingBoard.at(i) = startupLocation;
+	}
+
+	// talon
+	startupLocation.knownCards.clear();
+	startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
+	startupLocation.remainingCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
+	currentPlayingBoard.at(7) = startupLocation;
+
+	// suit stack
+	for (i = 8; i < currentPlayingBoard.size(); i++)
+	{
+		startupLocation.knownCards.clear();
+		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
+		{
+			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
+		}
+		startupLocation.remainingCards = 0;
+		currentPlayingBoard.at(i) = startupLocation;
+	}
+	previousPlayingBoards.push_back(currentPlayingBoard);	// add the first game state to the list of all game states
+	printPlayingBoardState();	// print the board
+}
+
+/****************************************************
+ *	MAIN FUNCTIONS									
+ ****************************************************/
 
 void GameAnalytics::process()
 {
@@ -311,6 +324,177 @@ void GameAnalytics::process()
 	handleEndOfGame();
 }
 
+void GameAnalytics::determineNextState(const int & x, const int & y)	// update the statemachine by checking if a special location has been pressed (menu, hint, undo, etc.)
+{																		// -> uses hardcoded values (possible because the screen is always an identical 1600x900)
+	switch (currentState)
+	{
+	case MENU:
+		if ((1 <= x && x <= 300) && (64 <= y && y <= 108))
+		{
+			std::cout << "HINT PRESSED!" << std::endl;
+			currentState = HINT;
+		}
+		else if (!((1 <= x && x <= 300) && (54 <= y && y <= 899)))
+		{
+			std::cout << "PLAYING!" << std::endl;
+			currentState = PLAYING;
+		}
+		break;
+	case NEWGAME:
+		if ((1175 <= x && x <= 1312) && (486 <= y && y <= 516))
+		{
+			std::cout << "CANCEL PRESSED!" << std::endl;
+			currentState = PLAYING;
+		}
+		else if ((1010 <= x && x <= 1146) && (486 <= y && y <= 516))
+		{
+			std::cout << "CONTINUE PRESSED!" << std::endl;
+			currentState = QUIT;
+		}
+		break;
+	case OUTOFMOVES:
+		if ((1175 <= x && x <= 1312) && (486 <= y && y <= 516))
+		{
+			std::cout << "UNDO PRESSED!" << std::endl;
+			currentState = UNDO;
+		}
+		else if ((1010 <= x && x <= 1146) && (486 <= y && y <= 516))
+		{
+			std::cout << "CONTINUE PRESSED!" << std::endl;
+			currentState = QUIT;
+		}
+		else
+		{
+			currentState = OUTOFMOVES;
+		}
+		break;
+	case MAINMENU:
+		if ((75 <= x && x <= 360) && (149 <= y && y <= 416))
+		{
+			std::cout << "KLONDIKE PRESSED!" << std::endl;
+			currentState = PLAYING;
+		}
+		break;
+	case PLAYING:
+		if ((12 <= x && x <= 111) && (837 <= y && y <= 889))
+		{
+			std::cout << "NEWGAME PRESSED!" << std::endl;
+			currentState = NEWGAME;
+		}
+		else if (ec.checkForOutOfMovesState(src))
+		{
+			std::cout << "OUT OF MOVES!" << std::endl;
+			currentState = OUTOFMOVES;
+		}
+		else if ((1487 <= x && x <= 1586) && (837 <= y && y <= 889))
+		{
+			int cardsLeft = 0;
+			for (int i = 0; i < 8; i++)
+			{
+				if (currentPlayingBoard.at(i).remainingCards > 0)
+				{
+					++cardsLeft;
+				}
+			}
+			if (cardsLeft > 0)
+			{
+				std::cout << "UNDO PRESSED!" << std::endl;
+				currentState = UNDO;
+			}
+			else
+			{
+				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
+				int remainingCards = 0;
+				for (int i = 0; i < 7; ++i)
+				{
+					remainingCards += currentPlayingBoard.at(i).knownCards.size();
+				}
+				score += (remainingCards * 10);
+				currentState = AUTOCOMPLETE;
+			}
+		}
+		else if ((13 <= x && x <= 82) && (1 <= y && y <= 55))
+		{
+			std::cout << "MENU PRESSED!" << std::endl;
+			currentState = MENU;
+		}
+		else if ((283 <= x && x <= 416) && (84 <= y && y <= 258))	// pile pressed
+		{
+			locationOfLastPress.first = x - 283;
+			locationOfLastPress.second = y - 84;
+			locationOfPresses.push_back(locationOfLastPress);
+			++numberOfPilePresses;
+		}
+		else if ((91 <= x && x <= 161) && (1 <= y && y <= 55))
+		{
+			std::cout << "BACK PRESSED!" << std::endl;
+			currentState = MAINMENU;
+		}
+		break;
+	case WON:
+		break;
+	default:
+		std::cerr << "Error: currentState is not defined!" << std::endl;
+		break;
+	}
+}
+
+void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
+{
+	std::cout << "--------------------------------------------------------" << std::endl;
+	(gameWon) ? std::cout << "Game won!" << std::endl : std::cout << "Game over!" << std::endl;
+	std::cout << "--------------------------------------------------------" << std::endl;
+	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
+	std::cout << "Game solved: " << std::boolalpha << gameWon << std::endl;
+	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
+	std::cout << "Points scored: " << score << std::endl;
+	std::cout << "Average time per move = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
+	std::cout << "Number of moves = " << averageThinkDurations.size() << " moves" << std::endl;
+	std::cout << "Hints requested = " << numberOfHints << std::endl;
+	std::cout << "Times undo = " << numberOfUndos << std::endl;
+	std::cout << "Number of rank errors = " << numberOfRankErrors << std::endl;
+	std::cout << "Number of suit errors = " << numberOfSuitErrors << std::endl;
+	std::cout << "--------------------------------------------------------" << std::endl;
+	for (int i = 0; i < 7; i++)
+	{
+		std::cout << "Number of build stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
+	}
+	std::cout << "Number of pile presses = " << numberOfPilePresses << std::endl;
+	std::cout << "Number of talon presses = " << numberOfPresses.at(7) << std::endl;
+	for (int i = 8; i < 12; i++)
+	{
+		std::cout << "Number of suit stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
+	}
+	std::cout << "--------------------------------------------------------" << std::endl;
+	cv::Mat pressLocations = Mat(176 * 2, 133 * 2, CV_8UC3, Scalar(255, 255, 255));	// output an image with location of presses on a topcard
+	for (int i = 0; i < locationOfPresses.size(); i++)
+	{
+		cv::Point point = Point(locationOfPresses.at(i).first * 2, locationOfPresses.at(i).second * 2);
+		cv::circle(pressLocations, point, 2, cv::Scalar(0, 0, 255), 2);
+	}
+	namedWindow("clicklocations", WINDOW_NORMAL);
+	resizeWindow("clicklocations", cv::Size(131 * 2, 174 * 2));
+	imshow("clicklocations", pressLocations);
+	waitKey(0);
+}
+
+bool GameAnalytics::handlePlayingState()
+{
+	ec.findCardsFromBoardImage(src); // extract the cards from the board
+	extractedImagesFromPlayingBoard = ec.getCards();
+	classifyExtractedCards();	// classify the extracted cards
+	if (updateBoard(classifiedCardsFromPlayingBoard))	// check if the board needs to be updated
+	{
+		previousPlayingBoards.push_back(currentPlayingBoard);	// if so, add the new playingboard to the list
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
 void GameAnalytics::handleUndoState()
 {
 	if (previousPlayingBoards.size() > 1)	// at least one move has been played in the game
@@ -321,6 +505,37 @@ void GameAnalytics::handleUndoState()
 	printPlayingBoardState();
 	++numberOfUndos;
 	currentState = PLAYING;
+}
+
+void GameAnalytics::classifyExtractedCards()
+{
+	classifiedCardsFromPlayingBoard.clear();	// reset the variable
+	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [this](cv::Mat mat) {
+		if (mat.empty())	// extracted card was an empty image -> no card on this location
+		{
+			cardType.first = EMPTY;
+			cardType.second = EMPTY;
+		}
+		else	// segment the rank and suit + classify this rank and suit
+		{
+			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
+			cardType = cc.classifyCard(cardCharacteristics);
+		}
+		classifiedCardsFromPlayingBoard.push_back(cardType);	// push the classified card to the variable
+	});
+}
+
+/****************************************************
+ *	MULTITHREADED CLICK FUNCTIONS + SCREEN CAPTURE								
+ ****************************************************/
+
+void GameAnalytics::hookMouseClicks()
+{
+	// installing the click hook
+	ClicksHooks::Instance().InstallHook();
+
+	// handeling the incoming mouse data
+	ClicksHooks::Instance().Messages();
 }
 
 void GameAnalytics::toggleClickDownBool()
@@ -368,6 +583,101 @@ void GameAnalytics::grabSrc()
 		}
 	}
 }
+
+void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
+	EnterCriticalSection(&threadLock);	// function called by the clickHooksThread, pushes the coordinates of a click to the first buffer
+	xPosBuffer1.push(x);
+	yPosBuffer1.push(y);
+	LeaveCriticalSection(&threadLock);
+}
+
+cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
+{
+	norm = DBL_MAX;
+	std::chrono::time_point<std::chrono::steady_clock> duration1 = Clock::now();
+
+	src2 = hwnd2mat(hwnd);
+	while (norm > 0.0)
+	{
+		if (std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - duration1).count() > 2)	// function takes longer than 2 seconds -> end of game animation
+		{
+			cv::Mat empty;
+			return empty;
+		}
+		src1 = src2;
+		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
+		Sleep(60);	// wait for a certain duration to check for a difference (animation)
+					// -> too short? issue: first animation of cardmove, second animation of new card turning around
+					//					the second animation takes a small duration to kick in, which will be missed if the Sleep duration is too short
+					// -> too long? the process takes longer, which can give issues when a player plays fast (more exception cases using clickDownBuffer)
+		src2 = hwnd2mat(hwnd);
+		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
+		norm = cv::norm(graySrc1, graySrc2, NORM_L1);	// calculates the manhattan distance (sum of absolute values) of two grayimages
+		if (clickDownBool)
+		{
+			clickDownBool = false;	// new click registered while waitForStableImage isn't done yet
+									//  -> use the image at the moment of the new click (just before the new animation) for the previous move
+			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
+			return src1;
+		}
+	}
+	return src2;
+}
+
+cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
+{
+	HDC hwindowDC, hwindowCompatibleDC;
+
+	int height, width, srcheight, srcwidth;
+	HBITMAP hbwindow;
+	Mat src;
+	BITMAPINFOHEADER  bi;
+
+	hwindowDC = GetDC(hwnd);	// get the device context of the window handle 
+	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	// get a handle to the memory of the device context
+	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	// set the stretching mode of the bitmap so that when the image gets resized to a smaller size, the eliminated pixels get deleted w/o preserving information
+
+	RECT windowsize;    // get the height and width of the screen
+	GetClientRect(hwnd, &windowsize);
+
+	srcheight = windowsize.bottom;	// get the screensize of the window
+	srcwidth = windowsize.right;
+	height = windowsize.bottom;
+	width = windowsize.right;
+
+	src.create(height, width, CV_8UC4);	// create an a color image (R,G,B and alpha for transparency)
+
+										// create a bitmap
+	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
+	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
+	bi.biWidth = width;
+	bi.biHeight = -height;  //this is the line that makes it draw upside down or not
+	bi.biPlanes = 1;
+	bi.biBitCount = 32;
+	bi.biCompression = BI_RGB;
+	bi.biSizeImage = 0;
+	bi.biXPelsPerMeter = 0;
+	bi.biYPelsPerMeter = 0;
+	bi.biClrUsed = 0;
+	bi.biClrImportant = 0;
+
+	// use the previously created device context with the bitmap
+	SelectObject(hwindowCompatibleDC, hbwindow);
+	// copy from the window device context to the bitmap device context
+	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
+	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
+
+																									   // avoid memory leak
+	DeleteObject(hbwindow);
+	DeleteDC(hwindowCompatibleDC);
+	ReleaseDC(hwnd, hwindowDC);
+
+	return src;
+}
+
+/****************************************************
+ *	PROCESSING OF SELECTED CARDS BY THE PLAYER
+ ****************************************************/
 
 void GameAnalytics::processCardSelection(const int & x, const int & y)
 {
@@ -556,273 +866,9 @@ int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)	// 
 	return -1;
 }
 
-void GameAnalytics::determineNextState(const int & x, const int & y)	// update the statemachine by checking if a special location has been pressed (menu, hint, undo, etc.)
-{																		// -> uses hardcoded values (possible because the screen is always an identical 1600x900)
-	switch (currentState)
-	{
-	case MENU:
-		if ((1 <= x  && x <= 300) && (64 <= y && y <= 108))
-		{
-			std::cout << "HINT PRESSED!" << std::endl;
-			currentState = HINT;
-		}
-		else if (!((1 <= x  && x <= 300) && (54 <= y && y <= 899)))
-		{
-			std::cout << "PLAYING!" << std::endl;
-			currentState = PLAYING;
-		}
-		break;
-	case NEWGAME:
-		if ((1175 <= x  && x <= 1312) && (486 <= y && y <= 516))
-		{
-			std::cout << "CANCEL PRESSED!" << std::endl;
-			currentState = PLAYING;
-		}
-		else if ((1010 <= x  && x <= 1146) && (486 <= y && y <= 516))
-		{
-			std::cout << "CONTINUE PRESSED!" << std::endl;
-			currentState = QUIT;
-		}
-		break;
-	case OUTOFMOVES:
-		if ((1175 <= x  && x <= 1312) && (486 <= y && y <= 516))
-		{
-			std::cout << "UNDO PRESSED!" << std::endl;
-			currentState = UNDO;
-		}
-		else if ((1010 <= x  && x <= 1146) && (486 <= y && y <= 516))
-		{
-			std::cout << "CONTINUE PRESSED!" << std::endl;
-			currentState = QUIT;
-		}
-		else
-		{
-			currentState = OUTOFMOVES;
-		}
-		break;
-	case MAINMENU:
-		if ((75 <= x  && x <= 360) && (149 <= y && y <= 416))
-		{
-			std::cout << "KLONDIKE PRESSED!" << std::endl;
-			currentState = PLAYING;
-		}
-		break;
-	case PLAYING:
-		if ((12 <= x  && x <= 111) && (837 <= y && y <= 889))
-		{
-			std::cout << "NEWGAME PRESSED!" << std::endl;
-			currentState = NEWGAME;
-		}
-		else if (ec.checkForOutOfMovesState(src))
-		{
-			std::cout << "OUT OF MOVES!" << std::endl;
-			currentState = OUTOFMOVES;
-		}
-		else if ((1487 <= x  && x <= 1586) && (837 <= y && y <= 889))
-		{
-			int cardsLeft = 0;
-			for (int i = 0; i < 8; i++)
-			{
-				if (currentPlayingBoard.at(i).remainingCards > 0)
-				{
-					++cardsLeft;
-				}
-			}
-			if (cardsLeft > 0)
-			{
-				std::cout << "UNDO PRESSED!" << std::endl;
-				currentState = UNDO;
-			}
-			else
-			{
-				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
-				int remainingCards = 0;
-				for (int i = 0; i < 7; ++i)
-				{
-					remainingCards += currentPlayingBoard.at(i).knownCards.size();
-				}
-				score += (remainingCards * 10);
-				currentState = AUTOCOMPLETE;
-			}
-		}
-		else if ((13 <= x  && x <= 82) && (1 <= y && y <= 55))
-		{
-			std::cout << "MENU PRESSED!" << std::endl;
-			currentState = MENU;
-		}
-		else if ((283 <= x  && x <= 416) && (84 <= y && y <= 258))	// pile pressed
-		{
-			locationOfLastPress.first = x - 283;
-			locationOfLastPress.second = y - 84;
-			locationOfPresses.push_back(locationOfLastPress);
-			++numberOfPilePresses;
-		}
-		else if ((91 <= x  && x <= 161) && (1 <= y && y <= 55))
-		{
-			std::cout << "BACK PRESSED!" << std::endl;
-			currentState = MAINMENU;
-		}
-		break;
-	case WON:
-		break;
-	default:
-		std::cerr << "Error: currentState is not defined!" << std::endl;
-		break;
-	}
-}
-
-void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
-{
-	std::cout << "--------------------------------------------------------" << std::endl;
-	(gameWon) ? std::cout << "Game won!" << std::endl : std::cout << "Game over!" << std::endl;	
-	std::cout << "--------------------------------------------------------" << std::endl;
-	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
-	std::cout << "Game solved: " << std::boolalpha << gameWon << std::endl;
-	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
-	std::cout << "Points scored: " << score << std::endl;
-	std::cout << "Average time per move = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
-	std::cout << "Number of moves = " << averageThinkDurations.size() << " moves" << std::endl;
-	std::cout << "Hints requested = " << numberOfHints << std::endl;
-	std::cout << "Times undo = " << numberOfUndos << std::endl;
-	std::cout << "Number of rank errors = " << numberOfRankErrors << std::endl;
-	std::cout << "Number of suit errors = " << numberOfSuitErrors << std::endl;
-	std::cout << "--------------------------------------------------------" << std::endl;
-	for (int i = 0; i < 7; i++)
-	{
-		std::cout << "Number of build stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
-	}
-	std::cout << "Number of pile presses = " << numberOfPilePresses << std::endl;
-	std::cout << "Number of talon presses = " << numberOfPresses.at(7) << std::endl;
-	for (int i = 8; i < 12; i++)
-	{
-		std::cout << "Number of suit stack " << i << " presses = " << numberOfPresses.at(i) << std::endl;
-	}
-	std::cout << "--------------------------------------------------------" << std::endl;
-	cv::Mat pressLocations = Mat(176 * 2, 133 * 2, CV_8UC3, Scalar(255, 255, 255));	// output an image with location of presses on a topcard
-	for (int i = 0; i < locationOfPresses.size(); i++)
-	{
-		cv::Point point = Point(locationOfPresses.at(i).first * 2, locationOfPresses.at(i).second * 2);
-		cv::circle(pressLocations, point, 2, cv::Scalar(0, 0, 255), 2);
-	}
-	namedWindow("clicklocations", WINDOW_NORMAL);
-	resizeWindow("clicklocations", cv::Size(131 * 2, 174 * 2));
-	imshow("clicklocations", pressLocations);
-	waitKey(0);
-}
-
-bool GameAnalytics::handlePlayingState()
-{
-	ec.findCardsFromBoardImage(src); // extract the cards from the board
-	extractedImagesFromPlayingBoard = ec.getCards();
-	classifyExtractedCards();	// classify the extracted cards
-	if (updateBoard(classifiedCardsFromPlayingBoard))	// check if the board needs to be updated
-	{
-		previousPlayingBoards.push_back(currentPlayingBoard);	// if so, add the new playingboard to the list
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-
-}
-
-void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
-	EnterCriticalSection(&threadLock);	// function called by the clickHooksThread, pushes the coordinates of a click to the first buffer
-	xPosBuffer1.push(x);
-	yPosBuffer1.push(y);
-	LeaveCriticalSection(&threadLock);
-}
-
-void GameAnalytics::classifyExtractedCards()
-{
-	classifiedCardsFromPlayingBoard.clear();	// reset the variable
-	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [this](cv::Mat mat) {
-		if (mat.empty())	// extracted card was an empty image -> no card on this location
-		{
-			cardType.first = EMPTY;
-			cardType.second = EMPTY;
-		}
-		else	// segment the rank and suit + classify this rank and suit
-		{
-			cardCharacteristics = cc.segmentRankAndSuitFromCard(mat);
-			cardType = cc.classifyCard(cardCharacteristics);
-		}
-		classifiedCardsFromPlayingBoard.push_back(cardType);	// push the classified card to the variable
-	});
-}
-
-cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
-{
-	norm = DBL_MAX;
-	std::chrono::time_point<std::chrono::steady_clock> duration1 = Clock::now();
-	
-	src2 = hwnd2mat(hwnd);
-	while (norm > 0.0)
-	{
-		if (std::chrono::duration_cast<std::chrono::seconds>(Clock::now() - duration1).count() > 2)	// function takes longer than 2 seconds -> end of game animation
-		{
-			cv::Mat empty;
-			return empty;
-		}
-		src1 = src2;
-		cvtColor(src1, graySrc1, COLOR_BGR2GRAY);
-		Sleep(60);	// wait for a certain duration to check for a difference (animation)
-					// -> too short? issue: first animation of cardmove, second animation of new card turning around
-					//					the second animation takes a small duration to kick in, which will be missed if the Sleep duration is too short
-					// -> too long? the process takes longer, which can give issues when a player plays fast (more exception cases using clickDownBuffer)
-		src2 = hwnd2mat(hwnd);
-		cvtColor(src2, graySrc2, COLOR_BGR2GRAY);
-		norm = cv::norm(graySrc1, graySrc2, NORM_L1);	// calculates the manhattan distance (sum of absolute values) of two grayimages
-		if (clickDownBool)
-		{
-			clickDownBool = false;	// new click registered while waitForStableImage isn't done yet
-									//  -> use the image at the moment of the new click (just before the new animation) for the previous move
-			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
-			return src1;
-		}
-	}
-	return src2;
-}
-
-void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
-{
-	currentPlayingBoard.resize(12);
-	int i;
-	cardLocation startupLocation;
-
-	// build stack
-	for (i = 0; i < 7; i++)	// add the classified cards as the only item of known cards and set the amount of unknown cards of each location
-	{
-		startupLocation.knownCards.clear();
-		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
-		{
-			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
-		}
-		startupLocation.remainingCards = i;
-		currentPlayingBoard.at(i) = startupLocation;
-	}
-
-	// talon
-	startupLocation.knownCards.clear();
-	startupLocation.topCard = classifiedCardsFromPlayingBoard.at(7);
-	startupLocation.remainingCards = 24;	// each time a card has been moved from the talon, this value will decrease until 0
-	currentPlayingBoard.at(7) = startupLocation;
-
-	// suit stack
-	for (i = 8; i < currentPlayingBoard.size(); i++)
-	{
-		startupLocation.knownCards.clear();
-		if (classifiedCardsFromPlayingBoard.at(i).first != EMPTY)
-		{
-			startupLocation.knownCards.push_back(classifiedCardsFromPlayingBoard.at(i));
-		}
-		startupLocation.remainingCards = 0;
-		currentPlayingBoard.at(i) = startupLocation;
-	}
-	previousPlayingBoards.push_back(currentPlayingBoard);	// add the first game state to the list of all game states
-	printPlayingBoardState();	// print the board
-}
+/****************************************************
+ *	PROCESSING THE GAME STATE OF THE PLAYING BOARD
+ ****************************************************/
 
 bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {	
@@ -1044,6 +1090,60 @@ void GameAnalytics::findChangedCardLocations(const std::vector<std::pair<classif
 	}
 }
 
+void GameAnalytics::printPlayingBoardState()
+{
+	std::cout << "Talon: ";	// print the current topcard from deck
+	if (currentPlayingBoard.at(7).topCard.first == EMPTY)
+	{
+		std::cout << "// ";
+	}
+	else
+	{
+		std::cout << static_cast<char>(currentPlayingBoard.at(7).topCard.first) << static_cast<char>(currentPlayingBoard.at(7).topCard.second);
+	}
+	std::cout << "	Remaining: " << currentPlayingBoard.at(7).remainingCards << std::endl;
+
+	std::cout << "Suit stack: " << std::endl;		// print all cards from the suit stack
+	for (int i = 8; i < currentPlayingBoard.size(); i++)
+	{
+		std::cout << "   Pos " << i - 8 << ": ";
+		if (currentPlayingBoard.at(i).knownCards.empty())
+		{
+			std::cout << "// ";
+		}
+		for (int j = 0; j < currentPlayingBoard.at(i).knownCards.size(); j++)
+		{
+			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
+		}
+		std::cout << std::endl;
+	}
+
+	std::cout << "Build stack: " << std::endl;		// print all cards from the build stack
+	for (int i = 0; i < 7; i++)
+	{
+		std::cout << "   Pos " << i << ": ";
+		if (currentPlayingBoard.at(i).knownCards.empty())
+		{
+			std::cout << "// ";
+		}
+		for (int j = 0; j < currentPlayingBoard.at(i).knownCards.size(); j++)
+		{
+			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
+		}
+		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).remainingCards << std::endl;
+	}
+
+	auto averageThinkTime2 = Clock::now();	// add the average think duration to the list
+	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfMove).count());
+	startOfMove = Clock::now();
+	std::cout << std::endl;
+}
+
+
+/****************************************************
+ *	TEST FUNCTIONS
+ ****************************************************/
+
 void GameAnalytics::test()
 {
 	// PREPARATION
@@ -1230,102 +1330,27 @@ bool GameAnalytics::readTestData(vector <vector <pair <classifiers, classifiers>
 	return true;
 }
 
-void GameAnalytics::printPlayingBoardState()
+/****************************************************
+ *	OTHER FUNCTIONS
+ ****************************************************/
+
+void changeConsoleFontSize(const double & percentageIncrease)
 {
-	std::cout << "Talon: ";	// print the current topcard from deck
-	if (currentPlayingBoard.at(7).topCard.first == EMPTY)
-	{
-		std::cout << "// ";
-	}
-	else
-	{
-		std::cout << static_cast<char>(currentPlayingBoard.at(7).topCard.first) << static_cast<char>(currentPlayingBoard.at(7).topCard.second);
-	}
-	std::cout << "	Remaining: " << currentPlayingBoard.at(7).remainingCards << std::endl;
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	CONSOLE_FONT_INFOEX font = { sizeof(CONSOLE_FONT_INFOEX) };
 
-	std::cout << "Suit stack: " << std::endl;		// print all cards from the suit stack
-	for (int i = 8; i < currentPlayingBoard.size(); i++)
+	if (!GetCurrentConsoleFontEx(hConsole, 0, &font))
 	{
-		std::cout << "   Pos " << i - 8 << ": ";
-		if (currentPlayingBoard.at(i).knownCards.empty())
-		{
-			std::cout << "// ";
-		}
-		for (int j = 0; j < currentPlayingBoard.at(i).knownCards.size(); j++)
-		{
-			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
-		}
-		std::cout << std::endl;
+		exit(EXIT_FAILURE);
 	}
 
-	std::cout << "Build stack: " << std::endl;		// print all cards from the build stack
-	for (int i = 0; i < 7; i++)
+	COORD size = font.dwFontSize;
+	size.X += (SHORT)(size.X * percentageIncrease);
+	size.Y += (SHORT)(size.Y * percentageIncrease);
+	font.dwFontSize = size;
+
+	if (!SetCurrentConsoleFontEx(hConsole, 0, &font))
 	{
-		std::cout << "   Pos " << i << ": ";
-		if (currentPlayingBoard.at(i).knownCards.empty())
-		{
-			std::cout << "// ";
-		}
-		for (int j = 0; j < currentPlayingBoard.at(i).knownCards.size(); j++)
-		{
-			std::cout << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).first) << static_cast<char>(currentPlayingBoard.at(i).knownCards.at(j).second) << " ";
-		}
-		std::cout << "	Hidden cards = " << currentPlayingBoard.at(i).remainingCards << std::endl;
+		exit(EXIT_FAILURE);
 	}
-
-	auto averageThinkTime2 = Clock::now();	// add the average think duration to the list
-	averageThinkDurations.push_back(std::chrono::duration_cast<std::chrono::milliseconds>(averageThinkTime2 - startOfMove).count());
-	startOfMove = Clock::now();
-	std::cout << std::endl;
-}
-
-cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense array class, HWND = handle for desktop window
-{
-	HDC hwindowDC, hwindowCompatibleDC;
-
-	int height, width, srcheight, srcwidth;
-	HBITMAP hbwindow;
-	Mat src;
-	BITMAPINFOHEADER  bi;
-
-	hwindowDC = GetDC(hwnd);	// get the device context of the window handle 
-	hwindowCompatibleDC = CreateCompatibleDC(hwindowDC);	// get a handle to the memory of the device context
-	SetStretchBltMode(hwindowCompatibleDC, COLORONCOLOR);	// set the stretching mode of the bitmap so that when the image gets resized to a smaller size, the eliminated pixels get deleted w/o preserving information
-
-	RECT windowsize;    // get the height and width of the screen
-	GetClientRect(hwnd, &windowsize);
-
-	srcheight = windowsize.bottom;	// get the screensize of the window
-	srcwidth = windowsize.right;
-	height = windowsize.bottom;
-	width = windowsize.right;
-
-	src.create(height, width, CV_8UC4);	// create an a color image (R,G,B and alpha for transparency)
-
-	// create a bitmap
-	hbwindow = CreateCompatibleBitmap(hwindowDC, width, height);
-	bi.biSize = sizeof(BITMAPINFOHEADER);    //http://msdn.microsoft.com/en-us/library/windows/window/dd183402%28v=vs.85%29.aspx
-	bi.biWidth = width;
-	bi.biHeight = -height;  //this is the line that makes it draw upside down or not
-	bi.biPlanes = 1;
-	bi.biBitCount = 32;
-	bi.biCompression = BI_RGB;
-	bi.biSizeImage = 0;
-	bi.biXPelsPerMeter = 0;
-	bi.biYPelsPerMeter = 0;
-	bi.biClrUsed = 0;
-	bi.biClrImportant = 0;
-
-	// use the previously created device context with the bitmap
-	SelectObject(hwindowCompatibleDC, hbwindow);
-	// copy from the window device context to the bitmap device context
-	StretchBlt(hwindowCompatibleDC, 0, 0, width, height, hwindowDC, 0, 0, srcwidth, srcheight, SRCCOPY); //change SRCCOPY to NOTSRCCOPY for wacky colors !
-	GetDIBits(hwindowCompatibleDC, hbwindow, 0, height, src.data, (BITMAPINFO *)&bi, DIB_RGB_COLORS);  //copy from hwindowCompatibleDC to hbwindow
-
-																									   // avoid memory leak
-	DeleteObject(hbwindow);
-	DeleteDC(hwindowCompatibleDC);
-	ReleaseDC(hwnd, hwindowDC);
-
-	return src;
 }
