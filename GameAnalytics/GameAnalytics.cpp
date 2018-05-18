@@ -83,7 +83,7 @@ void GameAnalytics::initGameLogic()
 	startOfMove = Clock::now();
 
 	classifiedCardsFromPlayingBoard.reserve(12);
-	src = waitForStableImage();	// get the first image of the board
+	cv::Mat src = waitForStableImage();	// get the first image of the board
 	ec.determineROI(src);	// calculating the important region within this board image
 	
 	ec.findCardsFromBoardImage(src);	// setup the starting board
@@ -509,8 +509,10 @@ void GameAnalytics::handleUndoState()
 
 void GameAnalytics::classifyExtractedCards()
 {
+	std::pair<classifiers, classifiers> cardType;
+	std::pair<Mat, Mat> cardCharacteristics;
 	classifiedCardsFromPlayingBoard.clear();	// reset the variable
-	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [this](cv::Mat mat) {
+	for_each(extractedImagesFromPlayingBoard.begin(), extractedImagesFromPlayingBoard.end(), [this, &cardType, &cardCharacteristics](cv::Mat mat) {
 		if (mat.empty())	// extracted card was an empty image -> no card on this location
 		{
 			cardType.first = EMPTY;
@@ -593,7 +595,8 @@ void GameAnalytics::addCoordinatesToBuffer(const int x, const int y) {
 
 cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated screen
 {
-	norm = DBL_MAX;
+	cv::Mat src1, src2, graySrc1, graySrc2;
+	double norm = DBL_MAX;
 	std::chrono::time_point<std::chrono::steady_clock> duration1 = Clock::now();
 
 	src2 = hwnd2mat(hwnd);
@@ -630,7 +633,7 @@ cv::Mat GameAnalytics::hwnd2mat(const HWND & hwnd)	//Mat = n-dimensional dense a
 
 	int height, width, srcheight, srcwidth;
 	HBITMAP hbwindow;
-	Mat src;
+	cv::Mat src;
 	BITMAPINFOHEADER  bi;
 
 	hwindowDC = GetDC(hwnd);	// get the device context of the window handle 
@@ -872,7 +875,7 @@ int GameAnalytics::determineIndexOfPressedCard(const int & x, const int & y)	// 
 
 bool GameAnalytics::updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {	
-	changedIndex1 = -1, changedIndex2 = -1;
+	int changedIndex1 = -1, changedIndex2 = -1;
 	findChangedCardLocations(classifiedCardsFromPlayingBoard, changedIndex1, changedIndex2);	// check which card locations have changed, this is maximum 2 (move from loc1 to loc2, or click on deck)
 	if (changedIndex1 == -1 && changedIndex2 == -1)
 	{
@@ -1223,13 +1226,16 @@ void GameAnalytics::test()
 
 		allExtractedImages.at(i) = ec.getCards();
 	}
+	std::pair<Mat, Mat> cardCharacteristics;
+	std::pair<classifiers, classifiers> cardType;
+
 	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	for (int k = 0; k < 100; k++)	// repeat for k loops
 	{
 		for (int i = 0; i < allExtractedImages.size(); i++)
 		{
 			classifiedCardsFromPlayingBoard.clear();	// reset the variable
-			for_each(allExtractedImages.at(i).begin(), allExtractedImages.at(i).end(), [this](cv::Mat mat) {
+			for_each(allExtractedImages.at(i).begin(), allExtractedImages.at(i).end(), [this, &cardCharacteristics, &cardType](cv::Mat mat) {
 				if (mat.empty())	// extracted card was an empty image -> no card on this location
 				{
 					cardType.first = EMPTY;

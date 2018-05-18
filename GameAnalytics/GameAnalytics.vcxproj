@@ -192,26 +192,6 @@
     <ClCompile Include="ClassifyCard.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\x64\Debug\3ofspades.PNG" />
-    <Image Include="..\x64\Debug\cards\10.png" />
-    <Image Include="..\x64\Debug\cards\2.png" />
-    <Image Include="..\x64\Debug\cards\3.png" />
-    <Image Include="..\x64\Debug\cards\4.png" />
-    <Image Include="..\x64\Debug\cards\5.png" />
-    <Image Include="..\x64\Debug\cards\6.png" />
-    <Image Include="..\x64\Debug\cards\7.png" />
-    <Image Include="..\x64\Debug\cards\8.png" />
-    <Image Include="..\x64\Debug\cards\9.png" />
-    <Image Include="..\x64\Debug\cards\ace.png" />
-    <Image Include="..\x64\Debug\cards\clubs.png" />
-    <Image Include="..\x64\Debug\cards\diamonds.png" />
-    <Image Include="..\x64\Debug\cards\hearts.png" />
-    <Image Include="..\x64\Debug\cards\jack.png" />
-    <Image Include="..\x64\Debug\cards\king.png" />
-    <Image Include="..\x64\Debug\cards\queen.png" />
-    <Image Include="..\x64\Debug\cards\spades.png" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

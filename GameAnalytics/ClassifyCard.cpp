@@ -149,7 +149,7 @@ void ClassifyCard::generateImageVector()
 
 	for (int i = 0; i < rankClassifiersList.size(); i++)	// get the images from the map to use them for classification using comparison
 	{
-		Mat src = imread("../GameAnalytics/testImages/" + rankClassifiersList.at(i) + ".png");
+		Mat src = imread("../GameAnalytics/compareImages/" + rankClassifiersList.at(i) + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			std::cerr << "Could not open or find the image" << std::endl;
@@ -165,7 +165,7 @@ void ClassifyCard::generateImageVector()
 	}
 	for (int i = 0; i < red_suitClassifiersList.size(); i++)
 	{
-		Mat src = imread("../GameAnalytics/testImages/" + red_suitClassifiersList.at(i) + ".png");
+		Mat src = imread("../GameAnalytics/compareImages/" + red_suitClassifiersList.at(i) + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			std::cerr << "Could not open or find the image" << std::endl;
@@ -182,7 +182,7 @@ void ClassifyCard::generateImageVector()
 	}
 	for (int i = 0; i < black_suitClassifiersList.size(); i++)
 	{
-		Mat src = imread("../GameAnalytics/testImages/" + black_suitClassifiersList.at(i) + ".png");
+		Mat src = imread("../GameAnalytics/compareImages/" + black_suitClassifiersList.at(i) + ".png");
 		if (!src.data)	// check for invalid input
 		{
 			std::cerr << "Could not open or find the image" << std::endl;

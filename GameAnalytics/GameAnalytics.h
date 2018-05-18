@@ -164,23 +164,13 @@ private:
 	
 
 	// FREQUENTLY USED VARIABLES
-
-	HDC hwindowDC, hwindowCompatibleDC;
-	HBITMAP hbwindow;
-	BITMAPINFOHEADER  bi;
 	RECT windowsize;    // get the height and width of the screen
 	RECT appRect;	// get location of the game in respect to the primary window
 	POINT pt[2];	// remap the coordinates to the correct window
 	double windowWidth, windowHeight;
-	int height, width;
 	int distortedWindowHeight = 0;
 	HWND hwnd;
-	Mat src, src1, src2, graySrc1, graySrc2;
-	double norm;
-	std::pair<classifiers, classifiers> cardType;
-	std::pair<Mat, Mat> cardCharacteristics;
-	int changedIndex1, changedIndex2;
-	srcData data;
+	Mat src;
 };
 
 void changeConsoleFontSize(const double & percentageIncrease);
