@@ -137,25 +137,36 @@ void GameAnalytics::initDBConn() {
 		sql::ResultSet *res;
 		sql::PreparedStatement  *prep_stmt;
 
-		int var = 5;
+		int id = 0;
 
 		// Create a connection
 		driver = get_driver_instance();
 		con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
-		// Connect to the MySQL test database 
-		//con->setSchema("demo");
 
 		stmt = con->createStatement();
 
+		//Create Schema and connect to it
 		stmt->execute("CREATE SCHEMA IF NOT EXISTS ga");
 		con->setSchema("ga");
 
 
-		//stmt->execute("DROP TABLE IF EXISTS test");
+		//Create the table for the Game Statistics
+		//stmt->execute("DROP TABLE IF EXISTS GameStats");
 		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
 
+		//Fetch the max ID and increment it in order to get an unique ID
+		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
+		while (res->next()) {
+			if (res->getInt(1) >= 0) {
+
+				id = res->getInt(1) + 1;
+			}
+			else id = 0;
+		}
+
+		//Insert data into the GameStats table
 		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
-		prep_stmt->setInt(1, 1);
+		prep_stmt->setInt(1, id);
 		prep_stmt->setInt(2, numberOfUndos);
 		prep_stmt->setInt(3, numberOfPilePresses);
 		prep_stmt->setInt(4, numberOfHints);
@@ -165,7 +176,7 @@ void GameAnalytics::initDBConn() {
 
 		prep_stmt->execute();
 
-		//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
+//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
 
 
 		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
