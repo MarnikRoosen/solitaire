@@ -33,10 +33,10 @@
     <ClInclude Include="GameAnalytics.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PlayingBoard.h">
+    <ClInclude Include="ClicksHooks.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ClicksHooks.h">
+    <ClInclude Include="ExtractCards.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,10 +50,10 @@
     <ClCompile Include="GameAnalytics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PlayingBoard.cpp">
+    <ClCompile Include="ClicksHooks.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ClicksHooks.cpp">
+    <ClCompile Include="ExtractCards.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,16 +1,16 @@
 #include "stdafx.h"
-#include "PlayingBoard.h"
+#include "ExtractCard.h"
 
-PlayingBoard::PlayingBoard()
+ExtractCard::ExtractCard()
 {
 	cards.resize(12);
 }
 
-PlayingBoard::~PlayingBoard()
+ExtractCard::~ExtractCard()
 {
 }
 
-void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
+void ExtractCard::findCardsFromBoardImage(Mat const & boardImage)
 {
 	cv::Mat adaptedSrc, src, hsv, mask, croppedSrc;
 	try
@@ -29,7 +29,7 @@ void PlayingBoard::findCardsFromBoardImage(Mat const & boardImage)
 	}
 }
 
-void PlayingBoard::determineROI(const Mat & boardImage)
+void ExtractCard::determineROI(const Mat & boardImage)
 {
 	cv::Mat adaptedSrc, src, hsv, mask;
 	resizeBoardImage(boardImage, src);
@@ -50,7 +50,7 @@ void PlayingBoard::determineROI(const Mat & boardImage)
 	calculateOuterRect(contours);	// calculate the outer rectangle enclosing all cards + a margin at the bottom for stacked cards
 }
 
-void PlayingBoard::calculateOuterRect(std::vector<std::vector<cv::Point>> &contours)
+void ExtractCard::calculateOuterRect(std::vector<std::vector<cv::Point>> &contours)
 {
 	Rect tempRect = boundingRect(contours.at(0));	// calculate the min and max area that encloses all cards
 	int xmin = tempRect.x;
@@ -73,7 +73,7 @@ void PlayingBoard::calculateOuterRect(std::vector<std::vector<cv::Point>> &conto
 	topCardsHeight += 20;	// value used for the extraction of cardregions later on, namingly to split the top cards and bottom cards
 }
 
-void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
+void ExtractCard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
 {
 	// certain resolutions return an image with black borders, we have to remove these for our processing
 	Mat gray, thresh;
@@ -104,7 +104,7 @@ void PlayingBoard::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardIm
 	resizedBoardImage = targetImage.clone();
 }
 
-void PlayingBoard::extractCardRegions(const cv::Mat &src)
+void ExtractCard::extractCardRegions(const cv::Mat &src)
 {
 	cardRegions.clear();
 	cv::Size srcSize = src.size();
@@ -133,7 +133,7 @@ void PlayingBoard::extractCardRegions(const cv::Mat &src)
 	}
 }
 
-bool PlayingBoard::checkForOutOfMovesState(const cv::Mat &src)
+bool ExtractCard::checkForOutOfMovesState(const cv::Mat &src)
 {
 	// split the image in 3 horizontal parts and take the middle part
 	// if the middle part is mostly white (at least 70%), then the board image shows an outOfMoves image (big horizontal white bar in the middle)
@@ -152,7 +152,7 @@ bool PlayingBoard::checkForOutOfMovesState(const cv::Mat &src)
 	}
 }
 
-void PlayingBoard::extractCards()
+void ExtractCard::extractCards()
 {
 	for (int i = 0; i < cardRegions.size(); i++)
 	{		
@@ -201,7 +201,7 @@ void PlayingBoard::extractCards()
 	}
 }
 
-int PlayingBoard::getIndexOfSelectedCard(int i)	// use the cardlocation that has been clicked on (using coordinates)
+int ExtractCard::getIndexOfSelectedCard(int i)	// use the cardlocation that has been clicked on (using coordinates)
 {
 	Mat selectedCard = cardRegions.at(i).clone();
 	Mat hsv, mask;
@@ -231,7 +231,7 @@ int PlayingBoard::getIndexOfSelectedCard(int i)	// use the cardlocation that has
 	}
 }
 
-void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, int i)
+void ExtractCard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, int i)
 {
 	Mat gray, grad, abs_grad, thresh_grad;
 	cv::cvtColor(src, gray, COLOR_BGR2GRAY);
@@ -313,7 +313,7 @@ void PlayingBoard::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 	dest = croppedRef.clone();
 }
 
-void PlayingBoard::croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::Mat &resizedCardImage)
+void ExtractCard::croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::Mat &resizedCardImage)
 {
 	int width = croppedRef.cols,
 		height = croppedRef.rows;
@@ -327,7 +327,7 @@ void PlayingBoard::croppedTopCardToStandardSize(const cv::Mat &croppedRef, cv::M
 	cv::resize(croppedRef, resizedCardImage(roi), roi.size());
 }
 
-void PlayingBoard::extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat & dest)
+void ExtractCard::extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat & dest)
 {
 	Size cardSize = src.size();
 	Rect myROI;
@@ -350,7 +350,7 @@ void PlayingBoard::extractTopCardUsingAspectRatio(const cv::Mat & src, cv::Mat &
 	dest = croppedRef.clone();
 }
 
-const std::vector<cv::Mat> & PlayingBoard::getCards()
+const std::vector<cv::Mat> & ExtractCard::getCards()
 {
 	return cards;
 }

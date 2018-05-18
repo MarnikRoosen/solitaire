@@ -20,13 +20,11 @@
 using namespace std;
 using namespace cv;
 
-enum playingBoardState { playing, outOfMoves, inMenu, newGame, closeBrowser, undo };
-
-class PlayingBoard
+class ExtractCard
 {
 public:
-	PlayingBoard();
-	~PlayingBoard();
+	ExtractCard();
+	~ExtractCard();
 	void findCardsFromBoardImage(Mat const & boardImage);
 	void determineROI(const Mat & boardImage);
 	void calculateOuterRect(std::vector<std::vector<cv::Point>> &contours);
@@ -43,7 +41,6 @@ public:
 private:
 	std::vector<cv::Mat> cards;
 	std::vector<cv::Mat> cardRegions;
-	playingBoardState state;
 	Rect ROI;
 	int topCardsHeight;
 };

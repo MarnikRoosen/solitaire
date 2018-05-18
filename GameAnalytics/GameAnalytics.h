@@ -7,7 +7,7 @@
 #include "shcore.h"
 
 #include "ClassifyCard.h"
-#include "PlayingBoard.h"
+#include "ExtractCards.h"
 #include "ClicksHooks.h"
 
 // opencv includes
@@ -60,7 +60,7 @@ struct srcData	// struct for buffers after a click was registered
 
 enum SolitaireState { PLAYING, UNDO, QUIT, NEWGAME, MENU, MAINMENU, OUTOFMOVES, WON, HINT, AUTOCOMPLETE };	// possible game states
 
-class PlayingBoard;
+class ExtractCards;
 class ClassifyCard;
 
 class GameAnalytics
@@ -90,7 +90,6 @@ public:
 	// MULTITHREADED FUNCTIONS + SCREEN CAPTURE
 
 	void hookMouseClicks();	// multithreaded function for capturing mouse clicks
-	void calculateBetaErrors();	// multithreaded function for calculating the beta errors
 	void grabSrc();	// multithreaded function that only captures screens after mouse clicks
 	void toggleClickDownBool();	// on click before previous screen is captured, notify for immediate screengrab
 	void addCoordinatesToBuffer(const int x, const int y);	// function called by the callback of the hookMouse that adds the coordinates of the mouseclick to the buffer
@@ -120,7 +119,7 @@ public:
 	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file);	// read in previously saved testdata from a textfile
 
 private:
-	PlayingBoard pb;
+	ExtractCards ec;
 	ClassifyCard cc;
 	SolitaireState currentState;
 

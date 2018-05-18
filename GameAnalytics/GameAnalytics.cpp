@@ -162,9 +162,9 @@ void GameAnalytics::hookMouseClicks()
 	ClicksHooks::Instance().Messages();
 }
 
-GameAnalytics::GameAnalytics() : cc(), pb()
+GameAnalytics::GameAnalytics() : cc(), ec()
 {
-	// initializing ClassifyCard.cpp and PlayingBoard.cpp
+	// initializing ClassifyCard.cpp and ExtractCards.cpp
 }
 
 GameAnalytics::~GameAnalytics()
@@ -210,10 +210,10 @@ void GameAnalytics::initGameLogic()
 
 	classifiedCardsFromPlayingBoard.reserve(12);
 	src = waitForStableImage();	// get the first image of the board
-	pb.determineROI(src);	// calculating the important region within this board image
+	ec.determineROI(src);	// calculating the important region within this board image
 	
-	pb.findCardsFromBoardImage(src);	// setup the starting board
-	extractedImagesFromPlayingBoard = pb.getCards();
+	ec.findCardsFromBoardImage(src);	// setup the starting board
+	extractedImagesFromPlayingBoard = ec.getCards();
 	classifyExtractedCards();
 	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
@@ -297,7 +297,7 @@ void GameAnalytics::process()
 		else if (currentState == PLAYING)	// check for out of moves using a static image
 		{
 			cv::Mat img = hwnd2mat(hwnd);
-			if (pb.checkForOutOfMovesState(img))
+			if (ec.checkForOutOfMovesState(img))
 			{
 				std::cout << "OUT OF MOVES!" << std::endl;
 				currentState = OUTOFMOVES;
@@ -374,7 +374,7 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 	int indexOfPressedCardLocation = determineIndexOfPressedCard(x, y);	// check which cardlocation has been pressed using coordinates
 	if (indexOfPressedCardLocation != -1)
 	{
-		int indexOfPressedCard = pb.getIndexOfSelectedCard(indexOfPressedCardLocation);	// check which card(s) on that index have been selected using a blue filter
+		int indexOfPressedCard = ec.getIndexOfSelectedCard(indexOfPressedCardLocation);	// check which card(s) on that index have been selected using a blue filter
 		if (indexOfPressedCard != -1)													//	-> returns an index from bottom->top of how many cards have been selected
 		{
 			std::pair<classifiers, classifiers> selectedCard;
@@ -613,7 +613,7 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			std::cout << "NEWGAME PRESSED!" << std::endl;
 			currentState = NEWGAME;
 		}
-		else if (pb.checkForOutOfMovesState(src))
+		else if (ec.checkForOutOfMovesState(src))
 		{
 			std::cout << "OUT OF MOVES!" << std::endl;
 			currentState = OUTOFMOVES;
@@ -712,8 +712,8 @@ void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 
 bool GameAnalytics::handlePlayingState()
 {
-	pb.findCardsFromBoardImage(src); // extract the cards from the board
-	extractedImagesFromPlayingBoard = pb.getCards();
+	ec.findCardsFromBoardImage(src); // extract the cards from the board
+	extractedImagesFromPlayingBoard = ec.getCards();
 	classifyExtractedCards();	// classify the extracted cards
 	if (updateBoard(classifiedCardsFromPlayingBoard))	// check if the board needs to be updated
 	{
@@ -1065,8 +1065,8 @@ void GameAnalytics::test()
 
 	/*for (int i = 0; i < testImages.size(); i++)		// ---> used to save testdata of the classified images to a txt file
 	{
-	pb.findCardsFromBoardImage(testImages.at(i)); // -> average 38ms
-	extractedImagesFromPlayingBoard = pb.getCards();
+	ec.findCardsFromBoardImage(testImages.at(i)); // -> average 38ms
+	extractedImagesFromPlayingBoard = ec.getCards();
 	classifyExtractedCards();	// -> average d133ms and 550ms
 	correctClassifiedOutputVector.push_back(classifiedCardsFromPlayingBoard);
 	}
@@ -1092,8 +1092,8 @@ void GameAnalytics::test()
 	{
 		for (int i = 0; i < testImages.size(); i++)	// repeat for all testimages
 		{
-			pb.findCardsFromBoardImage(testImages.at(i));
-			extractedImagesFromPlayingBoard = pb.getCards();
+			ec.findCardsFromBoardImage(testImages.at(i));
+			extractedImagesFromPlayingBoard = ec.getCards();
 			for (int j = 0; j < extractedImagesFromPlayingBoard.size(); j++)
 			{
 				cv::Mat test = extractedImagesFromPlayingBoard.at(j);
@@ -1119,9 +1119,9 @@ void GameAnalytics::test()
 	allExtractedImages.resize(testImages.size());
 	for (int i = 0; i < testImages.size(); i++)	// first, get all cards extracted correctly
 	{
-		pb.findCardsFromBoardImage(testImages.at(i));
+		ec.findCardsFromBoardImage(testImages.at(i));
 
-		allExtractedImages.at(i) = pb.getCards();
+		allExtractedImages.at(i) = ec.getCards();
 	}
 	std::chrono::time_point<std::chrono::steady_clock> test1 = Clock::now();
 	for (int k = 0; k < 100; k++)	// repeat for k loops
