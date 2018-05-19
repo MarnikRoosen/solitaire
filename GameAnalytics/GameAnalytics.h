@@ -7,7 +7,7 @@
 #include "shcore.h"
 
 #include "ClassifyCard.h"
-#include "PlayingBoard.h"
+#include "ExtractCards.h"
 #include "ClicksHooks.h"
 
 // opencv includes
@@ -63,7 +63,7 @@ struct srcData	// struct for buffers after a click was registered
 
 enum SolitaireState { PLAYING, UNDO, QUIT, NEWGAME, MENU, MAINMENU, OUTOFMOVES, WON, HINT, AUTOCOMPLETE };	// possible game states
 
-class PlayingBoard;
+class ExtractCards;
 class ClassifyCard;
 
 class GameAnalytics
@@ -72,8 +72,7 @@ public:
 	GameAnalytics();
 	~GameAnalytics();
 
-	// INITIALIZATION
-
+	// INITIALIZATIONS
 	void initScreenCapture();	// initialize the screen capture relative to the correct monitor
 	void initGameLogic();	// intialize tracking variables and the state of the game 
 	void initDBConn();	// initialize the database connection
@@ -81,7 +80,6 @@ public:
 
 
 	// MAIN FUNCTIONS
-
 	void process();	// main function of the application
 	void determineNextState(const int & x, const int & y);	// check what the main function should do next
 	void handleUndoState();	// take the previous state of the playing board if undo was pressed
@@ -91,9 +89,7 @@ public:
 
 
 	// MULTITHREADED FUNCTIONS + SCREEN CAPTURE
-
 	void hookMouseClicks();	// multithreaded function for capturing mouse clicks
-	void calculateBetaErrors();	// multithreaded function for calculating the beta errors
 	void grabSrc();	// multithreaded function that only captures screens after mouse clicks
 	void toggleClickDownBool();	// on click before previous screen is captured, notify for immediate screengrab
 	void addCoordinatesToBuffer(const int x, const int y);	// function called by the callback of the hookMouse that adds the coordinates of the mouseclick to the buffer
@@ -102,14 +98,12 @@ public:
 
 
 	// PROCESSING OF SELECTED CARDS BY THE PLAYER
-
 	void processCardSelection(const int & x, const int & y);	// process if a card was selected and handle player error checking
 	void detectPlayerMoveErrors(std::pair<classifiers, classifiers> &selectedCard, int indexOfPressedCardLocation);	// check for player errors if a card was selected
 	int determineIndexOfPressedCard(const int & x, const int & y);	// check if a cardlocation was pressed using coordinates
 
 
 	// PROCESSING THE GAME STATE OF THE PLAYING BOARD
-
 	bool updateBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);	// general function to update the playing board
 	void findChangedCardLocations(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int & changedIndex1, int & changedIndex2);	// check which cards have been moved
 	bool cardMoveBetweenBuildAndSuitStack(const std::vector<std::pair<classifiers, classifiers>> &classifiedCardsFromPlayingBoard, int changedIndex1, int changedIndex2);	// handle card move between build and suit stacks
@@ -117,13 +111,12 @@ public:
 	
 
 	// TEST FUNCTIONS
-
 	void test();	// test function for card extraction and classification
 	bool writeTestData(const vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string & file);	// easily write new testdata to a textfile for later use
 	bool readTestData(vector <vector <pair <classifiers, classifiers> > > &classifiedBoards, const string &file);	// read in previously saved testdata from a textfile
 
 private:
-	PlayingBoard pb;
+	ExtractCards ec;
 	ClassifyCard cc;
 	SolitaireState currentState;
 
@@ -175,23 +168,13 @@ private:
 	
 
 	// FREQUENTLY USED VARIABLES
-
-	HDC hwindowDC, hwindowCompatibleDC;
-	HBITMAP hbwindow;
-	BITMAPINFOHEADER  bi;
 	RECT windowsize;    // get the height and width of the screen
 	RECT appRect;	// get location of the game in respect to the primary window
 	POINT pt[2];	// remap the coordinates to the correct window
 	double windowWidth, windowHeight;
-	int height, width;
 	int distortedWindowHeight = 0;
 	HWND hwnd;
-	Mat src, src1, src2, graySrc1, graySrc2;
-	double norm;
-	std::pair<classifiers, classifiers> cardType;
-	std::pair<Mat, Mat> cardCharacteristics;
-	int changedIndex1, changedIndex2;
-	srcData data;
+	Mat src;
 };
 
 void changeConsoleFontSize(const double & percentageIncrease);
