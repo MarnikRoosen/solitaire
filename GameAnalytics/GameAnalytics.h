@@ -26,6 +26,9 @@
 #include "cppconn/statement.h"
 #include <cppconn/prepared_statement.h>
 
+
+#include <ctime>
+
 // other includes
 #include <vector>
 #include <utility>
@@ -154,6 +157,7 @@ private:
 	int score = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
+	std::time_t start;
 	std::vector<long long> averageThinkDurations;
 	
 

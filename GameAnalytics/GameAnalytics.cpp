@@ -86,8 +86,8 @@ void GameAnalytics::initDBConn() {
 
 
 		//Create the table for the Game Statistics
-		//stmt->execute("DROP TABLE IF EXISTS GameStats");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4))");
+		stmt->execute("DROP TABLE IF EXISTS GameStats");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4), starttime TIMESTAMP)");
 
 		//Fetch the max ID and increment it in order to get an unique ID
 		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
@@ -101,7 +101,7 @@ void GameAnalytics::initDBConn() {
 	
 
 		//Insert data into the GameStats table
-		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score, gamewon) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score, gamewon, starttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		prep_stmt->setInt(1, id);
 		prep_stmt->setInt(2, numberOfUndos);
 		prep_stmt->setInt(3, numberOfPilePresses);
@@ -115,9 +115,19 @@ void GameAnalytics::initDBConn() {
 		else
 		prep_stmt->setString(8, "LOST");
 
+	
+		//char buffer[80];
+		std::tm tm;
+		localtime_s(&tm, &start);
+		//strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+		//std::string temp(buffer);
+
+		std::ostringstream oss;
+		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
+		prep_stmt->setDateTime(9, oss.str());
+
+
 		prep_stmt->execute();
-
-
 
 
 		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
@@ -225,6 +235,7 @@ void GameAnalytics::initGameLogic()
 
 	startOfGame = Clock::now();	// tracking the time between moves and total game time
 	startOfMove = Clock::now();
+	start = std::time(0);
 
 	classifiedCardsFromPlayingBoard.reserve(12);
 	src = waitForStableImage();	// get the first image of the board
