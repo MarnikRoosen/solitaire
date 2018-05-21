@@ -63,7 +63,7 @@ LRESULT WINAPI MyMouseCallback(int nCode, WPARAM wParam, LPARAM lParam)
 			break;
 
 		case WM_LBUTTONDOWN:
-			if (std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - clickUpTimer).count() > 150)
+			if (std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now() - clickUpTimer).count() > 300)
 			{
 				ga.toggleClickDownBool();
  			}

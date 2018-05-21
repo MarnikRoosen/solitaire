@@ -79,6 +79,7 @@ public:
 	// MAIN FUNCTIONS
 	void process();	// main function of the application
 	void determineNextState(const int & x, const int & y);	// check what the main function should do next
+	void calculateFinalScore();
 	void handleUndoState();	// take the previous state of the playing board if undo was pressed
 	void handleEndOfGame();	// print all tracked data
 	bool handlePlayingState();	// extract cards, classify them and check for changes in the playing board

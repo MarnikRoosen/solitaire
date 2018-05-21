@@ -291,10 +291,12 @@ void GameAnalytics::process()
 				endOfGameBool = true;
 				break;
 			case WON:
+				calculateFinalScore();
 				gameWon = true;
 				endOfGameBool = true;
 				break;
 			case AUTOCOMPLETE:
+				calculateFinalScore();
 				gameWon = true;
 				endOfGameBool = true;
 				break;
@@ -312,9 +314,9 @@ void GameAnalytics::process()
 			}
 			processCardSelection(pt->x, pt->y);	// check which card has been pressed and whether game errors have been made
 		}
-
 		else if (currentState == WON)	// waitForStableImage took too long, game won
 		{
+			calculateFinalScore();
 			gameWon = true;
 			endOfGameBool = true;
 		}
@@ -375,12 +377,6 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			else
 			{
 				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
-				int remainingCards = 0;
-				for (int i = 0; i < 7; ++i)
-				{
-					remainingCards += currentPlayingBoard.at(i).knownCards.size();
-				}
-				score += (remainingCards * 10);
 				currentState = AUTOCOMPLETE;
 			}
 		}
@@ -448,6 +444,16 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 		std::cerr << "Error: currentState is not defined!" << std::endl;
 		break;
 	}
+}
+
+void GameAnalytics::calculateFinalScore()
+{
+	int remainingCards = 0;
+	for (int i = 0; i < 7; ++i)
+	{
+		remainingCards += currentPlayingBoard.at(i).knownCards.size();
+	}
+	score += (remainingCards * 10);
 }
 
 void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
@@ -629,6 +635,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);	// calculates the manhattan distance (sum of absolute values) of two grayimages
 		if (clickDownBool)
 		{
+			std::cout << "test" << std::endl;
 			clickDownBool = false;	// new click registered while waitForStableImage isn't done yet
 									//  -> use the image at the moment of the new click (just before the new animation) for the previous move
 			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
