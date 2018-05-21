@@ -137,6 +137,7 @@ void GameAnalytics::initDBConn() {
 		sql::PreparedStatement  *prep_stmt;
 
 		int id = 0;
+		//bool won = true;
 
 		// Create a connection
 		driver = get_driver_instance();
@@ -150,21 +151,22 @@ void GameAnalytics::initDBConn() {
 
 
 		//Create the table for the Game Statistics
-		//stmt->execute("DROP TABLE IF EXISTS GameStats");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int)");
+		stmt->execute("DROP TABLE IF EXISTS GameStats");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4), starttime TIMESTAMP)");
 
 		//Fetch the max ID and increment it in order to get an unique ID
 		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
-		while (res->next()) {
-			if (res->getInt(1) >= 0) {
+		
+		res->next();
+		if (res->getInt(1) >= 0) {
 
-				id = res->getInt(1) + 1;
-			}
-			else id = 0;
+			id = res->getInt(1) +1;
 		}
+		else id = 0;
+	
 
 		//Insert data into the GameStats table
-		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score) VALUES (?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score, gamewon, starttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		prep_stmt->setInt(1, id);
 		prep_stmt->setInt(2, numberOfUndos);
 		prep_stmt->setInt(3, numberOfPilePresses);
@@ -173,10 +175,25 @@ void GameAnalytics::initDBConn() {
 		prep_stmt->setInt(6, numberOfRankErrors);
 		prep_stmt->setInt(7, score);
 
-		prep_stmt->execute();
+		if(gameWon == true)
+		prep_stmt->setString(8, "WON");
+		else
+		prep_stmt->setString(8, "LOST");
+
+	
+		//char buffer[80];
+		std::tm tm;
+		localtime_s(&tm, &start);
+		//strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+		//std::string temp(buffer);
+
+		std::ostringstream oss;
+		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
+		prep_stmt->setDateTime(9, oss.str());
 
 //		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
 
+		prep_stmt->execute();
 
 		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
 		while (res->next()) {
@@ -243,9 +260,31 @@ void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, cl
 	printPlayingBoardState();	// print the board
 }
 
-/****************************************************
- *	MAIN FUNCTIONS									
- ****************************************************/
+void GameAnalytics::initGameLogic()
+{
+	currentState = PLAYING;	// initialize the statemachine
+
+	previouslySelectedCard.first = EMPTY;	// initialize selected card logic
+	previouslySelectedCard.second = EMPTY;
+
+	startOfGame = Clock::now();	// tracking the time between moves and total game time
+	startOfMove = Clock::now();
+
+	classifiedCardsFromPlayingBoard.reserve(12);
+	src = waitForStableImage();	// get the first image of the board
+	pb.determineROI(src);	// calculating the important region within this board image
+	
+	pb.findCardsFromBoardImage(src);	// setup the starting board
+	extractedImagesFromPlayingBoard = pb.getCards();
+	classifyExtractedCards();
+	initPlayingBoard(classifiedCardsFromPlayingBoard);
+
+	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
+	for (int i = 0; i < numberOfPresses.size(); i++)
+	{
+		numberOfPresses.at(i) = 0;
+	}
+}
 
 void GameAnalytics::process()
 {
