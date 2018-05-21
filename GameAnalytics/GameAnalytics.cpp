@@ -11,10 +11,9 @@ int main(int argc, char** argv)
 
 	// initializing lock for shared variables, screencapture and game logic
 	InitializeCriticalSection(&threadLock);
+	ga.initDBConn(); 
 	ga.initScreenCapture();
 	ga.initGameLogic();
-	ga.initDBConn();
-	
 	
 	//ga.test();	// --> used for benchmarking functions
 
@@ -126,9 +125,6 @@ void GameAnalytics::initDBConn() {
 	}
 	*/
 
-	cout << endl;
-	cout << "Running 'SELECT 'Hello World!' AS _message'..." << endl;
-
 	try {
 		sql::Driver *driver;
 		sql::Connection *con;
@@ -152,7 +148,7 @@ void GameAnalytics::initDBConn() {
 
 		//Create the table for the Game Statistics
 		stmt->execute("DROP TABLE IF EXISTS GameStats");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4), starttime TIMESTAMP)");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4), starttime DATETIME)");
 
 		//Fetch the max ID and increment it in order to get an unique ID
 		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
@@ -181,11 +177,8 @@ void GameAnalytics::initDBConn() {
 		prep_stmt->setString(8, "LOST");
 
 	
-		//char buffer[80];
 		std::tm tm;
 		localtime_s(&tm, &start);
-		//strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
-		//std::string temp(buffer);
 
 		std::ostringstream oss;
 		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
@@ -195,15 +188,6 @@ void GameAnalytics::initDBConn() {
 
 		prep_stmt->execute();
 
-		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
-		while (res->next()) {
-			cout << "\t... MySQL replies: ";
-			// Access column data by alias or column name 
-			cout << res->getString("_message") << endl;
-			cout << "\t... MySQL says it again: ";
-			// Access column data by numeric offset, 1 is the first column 
-			cout << res->getString(1) << endl;
-		}
 		delete res;
 		delete prep_stmt;
 		delete stmt;
@@ -218,7 +202,6 @@ void GameAnalytics::initDBConn() {
 		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
 	}
 
-	cout << endl;
 }
 
 void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
@@ -258,32 +241,6 @@ void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, cl
 	}
 	previousPlayingBoards.push_back(currentPlayingBoard);	// add the first game state to the list of all game states
 	printPlayingBoardState();	// print the board
-}
-
-void GameAnalytics::initGameLogic()
-{
-	currentState = PLAYING;	// initialize the statemachine
-
-	previouslySelectedCard.first = EMPTY;	// initialize selected card logic
-	previouslySelectedCard.second = EMPTY;
-
-	startOfGame = Clock::now();	// tracking the time between moves and total game time
-	startOfMove = Clock::now();
-
-	classifiedCardsFromPlayingBoard.reserve(12);
-	src = waitForStableImage();	// get the first image of the board
-	pb.determineROI(src);	// calculating the important region within this board image
-	
-	pb.findCardsFromBoardImage(src);	// setup the starting board
-	extractedImagesFromPlayingBoard = pb.getCards();
-	classifyExtractedCards();
-	initPlayingBoard(classifiedCardsFromPlayingBoard);
-
-	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
-	for (int i = 0; i < numberOfPresses.size(); i++)
-	{
-		numberOfPresses.at(i) = 0;
-	}
 }
 
 void GameAnalytics::process()
