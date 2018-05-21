@@ -86,8 +86,7 @@ void GameAnalytics::initGameLogic()
 	cv::Mat src = waitForStableImage();	// get the first image of the board
 	ec.determineROI(src);	// calculating the important region within this board image
 	
-	ec.findCardsFromBoardImage(src);	// setup the starting board
-	extractedImagesFromPlayingBoard = ec.getCards();
+	extractedImagesFromPlayingBoard = ec.findCardsFromBoardImage(src);	// setup the starting board
 	classifyExtractedCards();
 	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
@@ -497,8 +496,7 @@ void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 
 bool GameAnalytics::handlePlayingState()
 {
-	ec.findCardsFromBoardImage(src); // extract the cards from the board
-	extractedImagesFromPlayingBoard = ec.getCards();
+	extractedImagesFromPlayingBoard = ec.findCardsFromBoardImage(src); // extract the cards from the board
 	classifyExtractedCards();	// classify the extracted cards
 	if (updateBoard(classifiedCardsFromPlayingBoard))	// check if the board needs to be updated
 	{
@@ -1160,7 +1158,6 @@ void GameAnalytics::printPlayingBoardState()
 	std::cout << std::endl;
 }
 
-
 /****************************************************
  *	TEST FUNCTIONS
  ****************************************************/
@@ -1240,9 +1237,7 @@ void GameAnalytics::test()
 	allExtractedImages.resize(testImages.size());
 	for (int i = 0; i < testImages.size(); i++)	// first, get all cards extracted correctly
 	{
-		ec.findCardsFromBoardImage(testImages.at(i));
-
-		allExtractedImages.at(i) = ec.getCards();
+		allExtractedImages.at(i) = ec.findCardsFromBoardImage(testImages.at(i));
 	}
 	std::pair<Mat, Mat> cardCharacteristics;
 	std::pair<classifiers, classifiers> cardType;

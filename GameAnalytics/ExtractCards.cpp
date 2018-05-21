@@ -62,7 +62,7 @@ void ExtractCards::calculateOuterRect(std::vector<std::vector<cv::Point>> &conto
  *	MAIN FUNCTIONS
  ****************************************************/
 
-void ExtractCards::findCardsFromBoardImage(Mat const & boardImage)
+const std::vector<cv::Mat> & ExtractCards::findCardsFromBoardImage(Mat const & boardImage)
 {
 	cv::Mat adaptedSrc, src, hsv, mask, croppedSrc;
 	try
@@ -79,6 +79,7 @@ void ExtractCards::findCardsFromBoardImage(Mat const & boardImage)
 		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
 		std::cerr << "ERROR: Amount of not captured pixels in the image = " << cv::countNonZero(test) << std::endl;
 	}
+	return cards;
 }
 
 void ExtractCards::resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage)
@@ -348,7 +349,7 @@ int ExtractCards::getIndexOfSelectedCard(int i)	// use the cardlocation that has
 }
 
 /****************************************************
- *	 GAMEANALYTICS GETTERS AND CHECKS
+ *	 END OF GAME CHECK
  ****************************************************/
 
 bool ExtractCards::checkForOutOfMovesState(const cv::Mat &src)
@@ -368,9 +369,4 @@ bool ExtractCards::checkForOutOfMovesState(const cv::Mat &src)
 	{
 		return false;
 	}
-}
-
-const std::vector<cv::Mat> & ExtractCards::getCards()
-{
-	return cards;
 }

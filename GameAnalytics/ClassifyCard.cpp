@@ -233,8 +233,8 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 			}
 
 			// KNN METHOD
-			/*
-			if (type == "rank")
+			
+			/*if (type == "rank")
 			{
 				cardType.first = classifyTypeUsingKnn(resizedROI, kNearest_rank);
 			}
@@ -277,13 +277,11 @@ int ClassifyCard::classifyTypeUsingSubtraction(std::vector<std::pair<classifiers
 classifiers ClassifyCard::classifyTypeUsingKnn(const Mat & image, const Ptr<ml::KNearest> & kNearest)
 {
 	cv::Mat ROIFloat, ROIFlattenedFloat;
-	float fltCurrentChar;
 	image.convertTo(ROIFloat, CV_32FC1);	// converts 8 bit int gray image to binary float image
 	ROIFlattenedFloat = ROIFloat.reshape(1, 1);	// reshape the image to 1 line (all rows pasted behind each other)
 	cv::Mat CurrentChar(0, 0, CV_32F);	// output array char that corresponds to the best match (nearest neighbor)
 	kNearest->findNearest(ROIFlattenedFloat, 3, CurrentChar);	// calculate the best match
-	fltCurrentChar = (float)CurrentChar.at<float>(0, 0);	// get the float of the cell at the origen of the output array 
-	return classifiers(char(int(fltCurrentChar)));	// convert the float to an int, and again to a char, and finally to classifiers to find the closest match
+	return classifiers(char(CurrentChar.at<float>(0, 0)));	// convert the float to a char, and finally to classifiers to find the closest match
 }
 
 
