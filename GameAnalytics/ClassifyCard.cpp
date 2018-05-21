@@ -10,10 +10,11 @@ ClassifyCard::ClassifyCard()
 		String name = "../GameAnalytics/knnData/trained_" + type.at(i) + ".yml";	// get the trained data from the knn classifier
 		if (!fileExists(name))
 		{
-			getTrainedData(type.at(i));
+			Mat trainingImg = imread("../GameAnalytics/knnData/" + type.at(i) + "TrainingImg.png");
+			generateTrainingData(trainingImg, type.at(i));
 		}
 	}
-	kNearest_rank = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_rank.yml");	// load frequently used knn algorithms as variables
+	kNearest_rank = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_rank.yml");	// load frequently used knn algorithms as member variables
 	kNearest_black_suit = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_black_suit.yml");
 	kNearest_red_suit = ml::KNearest::load<ml::KNearest>("../GameAnalytics/knnData/trained_red_suit.yml");
 }
@@ -22,52 +23,10 @@ ClassifyCard::ClassifyCard()
  *	INITIALIZATIONS
  ****************************************************/
 
-void ClassifyCard::getTrainedData(String type)
-{
-	Mat classificationInts, trainingImagesAsFlattenedFloats;
-
-	FileStorage fsClassifications("../GameAnalytics/knnData/" + type + "_classifications.xml", FileStorage::READ);	// type = rank, black_suit or red_suit
-	if (!fsClassifications.isOpened()) {
-
-		std::cout << "Unable to open training classifications file, trying to generate it\n\n";	// try to open the XML classification file
-		Mat trainingImg = imread("../GameAnalytics/knnData/" + type + "TrainingImg.png");
-
-		if (!trainingImg.data)
-		{
-			std::cerr << "Could not open or find the image" << std::endl;
-			exit(EXIT_FAILURE);
-		}
-
-		generateTrainingData(trainingImg, type);		// If training data hasn't been generated yet, try to generate it
-		FileStorage fsClassifications("../GameAnalytics/knnData/" + type + "_classifications.xml", FileStorage::READ);	// store the newly made XML files for future use
-	}
-	if (!fsClassifications.isOpened())
-	{
-		std::cerr << "Unable to open training classification file again, exiting program" << std::endl;	// uncommon error
-		exit(EXIT_FAILURE);
-	}
-
-	fsClassifications[type + "_classifications"] >> classificationInts;	// get the data and store it in an image
-	fsClassifications.release();
-
-	FileStorage fsTrainingImages("../GameAnalytics/knnData/" + type + "_images.xml", FileStorage::READ);	// repeat for the XML image file
-
-	if (!fsTrainingImages.isOpened()) {
-		cout << "Unable to open training images file, exiting program" << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	fsTrainingImages[type + "_images"] >> trainingImagesAsFlattenedFloats;
-	fsTrainingImages.release();
-
-	Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
-	kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);	// train the knn classifier
-	kNearest->save("../GameAnalytics/knnData/trained_" + type + ".yml");	// store the trained classifier in a YML file for future use
-}
-
-void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreName) {
+void ClassifyCard::generateTrainingData(const cv::Mat & trainingImage, const String & outputPreName) {
 
 	// initialize variables
-	Mat grayImg, blurredImg, threshImg, threshImgCopy;
+	Mat grayImg, threshImg;
 	vector<vector<Point>> contours;
 	vector<Vec4i> hierarchy;
 	Mat classificationInts, trainingImagesAsFlattenedFloats;
@@ -76,18 +35,18 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 	Mat trainingNumbersImg = trainingImage;
 
 	// change the training image to black/white and find the contours of characters
-	cvtColor(trainingNumbersImg, grayImg, CV_BGR2GRAY);
-	GaussianBlur(grayImg, blurredImg, Size(1, 1), 0);
-	threshold(blurredImg, threshImg, 130, 255, THRESH_BINARY_INV);
-	threshImgCopy = threshImg.clone();
-	findContours(threshImgCopy, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);	// get each rank/suit from the image, one by one
+	cv::cvtColor(trainingNumbersImg, grayImg, CV_BGR2GRAY);
+	cv::threshold(grayImg, threshImg, 130, 255, THRESH_BINARY_INV);
+	cv::findContours(threshImg, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);	// get each rank/suit from the image, one by one
 
 
-																									// show each character from the training image and let the user input which character it is
-	for (int i = 0; i < contours.size(); i++) {
-		if (contourArea(contours[i]) > MIN_CONTOUR_AREA) {
-			Rect boundingRect = cv::boundingRect(contours[i]);
-			rectangle(trainingNumbersImg, boundingRect, cv::Scalar(0, 0, 255), 2);
+	// show each character from the training image and let the user input which character it is
+	for (int i = 0; i < contours.size(); i++)
+	{
+		if (contourArea(contours.at(i)) > MIN_CONTOUR_AREA)
+		{
+			cv::Rect boundingRect = cv::boundingRect(contours[i]);
+			cv::rectangle(trainingNumbersImg, boundingRect, cv::Scalar(0, 0, 255), 2);
 
 			Mat ROI = threshImg(boundingRect);	// process each segmented rank/suit before saving it and asking for user input
 			Mat ROIResized;
@@ -98,7 +57,8 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 			else
 			{
 				cv::resize(ROI, ROIResized, cv::Size(RESIZED_TYPE_WIDTH, RESIZED_TYPE_HEIGHT));
-			}			imshow("ROIResized", ROIResized);
+			}
+			imshow("ROIResized", ROIResized);
 			imshow("TrainingsNumbers", trainingNumbersImg);
 
 			int intChar = cv::waitKey(0);	// get user input
@@ -106,7 +66,8 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 			{
 				return;
 			}
-			else if (find(intValidChars.begin(), intValidChars.end(), intChar) != intValidChars.end()) {	// check if the user input is valid
+			else if (find(intValidChars.begin(), intValidChars.end(), intChar) != intValidChars.end())	// check if the user input is valid
+			{	
 				classificationInts.push_back(intChar);	// push the classified rank/suit to the classification list
 				Mat imageFloat;
 				ROIResized.convertTo(imageFloat, CV_32FC1);	// convert the image to a binary float image
@@ -119,26 +80,9 @@ void ClassifyCard::generateTrainingData(cv::Mat trainingImage, String outputPreN
 
 	std::cout << "training complete" << endl;
 
-	// save classifications to xml file
-
-	FileStorage fsClassifications("../GameAnalytics/knnData/" + outputPreName + "_classifications.xml", FileStorage::WRITE);
-	if (fsClassifications.isOpened() == false) {
-		std::cout << "error, unable to open training classifications file, exiting program\n\n";
-		exit(EXIT_FAILURE);
-	}
-
-	fsClassifications << outputPreName + "_classifications" << classificationInts;
-	fsClassifications.release();
-
-	FileStorage fsTrainingImages("../GameAnalytics/knnData/" + outputPreName + "_images.xml", FileStorage::WRITE);
-
-	if (fsTrainingImages.isOpened() == false) {
-		std::cout << "error, unable to open training images file, exiting program\n\n";
-		exit(EXIT_FAILURE);
-	}
-
-	fsTrainingImages << outputPreName + "_images" << trainingImagesAsFlattenedFloats;
-	fsTrainingImages.release();
+	Ptr<ml::KNearest>  kNearest(ml::KNearest::create());
+	kNearest->train(trainingImagesAsFlattenedFloats, cv::ml::ROW_SAMPLE, classificationInts);	// train the knn classifier
+	kNearest->save("../GameAnalytics/knnData/trained_" + outputPreName + ".yml");	// store the trained classifier in a YML file for future use
 }
 
 void ClassifyCard::generateImageVector()
@@ -337,7 +281,7 @@ classifiers ClassifyCard::classifyTypeUsingKnn(const Mat & image, const Ptr<ml::
 	image.convertTo(ROIFloat, CV_32FC1);	// converts 8 bit int gray image to binary float image
 	ROIFlattenedFloat = ROIFloat.reshape(1, 1);	// reshape the image to 1 line (all rows pasted behind each other)
 	cv::Mat CurrentChar(0, 0, CV_32F);	// output array char that corresponds to the best match (nearest neighbor)
-	kNearest->findNearest(ROIFlattenedFloat, 1, CurrentChar);	// calculate the best match
+	kNearest->findNearest(ROIFlattenedFloat, 3, CurrentChar);	// calculate the best match
 	fltCurrentChar = (float)CurrentChar.at<float>(0, 0);	// get the float of the cell at the origen of the output array 
 	return classifiers(char(int(fltCurrentChar)));	// convert the float to an int, and again to a char, and finally to classifiers to find the closest match
 }

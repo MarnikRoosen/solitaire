@@ -1,9 +1,0 @@
-<?xml version="1.0"?>
-<opencv_storage>
-<black_suit_classifications type_id="opencv-matrix">
-  <rows>12</rows>
-  <cols>1</cols>
-  <dt>i</dt>
-  <data>
-    67 67 67 67 67 83 67 83 83 83 83 83</data></black_suit_classifications>
-</opencv_storage>

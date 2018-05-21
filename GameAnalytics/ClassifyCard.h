@@ -16,7 +16,7 @@ using namespace std;
 
 const int RESIZED_TYPE_WIDTH = 40;
 const int RESIZED_TYPE_HEIGHT = 50;
-const int MIN_CONTOUR_AREA = 100;
+const int MIN_CONTOUR_AREA = 80;
 
 enum classifiers : char { TWO = '2', THREE = '3', FOUR = '4', FIVE = '5', SIX = '6',
 	SEVEN = '7', EIGHT = '8', NINE = '9', TEN , JACK = 'J', QUEEN = 'Q', KING = 'K', ACE = 'A',
@@ -28,8 +28,7 @@ public:
 	ClassifyCard();
 
 	// INITIALIZATION
-	void getTrainedData(String type);								// getting the knn data from the correct map in the repos
-	void generateTrainingData(cv::Mat trainingImage, String outputPreName);	// generating knn data if it doesn't exist yet
+	void generateTrainingData(const cv::Mat & trainingImage, const String & outputPreName);	// generating knn data if it doesn't exist yet
 	void generateImageVector();										// initialization of the image vector used for the subtraction method
 
 	// MAIN FUNCTIONS
