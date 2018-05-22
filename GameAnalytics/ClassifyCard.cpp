@@ -143,7 +143,6 @@ std::pair<Mat, Mat> ClassifyCard::segmentRankAndSuitFromCard(const Mat & aCard)
 std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Mat> cardCharacteristics)
 {
 	// initialize variables
-	int nonZero;
 	std::pair<classifiers, classifiers> cardType;
 	cv::Mat src, blurredImg, grayImg, threshImg, resizedBlurredImg, resizedThreshImg;
 	std::string type = "rank";	// first classify the rank

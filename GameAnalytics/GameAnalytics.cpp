@@ -69,9 +69,10 @@ void GameAnalytics::initScreenCapture()
 	
 	windowWidth = abs(appRect.right - appRect.left);
 	windowHeight = abs(appRect.bottom - appRect.top);
-	if (1.75 < windowWidth / windowHeight < 1.80)	// if the monitor doesn't have 16:9 aspect ratio, calculate the distorted coordinates
+	double aspectRatio = windowWidth / windowHeight;
+	if (1.75 < aspectRatio && aspectRatio < 1.80)	// if the monitor doesn't have 16:9 aspect ratio, calculate the distorted coordinates
 	{
-		distortedWindowHeight = (windowWidth * 1080 / 1920);
+		distortedWindowHeight = (int) (windowWidth * 1080 / 1920);
 	}
 }
 
@@ -450,7 +451,7 @@ void GameAnalytics::calculateFinalScore()
 	int remainingCards = 0;
 	for (int i = 0; i < 7; ++i)
 	{
-		remainingCards += currentPlayingBoard.at(i).knownCards.size();
+		remainingCards += (int) currentPlayingBoard.at(i).knownCards.size();
 	}
 	score += (remainingCards * 10);
 }
@@ -709,7 +710,7 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 			std::pair<classifiers, classifiers> selectedCard;
 			if (indexOfPressedCardLocation != 7)
 			{
-				int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
+				int index = (int) currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
 				selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);	// check which card has been selected
 			}
 			else
@@ -762,8 +763,8 @@ void GameAnalytics::detectPlayerMoveErrors(std::pair<classifiers, classifiers> &
 			}
 			if ((prevRank == '2' && newRank != 'A') || (prevRank == '3' && newRank != '2') || (prevRank == '4' && newRank != '3')	// check for number error 
 				|| (prevRank == '5' && newRank != '4') || (prevRank == '6' && newRank != '5') || (prevRank == '7' && newRank != '6')
-				|| (prevRank == '8' && newRank != '7') || (prevRank == '9' && newRank != ':') || (prevRank == ':' && newRank != 'J')
-				|| (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K') || (prevRank == 'Q' && newRank != 'K'))
+				|| (prevRank == '8' && newRank != '7') || (prevRank == '9' && newRank != '8') || (prevRank == ':' && newRank != '9')
+				|| (prevRank == 'J' && newRank != ':') || (prevRank == 'Q' && newRank != 'J') || (prevRank == 'K' && newRank != 'Q'))
 			{
 				std::cout << "Incompatible rank! " << prevRank << " can't go on " << newRank << std::endl;
 				++numberOfRankErrors;
