@@ -53,13 +53,11 @@ private:
 
 	// images used for subtraction method
 	vector<std::pair<classifiers, cv::Mat>> rankImages;
-	vector<std::pair<classifiers, cv::Mat>> red_suitImages;
-	vector<std::pair<classifiers, cv::Mat>> black_suitImages;
+	vector<std::pair<classifiers, cv::Mat>> suitImages;
 
 	// knn data
+	Ptr<ml::KNearest>  kNearest_suit;
 	Ptr<ml::KNearest>  kNearest_rank;
-	Ptr<ml::KNearest>  kNearest_black_suit;
-	Ptr<ml::KNearest>  kNearest_red_suit;
 };
 
 inline bool fileExists(const std::string& name) {

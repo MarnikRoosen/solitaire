@@ -11,7 +11,11 @@ int main(int argc, char** argv)
 
 	// initializing lock for shared variables, screencapture and game logic
 	InitializeCriticalSection(&threadLock);
-	ga.initDBConn(); 
+
+	#ifdef NDEBUG 
+		ga.initDBConn();	// database storage is only possible in release mode
+	#endif // NDEBUG 
+
 	ga.initScreenCapture();
 	ga.initGameLogic();
 	
@@ -96,9 +100,8 @@ void GameAnalytics::initGameLogic()
 	}
 }
 
+#ifdef NDEBUG	// database storage is only possible in release mode
 void GameAnalytics::initDBConn() {
-
-
 	/*
 	sql::Driver *driver;
 	sql::Connection *con;
@@ -152,14 +155,14 @@ void GameAnalytics::initDBConn() {
 
 		//Fetch the max ID and increment it in order to get an unique ID
 		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
-		
+
 		res->next();
 		if (res->getInt(1) >= 0) {
 
-			id = res->getInt(1) +1;
+			id = res->getInt(1) + 1;
 		}
 		else id = 0;
-	
+
 
 		//Insert data into the GameStats table
 		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score, gamewon, starttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -171,12 +174,12 @@ void GameAnalytics::initDBConn() {
 		prep_stmt->setInt(6, numberOfRankErrors);
 		prep_stmt->setInt(7, score);
 
-		if(gameWon == true)
-		prep_stmt->setString(8, "WON");
+		if (gameWon == true)
+			prep_stmt->setString(8, "WON");
 		else
-		prep_stmt->setString(8, "LOST");
+			prep_stmt->setString(8, "LOST");
 
-	
+
 		std::tm tm;
 		localtime_s(&tm, &start);
 
@@ -184,7 +187,7 @@ void GameAnalytics::initDBConn() {
 		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
 		prep_stmt->setDateTime(9, oss.str());
 
-//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
+		//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
 
 		prep_stmt->execute();
 
@@ -203,6 +206,7 @@ void GameAnalytics::initDBConn() {
 	}
 
 }
+#endif // NDEBUG 
 
 void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {
