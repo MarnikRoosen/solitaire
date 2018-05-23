@@ -175,8 +175,8 @@ private:
 	RECT windowsize;    // get the height and width of the screen
 	RECT appRect;	// get location of the game in respect to the primary window
 	POINT pt[2];	// remap the coordinates to the correct window
-	LONG windowWidth, windowHeight;
-	LONG distortedWindowHeight = 0;
+	double windowWidth, windowHeight;
+	int distortedWindowHeight = 0;
 	HWND hwnd;
 	Mat src;
 };
