@@ -29,6 +29,9 @@
 
 #include <ctime>
 
+//#include <openssl/sha.h>
+
+
 // other includes
 #include <vector>
 #include <utility>
@@ -75,8 +78,14 @@ public:
 	// INITIALIZATIONS
 	void initScreenCapture();	// initialize the screen capture relative to the correct monitor
 	void initGameLogic();	// intialize tracking variables and the state of the game 
-	void initDBConn();	// initialize the database connection
+	void initDBConn();	// initialize the database connection	
+	void initLogin();
 	void initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard);	// initialize the first playing board
+	void insertMetricsDB();
+	void disconnectDB();
+
+	//String hashPassword(const string str);
+
 
 
 	// MAIN FUNCTIONS
@@ -121,6 +130,14 @@ private:
 	SolitaireState currentState;
 
 
+	// DATABASE VARIABLES
+	sql::Connection *con;
+	sql::Statement *stmt;
+	sql::ResultSet *res;
+	sql::PreparedStatement  *prep_stmt;
+
+
+
 	// SCREENSHOT AND PLAYINGBOARD PROCESSING VARIABLES
 
 	std::vector<cv::Mat> extractedImagesFromPlayingBoard;	// extracted cards from a screenshot
@@ -137,6 +154,7 @@ private:
 
 	// GAME METRICS
 
+	int playerID = 0;
 	bool endOfGameBool = false;
 	bool gameWon = false;
 	int numberOfUndos = 0;
@@ -150,8 +168,10 @@ private:
 	int score = 0;
 	std::chrono::time_point<std::chrono::steady_clock> startOfGame;
 	std::chrono::time_point<std::chrono::steady_clock> startOfMove;
-	std::time_t start;
+	std::time_t startOfGameDB;
 	std::vector<long long> averageThinkDurations;
+	int duration = 0;
+	int avgTimeMove = 0;
 	
 
 	// SCREENSHOT BUFFERS AND DATA

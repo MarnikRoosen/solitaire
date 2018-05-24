@@ -14,7 +14,7 @@ int main(int argc, char** argv)
 	ga.initScreenCapture();
 	ga.initGameLogic();
 	ga.initDBConn();
-	
+	ga.initLogin();
 	
 	//ga.test();	// --> used for benchmarking functions
 
@@ -28,6 +28,8 @@ int main(int argc, char** argv)
 	// terminate threads
 	srcGrabber.join();
 	clickThread.join();
+
+	ga.disconnectDB();
 	
 	return EXIT_SUCCESS;
 }
@@ -72,73 +74,189 @@ void GameAnalytics::initScreenCapture()
 	}
 }
 
-void GameAnalytics::initGameLogic()
-{
-	currentState = PLAYING;	// initialize the statemachine
 
-	previouslySelectedCard.first = EMPTY;	// initialize selected card logic
-	previouslySelectedCard.second = EMPTY;
+void GameAnalytics::initLogin() {
 
-	startOfGame = Clock::now();	// tracking the time between moves and total game time
-	startOfMove = Clock::now();
+	std::cout << "Welcome to the Game Analytics tool of Klondike Solitaire" << std::endl;
+	std::cout << "If you want to continue without logging in, press 1" << std::endl;
+	std::cout << "If you want to log in, press 2" << std::endl;
+	std::cout << "If you want to register, press 3" << std::endl;
+	std::cout << "If you want to quit, press esc" << std::endl;
+	std::cout << std::endl;
 
-	classifiedCardsFromPlayingBoard.reserve(12);
-	cv::Mat src = waitForStableImage();	// get the first image of the board
-	ec.determineROI(src);	// calculating the important region within this board image
-	
-	ec.findCardsFromBoardImage(src);	// setup the starting board
-	extractedImagesFromPlayingBoard = ec.getCards();
-	classifyExtractedCards();
-	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
-	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
-	for (int i = 0; i < numberOfPresses.size(); i++)
-	{
-		numberOfPresses.at(i) = 0;
+	try {
+		int input;
+		std::cin >> input;
+
+		std::string username, password, passwordcheck;
+
+		bool loggedin = false;	
+
+		HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+		DWORD mode = 0;
+
+		while (loggedin != true)
+		{
+
+			switch (input)
+			{
+
+
+			case 27:
+				exit(EXIT_SUCCESS);
+				break;
+
+			case 0:
+				std::cout << "If you want to continue without logging in, press 1" << std::endl;
+				std::cout << "If you want to log in, press 2" << std::endl;
+				std::cout << "If you want to register, press 3" << std::endl;
+				std::cout << "If you want to quit, press esc" << std::endl;
+				std::cout << std::endl;
+				std::cin >> input;
+				break;
+
+
+			case 1:
+				playerID = -1; //negative value to show in DB it's an unregistered player
+				std::cout << "You chose to play without logging in, so no data will be linked to your personal account. Enjoy the game!" << std::endl;
+				loggedin = true;
+				break;
+
+			case 2:
+				std::cout << "Username: ";
+				std::cin >> username;
+				std::cout << "Password: ";
+				std::cin >> password;
+
+
+				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE username = '" + username + "'");
+
+				if (res->next()) {
+
+					res = stmt->executeQuery("SELECT password FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
+					
+					int i = 3;
+					while(!res->next() && i > 0) {
+
+						std::cout << "Wrong password. " << i << " attempts left before going back to menu." << std::endl;
+						i--;
+						std::cout << "Password (hidden): ";
+						//std::cin >> password;
+						GetConsoleMode(hStdin, &mode);
+						SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
+						getline(cin, password);
+						res = stmt->executeQuery("SELECT password FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
+						
+					}
+					if (i == 0) {
+						std::cout << std::endl;
+						std::cout << "Out of attempts. Try logging in again or register another account" << std::endl;
+						input = 0;
+						break;
+					}
+				}
+				else {
+					std::cout << "Username not found! Try to login with another username or register first." << std::endl;
+					std::cout << std::endl;
+					input = 0;
+					break;
+				}
+				loggedin = true;
+				std::cout << "Login succesful! Enjoy playing the game" << std::endl;
+				std::cout << std::endl;
+				break;
+
+
+			case 3:
+				std::cout << "Choose username: ";
+				std::cin >> username;
+				std::cout << "Choose password: ";
+				std::cin >> password;
+				std::cout << "Retype chosen password: ";
+				std::cin >> passwordcheck;
+
+				while (password != passwordcheck) {
+
+					std::cout << "Passwords don't match. Please give in password again" << std::endl;
+					std::cout << "Choose password: ";
+					std::cin >> password;
+					std::cout << "Retype chosen password: ";
+					std::cin >> passwordcheck;
+
+				}
+
+				//Fetch the max ID and increment it in order to get an unique ID
+				res = stmt->executeQuery("SELECT MAX(playerId) FROM UserInfo");
+
+				//res->next();
+				//if (res->getInt(1) >= 0) 
+				if(res->next()){
+
+					playerID = res->getInt(1) + 1;
+				}
+				else playerID = 1;
+
+
+				prep_stmt = con->prepareStatement("INSERT INTO UserInfo(playerId, username, password) VALUES (?, ?, ?)");
+				prep_stmt->setInt(1, playerID);
+				prep_stmt->setString(2, username);
+				prep_stmt->setString(3, password);
+
+				prep_stmt->execute();
+
+
+				std::cout << "You are now registered. Please login to continue" << std::endl;
+				std::cout << std::endl;
+				input = 2;
+				break;
+
+
+			default:
+
+				std::cout << "Not a valid input. Please press a number between 1 and 3" << std::endl;
+				std::cout << std::endl;
+				input = 0;
+				break;
+			}
+		}
+	}
+	catch (sql::SQLException &e) {
+		cout << "# ERR: SQLException in " << __FILE__;
+		cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+		cout << "# ERR: " << e.what();
+		cout << " (MySQL error code: " << e.getErrorCode();
+		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
 	}
 }
+
+/*
+String GameAnalytics::hashPassword(const string str){
+
+	unsigned char hash[SHA256_DIGEST_LENGTH];
+	SHA256_CTX sha256;
+	SHA256_Init(&sha256);
+	SHA256_Update(&sha256, str.c_str(), str.size());
+	SHA256_Final(hash, &sha256);
+	stringstream ss;
+	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+	{
+		ss << hex << setw(2) << setfill('0') << (int)hash[i];
+	}
+	return ss.str();
+
+}
+*/
 
 void GameAnalytics::initDBConn() {
 
 
-	/*
-	sql::Driver *driver;
-	sql::Connection *con;
-	sql::Statement *stmt;
-
-	driver = get_driver_instance();
-	con = driver->connect("tcp://127.0.0.1:3306", "root", "root");
-	con->setSchema("game_data");
-
-	if (con->isValid()) {
-
-	std::cout << "Connection made with database" << std::endl;
-	stmt = con->createStatement();
-	stmt->execute("DROP TABLE IF EXISTS game_data");
-	stmt->execute("CREATE TABLE game_data(id INT, label CHAR(1))");
-	stmt->execute("INSERT INTO game_data(id, label) VALUES (1, 'a')");
-
-	delete stmt;
-	delete con;
-	}
-	else {
-	std::cout << "No connection could be made with the database" << std::endl;
-	con->reconnect();
-	}
-	*/
-
 	cout << endl;
-	cout << "Running 'SELECT 'Hello World!' AS _message'..." << endl;
+	cout << "Trying to make a connection with the DB" << endl;
 
 	try {
+		
 		sql::Driver *driver;
-		sql::Connection *con;
-		sql::Statement *stmt;
-		sql::ResultSet *res;
-		sql::PreparedStatement  *prep_stmt;
-
-		int id = 0;
-		//bool won = true;
 
 		// Create a connection
 		driver = get_driver_instance();
@@ -147,55 +265,31 @@ void GameAnalytics::initDBConn() {
 		stmt = con->createStatement();
 
 		//Create Schema and connect to it
-		stmt->execute("CREATE SCHEMA IF NOT EXISTS ga");
-		con->setSchema("ga");
+		stmt->execute("CREATE SCHEMA IF NOT EXISTS GameAnalytics");
+		con->setSchema("GameAnalytics");
+		std::cout << "Connection made with database schema GameAnalytics" << std::endl;
 
 
 		//Create the table for the Game Statistics
 		stmt->execute("DROP TABLE IF EXISTS GameStats");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(id int, undos int, pilepresses int, hints int, suiterrors int, rankerrors int, score int, gamewon CHAR(4), starttime TIMESTAMP)");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(gameId int, playerId int, undos int, hints int, suiterrors int, rankerrors int, score int, endofgame CHAR(3), gameresult CHAR(4), starttime DATETIME, totaltimeinsec int, nrmoves int, avgtimemoveinmilsec int)");
 
-		//Fetch the max ID and increment it in order to get an unique ID
-		res = stmt->executeQuery("SELECT MAX(id) FROM GameStats");
+		//Create the table with user information
+		stmt->execute("DROP TABLE IF EXISTS UserInfo");
+		stmt->execute("CREATE TABLE IF NOT EXISTS UserInfo(playerId int, username CHAR(50), password CHAR(50))");
+
+		//Create the table with pressed card locations
+		stmt->execute("DROP TABLE IF EXISTS PressedLocations");
+		stmt->execute("CREATE TABLE IF NOT EXISTS PressedLocations(gameId int, pile int, talon int, build1 int, build2 int, build3 int, build4 int, build5 int, build6 int, build7 int, suit1 int, suit2 int, suit3 int, suit4 int)");
+
+		//Create the table with all the click coordinates
+		stmt->execute("DROP TABLE IF EXISTS ClickCoord");
+		stmt->execute("CREATE TABLE IF NOT EXISTS ClickCoord(clickId int, gameId int, xcoord int, ycoord int)");
+
 		
-		res->next();
-		if (res->getInt(1) >= 0) {
 
-			id = res->getInt(1) +1;
-		}
-		else id = 0;
-	
-
-		//Insert data into the GameStats table
-		prep_stmt = con->prepareStatement("INSERT INTO GameStats(id, undos, pilepresses, hints, suiterrors, rankerrors, score, gamewon, starttime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-		prep_stmt->setInt(1, id);
-		prep_stmt->setInt(2, numberOfUndos);
-		prep_stmt->setInt(3, numberOfPilePresses);
-		prep_stmt->setInt(4, numberOfHints);
-		prep_stmt->setInt(5, numberOfSuitErrors);
-		prep_stmt->setInt(6, numberOfRankErrors);
-		prep_stmt->setInt(7, score);
-
-		if(gameWon == true)
-		prep_stmt->setString(8, "WON");
-		else
-		prep_stmt->setString(8, "LOST");
-
-	
-		//char buffer[80];
-		std::tm tm;
-		localtime_s(&tm, &start);
-		//strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
-		//std::string temp(buffer);
-
-		std::ostringstream oss;
-		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
-		prep_stmt->setDateTime(9, oss.str());
-
-//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
-
-		prep_stmt->execute();
-
+		
+		/*
 		res = stmt->executeQuery("SELECT 'Hello World!' AS _message");
 		while (res->next()) {
 			cout << "\t... MySQL replies: ";
@@ -205,10 +299,8 @@ void GameAnalytics::initDBConn() {
 			// Access column data by numeric offset, 1 is the first column 
 			cout << res->getString(1) << endl;
 		}
-		delete res;
-		delete prep_stmt;
-		delete stmt;
-		delete con;
+		*/
+
 
 	}
 	catch (sql::SQLException &e) {
@@ -220,6 +312,114 @@ void GameAnalytics::initDBConn() {
 	}
 
 	cout << endl;
+}
+
+void GameAnalytics::insertMetricsDB() {
+
+	try {
+		int gameID = 0;
+
+		//Fetch the max ID and increment it in order to get an unique ID
+		res = stmt->executeQuery("SELECT MAX(gameId) FROM GameStats");
+		if (res->next()) {
+
+			gameID = res->getInt(1) + 1;
+		}
+		else gameID = 1;
+
+
+		//Insert data into the GameStats table
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(gameId, playerId, undos, hints, suiterrors, rankerrors, score, endofgame, gameresult, starttime, totaltimeinsec, nrmoves, avgtimemoveinmilsec) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt->setInt(1, gameID);
+		prep_stmt->setInt(2, playerID);
+		prep_stmt->setInt(3, numberOfUndos);
+		prep_stmt->setInt(4, numberOfHints);
+		prep_stmt->setInt(5, numberOfSuitErrors);
+		prep_stmt->setInt(6, numberOfRankErrors);
+		prep_stmt->setInt(7, score);
+
+		if (endOfGameBool == true)
+			prep_stmt->setString(8, "YES");
+		else
+			prep_stmt->setString(8, "NO");
+
+		if (gameWon == true)
+			prep_stmt->setString(9, "WON");
+		else
+			prep_stmt->setString(9, "LOST");
+
+
+		//char buffer[80];
+		std::tm tm;
+		localtime_s(&tm, &startOfGameDB);
+		//strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &tm);
+		//std::string temp(buffer);
+
+		std::ostringstream oss;
+		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
+		prep_stmt->setDateTime(10, oss.str());
+
+		//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
+
+		//insert duration
+		prep_stmt->setInt(11, duration);
+
+		prep_stmt->setInt(12, averageThinkDurations.size());
+		prep_stmt->setInt(13, avgTimeMove);
+		
+
+		prep_stmt->execute();
+
+		prep_stmt = con->prepareStatement("INSERT INTO PressedLocations(gameId, pile, talon, build1, build2, build3, build4, build5, build6, build7, suit1, suit2, suit3, suit4) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		
+		prep_stmt->setInt(1, gameID);
+		prep_stmt->setInt(2, numberOfPilePresses);
+		prep_stmt->setInt(3, numberOfPresses.at(7));
+		prep_stmt->setInt(4, numberOfPresses.at(0));
+		prep_stmt->setInt(5, numberOfPresses.at(1));
+		prep_stmt->setInt(6, numberOfPresses.at(2));
+		prep_stmt->setInt(7, numberOfPresses.at(3));
+		prep_stmt->setInt(8, numberOfPresses.at(4));
+		prep_stmt->setInt(9, numberOfPresses.at(5));
+		prep_stmt->setInt(10, numberOfPresses.at(6));
+		prep_stmt->setInt(11, numberOfPresses.at(8));
+		prep_stmt->setInt(12, numberOfPresses.at(9));
+		prep_stmt->setInt(13, numberOfPresses.at(10));
+		prep_stmt->setInt(14, numberOfPresses.at(11));
+
+		prep_stmt->execute();
+
+
+		prep_stmt = con->prepareStatement("INSERT INTO ClickCoord(clickId, gameId, xcoord, ycoord) VALUES (?, ?, ?, ?)");
+		for (int i = 0; i < locationOfPresses.size(); i++) {
+			prep_stmt->setInt(1, i);
+			prep_stmt->setInt(2, gameID);
+			prep_stmt->setInt(3, locationOfPresses.at(i).first);
+			prep_stmt->setInt(4, locationOfPresses.at(i).second);
+			prep_stmt->execute();
+		}
+		
+
+		
+	}
+
+	catch (sql::SQLException &e) {
+		cout << "# ERR: SQLException in " << __FILE__;
+		cout << "(" << __FUNCTION__ << ") on line " << __LINE__ << endl;
+		cout << "# ERR: " << e.what();
+		cout << " (MySQL error code: " << e.getErrorCode();
+		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
+	}
+}
+
+void GameAnalytics::disconnectDB() {
+
+	delete res;
+	delete prep_stmt;
+	delete stmt;
+	delete con;
+
+	std::cout << "Disconnected from database" << std::endl;
 }
 
 void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
@@ -270,13 +470,14 @@ void GameAnalytics::initGameLogic()
 
 	startOfGame = Clock::now();	// tracking the time between moves and total game time
 	startOfMove = Clock::now();
+	startOfGameDB = time(0);
 
 	classifiedCardsFromPlayingBoard.reserve(12);
 	src = waitForStableImage();	// get the first image of the board
-	pb.determineROI(src);	// calculating the important region within this board image
+	ec.determineROI(src);	// calculating the important region within this board image
 	
-	pb.findCardsFromBoardImage(src);	// setup the starting board
-	extractedImagesFromPlayingBoard = pb.getCards();
+	ec.findCardsFromBoardImage(src);	// setup the starting board
+	extractedImagesFromPlayingBoard = ec.getCards();
 	classifyExtractedCards();
 	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
@@ -491,14 +692,17 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 
 void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 {
+
 	std::cout << "--------------------------------------------------------" << std::endl;
 	(gameWon) ? std::cout << "Game won!" << std::endl : std::cout << "Game over!" << std::endl;
 	std::cout << "--------------------------------------------------------" << std::endl;
 	std::chrono::time_point<std::chrono::steady_clock> endOfGame = Clock::now();
+	duration = std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count();
 	std::cout << "Game solved: " << std::boolalpha << gameWon << std::endl;
-	std::cout << "Total time: " << std::chrono::duration_cast<std::chrono::seconds>(endOfGame - startOfGame).count() << " s" << std::endl;
+	std::cout << "Total time: " << duration << " s" << std::endl;
 	std::cout << "Points scored: " << score << std::endl;
-	std::cout << "Average time per move = " << std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size() << "ms" << std::endl;
+	avgTimeMove = std::accumulate(averageThinkDurations.begin(), averageThinkDurations.end(), 0) / averageThinkDurations.size();
+	std::cout << "Average time per move = " << avgTimeMove << "ms" << std::endl;
 	std::cout << "Number of moves = " << averageThinkDurations.size() << " moves" << std::endl;
 	std::cout << "Hints requested = " << numberOfHints << std::endl;
 	std::cout << "Times undo = " << numberOfUndos << std::endl;
@@ -522,6 +726,9 @@ void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 		cv::Point point = Point(locationOfPresses.at(i).first * 2, locationOfPresses.at(i).second * 2);
 		cv::circle(pressLocations, point, 2, cv::Scalar(0, 0, 255), 2);
 	}
+
+	insertMetricsDB();
+
 	namedWindow("clicklocations", WINDOW_NORMAL);
 	resizeWindow("clicklocations", cv::Size(131 * 2, 174 * 2));
 	imshow("clicklocations", pressLocations);
