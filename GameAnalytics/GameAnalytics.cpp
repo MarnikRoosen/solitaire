@@ -817,6 +817,12 @@ void GameAnalytics::hookMouseClicks()
 	ClicksHooks::Instance().Messages();
 }
 
+bool GameAnalytics::getEndOfGameBool()
+{
+	return endOfGameBool;	// check for the hooks thread to see if the game is over
+}
+
+
 void GameAnalytics::toggleClickDownBool()
 {
 	if (waitForStableImageBool)	// if the main process is waiting for a stable image (no animations), but a new click comes in

@@ -73,11 +73,10 @@ const std::vector<cv::Mat> & ExtractCards::findCardsFromBoardImage(Mat const & b
 		extractCards();	// extract the topcard from the regions
 	}
 	catch (const std::exception&)	// if the board image wasn't captured correctly
-	{
-		cv::Mat test;
-		cvtColor(boardImage, test, COLOR_BGR2GRAY);
-		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cerr << "ERROR: Amount of not captured pixels in the image = " << cv::countNonZero(test) << std::endl;
+	{		
+		std::cerr << std::endl;
+		std::cerr << "The image of the board wasn't captured correctly, trying again" << std::endl;
+		std::cerr << std::endl;
 	}
 	return cards;
 }
