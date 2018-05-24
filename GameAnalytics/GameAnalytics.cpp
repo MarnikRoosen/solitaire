@@ -14,12 +14,11 @@ int main(int argc, char** argv)
 
 	#ifdef NDEBUG 
 		ga.initDBConn();	// database storage is only possible in release mode
+		ga.initLogin();
 	#endif // NDEBUG 
 
 	ga.initScreenCapture();
 	ga.initGameLogic();
-	ga.initDBConn();
-	ga.initLogin();
 	
 	//ga.test();	// --> used for benchmarking functions
 
@@ -34,8 +33,11 @@ int main(int argc, char** argv)
 	srcGrabber.join();
 	clickThread.join();
 
-	ga.disconnectDB();
 	
+	#ifdef NDEBUG 
+		ga.disconnectDB();
+	#endif // NDEBUG 
+
 	return EXIT_SUCCESS;
 }
 
@@ -138,12 +140,13 @@ void GameAnalytics::initLogin() {
 
 				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE username = '" + username + "'");
 
-				if (res->next()) {
-
+				if (res->next()) 
+				{
 					res = stmt->executeQuery("SELECT password FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
-					
+
 					int i = 3;
-					while(!res->next() && i > 0) {
+					while (!res->next() && i > 0)
+					{
 
 						std::cout << "Wrong password. " << i << " attempts left before going back to menu." << std::endl;
 						i--;
@@ -162,7 +165,8 @@ void GameAnalytics::initLogin() {
 						break;
 					}
 				}
-				else {
+				else
+				{
 					std::cout << "Username not found! Try to login with another username or register first." << std::endl;
 					std::cout << std::endl;
 					input = 0;
@@ -277,19 +281,19 @@ void GameAnalytics::initDBConn() {
 
 
 		//Create the table for the Game Statistics
-		stmt->execute("DROP TABLE IF EXISTS GameStats");
+		//stmt->execute("DROP TABLE IF EXISTS GameStats");
 		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(gameId int, playerId int, undos int, hints int, suiterrors int, rankerrors int, score int, endofgame CHAR(3), gameresult CHAR(4), starttime DATETIME, totaltimeinsec int, nrmoves int, avgtimemoveinmilsec int)");
 
 		//Create the table with user information
-		stmt->execute("DROP TABLE IF EXISTS UserInfo");
+		//stmt->execute("DROP TABLE IF EXISTS UserInfo");
 		stmt->execute("CREATE TABLE IF NOT EXISTS UserInfo(playerId int, username CHAR(50), password CHAR(50))");
 
 		//Create the table with pressed card locations
-		stmt->execute("DROP TABLE IF EXISTS PressedLocations");
+		//stmt->execute("DROP TABLE IF EXISTS PressedLocations");
 		stmt->execute("CREATE TABLE IF NOT EXISTS PressedLocations(gameId int, pile int, talon int, build1 int, build2 int, build3 int, build4 int, build5 int, build6 int, build7 int, suit1 int, suit2 int, suit3 int, suit4 int)");
 
 		//Create the table with all the click coordinates
-		stmt->execute("DROP TABLE IF EXISTS ClickCoord");
+		//stmt->execute("DROP TABLE IF EXISTS ClickCoord");
 		stmt->execute("CREATE TABLE IF NOT EXISTS ClickCoord(clickId int, gameId int, xcoord int, ycoord int)");
 
 		
@@ -405,6 +409,7 @@ void GameAnalytics::insertMetricsDB() {
 			prep_stmt->execute();
 		}
 		
+		std::cout << "The data has been saved in the database." << std::endl;
 
 		
 	}
@@ -416,6 +421,7 @@ void GameAnalytics::insertMetricsDB() {
 		cout << " (MySQL error code: " << e.getErrorCode();
 		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
 	}
+
 }
 
 void GameAnalytics::disconnectDB() {
@@ -739,7 +745,10 @@ void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 		cv::circle(pressLocations, point, 2, cv::Scalar(0, 0, 255), 2);
 	}
 
+#ifdef NDEBUG
 	insertMetricsDB();
+#endif // NDEBUG
+
 
 	namedWindow("clicklocations", WINDOW_NORMAL);
 	resizeWindow("clicklocations", cv::Size(131 * 2, 174 * 2));

@@ -186,15 +186,15 @@ std::pair<classifiers, classifiers> ClassifyCard::classifyCard(std::pair<Mat, Ma
 
 
 			// COMPARISON METHOD
-			(type == "rank") ?
+			/*(type == "rank") ?
 				cardType.first = rankImages.at(classifyTypeUsingSubtraction(rankImages, resizedThreshImg)).first :
-				cardType.second = suitImages.at(classifyTypeUsingSubtraction(suitImages, resizedThreshImg)).first;
+				cardType.second = suitImages.at(classifyTypeUsingSubtraction(suitImages, resizedThreshImg)).first;*/
 
 			// KNN METHOD
 			
-			/*(type == "rank") ? 
+			(type == "rank") ? 
 				cardType.first = classifyTypeUsingKnn(resizedROI, kNearest_rank) : 
-				cardType.second = classifyTypeUsingKnn(resizedROI, kNearest_suit);*/
+				cardType.second = classifyTypeUsingKnn(resizedROI, kNearest_suit);
 
 		}
 		type = "suit";	// next classify the suit, start from a black_suit, if it's red, this will get detected at the beginning of the second loop

@@ -22,7 +22,7 @@ void ExtractCards::determineROI(const Mat & boardImage)
 	vector<Vec4i> hierarchy;
 
 	cvtColor(src, adaptedSrc, COLOR_BGR2GRAY);	// convert the image to gray
-	threshold(adaptedSrc, adaptedSrc, 120, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+	threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
 	findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
 
 	auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) {	// remove all small contours
@@ -146,16 +146,16 @@ void ExtractCards::extractCards()
 {
 	for (int i = 0; i < cardRegions.size(); i++)
 	{
-		Mat adaptedSrc;
+		Mat graySrc, blurredSrc, threshSrc;
 		vector<vector<Point>> contours;
 		vector<Vec4i> hierarchy;
 
-		cv::cvtColor(cardRegions.at(i), adaptedSrc, COLOR_BGR2GRAY);
-		cv::GaussianBlur(adaptedSrc, adaptedSrc, cv::Size(5, 5), 0);
-		cv::threshold(adaptedSrc, adaptedSrc, 240, 255, THRESH_BINARY);	// apply a string threshold to keep only white cards (no blue facedown cards)
+		cv::cvtColor(cardRegions.at(i), graySrc, COLOR_BGR2GRAY);
+		cv::GaussianBlur(graySrc, blurredSrc, cv::Size(5, 5), 0);
+		cv::threshold(blurredSrc, threshSrc, 220, 255, THRESH_BINARY);	// apply a string threshold to keep only white cards (no blue facedown cards)
 																		// by applying a strong threshold, the gray lines between stacked cards are also removed
 																		// -> the topcard will be accessible by taking the largest area
-		findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find the contours in the region
+		findContours(threshSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find the contours in the region
 
 		if (contours.size() > 1)	// remove potential noise
 		{
@@ -172,14 +172,14 @@ void ExtractCards::extractCards()
 
 			Mat card = Mat(cardRegions[i], br);
 			Mat croppedRef, resizedCardImage;
-			//extractTopCardUsingSobel(card, croppedRef, i);	// if the strong threshold doesn't extract the card correctly, the card can be extracted using sobel edge detection
+			extractTopCardUsingSobel(card, croppedRef, i);	// if the strong threshold doesn't extract the card correctly, the card can be extracted using sobel edge detection
 
 			/*Size cardSize = croppedRef.size();	// finally, if sobel edge doesn't extract the card correctly, try using hardcoded values (cardheight = 1.33 * cardwidth)
 			if (cardSize.width * 1.3 > cardSize.height || cardSize.width * 1.4 < cardSize.height)
 			{
 			extractTopCardUsingAspectRatio(card, croppedRef);
 			}*/
-			croppedTopCardToStandardSize(card, resizedCardImage);	// resize the card to 150x200 for consistency
+			croppedTopCardToStandardSize(croppedRef, resizedCardImage);	// resize the card to 150x200 for consistency
 			cards.at(i) = resizedCardImage.clone();
 		}
 		else
@@ -214,7 +214,7 @@ void ExtractCards::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 		/// Gradient Y
 		cv::Sobel(gray, grad, CV_16S, 0, 1, 3, 1, 0, BORDER_DEFAULT);	// calculate the horizontal edges using Sobel edge detection
 		cv::convertScaleAbs(grad, abs_grad);
-		cv::threshold(abs_grad, thresh_grad, 90, 255, THRESH_BINARY);
+		cv::threshold(abs_grad, thresh_grad, 80, 255, THRESH_BINARY);
 		lowest_pt1.y = 0;
 		HoughLinesP(thresh_grad, linesP, 1, CV_PI / 72, 30, cardSize.width * 0.88, 15);	// calculate lines of these edges that are at least 90% of the cardwidth
 																						//  and have maximum 10 pixels of not corresponding with the line
@@ -247,7 +247,7 @@ void ExtractCards::extractTopCardUsingSobel(const cv::Mat &src, cv::Mat& dest, i
 		/// Gradient X
 		cv::Sobel(gray, grad, CV_16S, 1, 0, 3, 1, 0, BORDER_DEFAULT);	// calculate the vertical edges using Sobel edge detection
 		cv::convertScaleAbs(grad, abs_grad);
-		cv::threshold(abs_grad, thresh_grad, 70, 255, THRESH_BINARY);
+		cv::threshold(abs_grad, thresh_grad, 80, 255, THRESH_BINARY);
 		lowest_pt1.y = 0;
 		HoughLinesP(thresh_grad, linesP, 1, CV_PI / 72, 30, cardSize.height * 0.88, 15);	// calculate lines of these edges that are at least 90% of the cardwidth
 																							//  and have maximum 10 pixels of not corresponding with the line

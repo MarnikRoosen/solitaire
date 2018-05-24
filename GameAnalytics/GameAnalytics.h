@@ -134,11 +134,14 @@ private:
 	SolitaireState currentState;
 
 
+#ifdef NDEBUG
 	// DATABASE VARIABLES
 	sql::Connection *con;
 	sql::Statement *stmt;
 	sql::ResultSet *res;
 	sql::PreparedStatement  *prep_stmt;
+#endif // NDEBUG
+
 
 
 
