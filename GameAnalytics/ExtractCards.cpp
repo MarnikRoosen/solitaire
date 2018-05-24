@@ -22,7 +22,7 @@ void ExtractCards::determineROI(const Mat & boardImage)
 	vector<Vec4i> hierarchy;
 
 	cvtColor(src, adaptedSrc, COLOR_BGR2GRAY);	// convert the image to gray
-	threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+	threshold(adaptedSrc, adaptedSrc, 210, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
 	findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
 
 	auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) {	// remove all small contours
