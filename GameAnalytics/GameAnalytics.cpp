@@ -11,6 +11,11 @@ int main(int argc, char** argv)
 
 	// initializing lock for shared variables, screencapture and game logic
 	InitializeCriticalSection(&threadLock);
+
+	#ifdef NDEBUG 
+		ga.initDBConn();	// database storage is only possible in release mode
+	#endif // NDEBUG 
+
 	ga.initScreenCapture();
 	ga.initGameLogic();
 	ga.initDBConn();
@@ -68,13 +73,14 @@ void GameAnalytics::initScreenCapture()
 	
 	windowWidth = abs(appRect.right - appRect.left);
 	windowHeight = abs(appRect.bottom - appRect.top);
-	if (1.75 < windowWidth / windowHeight < 1.80)	// if the monitor doesn't have 16:9 aspect ratio, calculate the distorted coordinates
+	double aspectRatio = windowWidth / windowHeight;
+	if (1.75 < aspectRatio && aspectRatio < 1.80)	// if the monitor doesn't have 16:9 aspect ratio, calculate the distorted coordinates
 	{
-		distortedWindowHeight = (windowWidth * 1080 / 1920);
+		distortedWindowHeight = (int) (windowWidth * 1080 / 1920);
 	}
 }
 
-
+#ifdef NDEBUG	// database storage is only possible in release mode
 void GameAnalytics::initLogin() {
 
 	std::cout << "Welcome to the Game Analytics tool of Klondike Solitaire" << std::endl;
@@ -421,6 +427,7 @@ void GameAnalytics::disconnectDB() {
 
 	std::cout << "Disconnected from database" << std::endl;
 }
+#endif // NDEBUG 
 
 void GameAnalytics::initPlayingBoard(const std::vector<std::pair<classifiers, classifiers>> & classifiedCardsFromPlayingBoard)
 {
@@ -470,22 +477,21 @@ void GameAnalytics::initGameLogic()
 
 	startOfGame = Clock::now();	// tracking the time between moves and total game time
 	startOfMove = Clock::now();
-	startOfGameDB = time(0);
 
-	classifiedCardsFromPlayingBoard.reserve(12);
-	src = waitForStableImage();	// get the first image of the board
-	ec.determineROI(src);	// calculating the important region within this board image
-	
-	ec.findCardsFromBoardImage(src);	// setup the starting board
-	extractedImagesFromPlayingBoard = ec.getCards();
-	classifyExtractedCards();
-	initPlayingBoard(classifiedCardsFromPlayingBoard);
 
-	numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
-	for (int i = 0; i < numberOfPresses.size(); i++)
-	{
-		numberOfPresses.at(i) = 0;
-	}
+classifiedCardsFromPlayingBoard.reserve(12);
+cv::Mat src = waitForStableImage();	// get the first image of the board
+ec.determineROI(src);	// calculating the important region within this board image
+
+extractedImagesFromPlayingBoard = ec.findCardsFromBoardImage(src);	// setup the starting board
+classifyExtractedCards();
+initPlayingBoard(classifiedCardsFromPlayingBoard);
+
+numberOfPresses.resize(12);	// used to track the number of presses on each cardlocation of the playingboard
+for (int i = 0; i < numberOfPresses.size(); i++)
+{
+	numberOfPresses.at(i) = 0;
+}
 }
 
 void GameAnalytics::process()
@@ -531,10 +537,12 @@ void GameAnalytics::process()
 				endOfGameBool = true;
 				break;
 			case WON:
+				calculateFinalScore();
 				gameWon = true;
 				endOfGameBool = true;
 				break;
 			case AUTOCOMPLETE:
+				calculateFinalScore();
 				gameWon = true;
 				endOfGameBool = true;
 				break;
@@ -552,9 +560,9 @@ void GameAnalytics::process()
 			}
 			processCardSelection(pt->x, pt->y);	// check which card has been pressed and whether game errors have been made
 		}
-
 		else if (currentState == WON)	// waitForStableImage took too long, game won
 		{
+			calculateFinalScore();
 			gameWon = true;
 			endOfGameBool = true;
 		}
@@ -615,12 +623,6 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 			else
 			{
 				std::cout << "AUTOSOLVE PRESSED!" << std::endl;
-				int remainingCards = 0;
-				for (int i = 0; i < 7; ++i)
-				{
-					remainingCards += currentPlayingBoard.at(i).knownCards.size();
-				}
-				score += (remainingCards * 10);
 				currentState = AUTOCOMPLETE;
 			}
 		}
@@ -690,6 +692,16 @@ void GameAnalytics::determineNextState(const int & x, const int & y)	// update t
 	}
 }
 
+void GameAnalytics::calculateFinalScore()
+{
+	int remainingCards = 0;
+	for (int i = 0; i < 7; ++i)
+	{
+		remainingCards += (int) currentPlayingBoard.at(i).knownCards.size();
+	}
+	score += (remainingCards * 10);
+}
+
 void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 {
 
@@ -737,8 +749,7 @@ void GameAnalytics::handleEndOfGame()	// print all the metrics and data captured
 
 bool GameAnalytics::handlePlayingState()
 {
-	ec.findCardsFromBoardImage(src); // extract the cards from the board
-	extractedImagesFromPlayingBoard = ec.getCards();
+	extractedImagesFromPlayingBoard = ec.findCardsFromBoardImage(src); // extract the cards from the board
 	classifyExtractedCards();	// classify the extracted cards
 	if (updateBoard(classifiedCardsFromPlayingBoard))	// check if the board needs to be updated
 	{
@@ -875,6 +886,7 @@ cv::Mat GameAnalytics::waitForStableImage()	// -> average 112ms for non-updated 
 		norm = cv::norm(graySrc1, graySrc2, NORM_L1);	// calculates the manhattan distance (sum of absolute values) of two grayimages
 		if (clickDownBool)
 		{
+			std::cout << "test" << std::endl;
 			clickDownBool = false;	// new click registered while waitForStableImage isn't done yet
 									//  -> use the image at the moment of the new click (just before the new animation) for the previous move
 			src1 = clickDownBuffer.front(); clickDownBuffer.pop();
@@ -950,7 +962,7 @@ void GameAnalytics::processCardSelection(const int & x, const int & y)
 			std::pair<classifiers, classifiers> selectedCard;
 			if (indexOfPressedCardLocation != 7)
 			{
-				int index = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
+				int index = (int) currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.size() - indexOfPressedCard - 1;	// indexOfPressedCard is from bot->top, knownCards is from top->bot - remap index
 				selectedCard = currentPlayingBoard.at(indexOfPressedCardLocation).knownCards.at(index);	// check which card has been selected
 			}
 			else
@@ -1003,8 +1015,8 @@ void GameAnalytics::detectPlayerMoveErrors(std::pair<classifiers, classifiers> &
 			}
 			if ((prevRank == '2' && newRank != 'A') || (prevRank == '3' && newRank != '2') || (prevRank == '4' && newRank != '3')	// check for number error 
 				|| (prevRank == '5' && newRank != '4') || (prevRank == '6' && newRank != '5') || (prevRank == '7' && newRank != '6')
-				|| (prevRank == '8' && newRank != '7') || (prevRank == '9' && newRank != ':') || (prevRank == ':' && newRank != 'J')
-				|| (prevRank == 'J' && newRank != 'Q') || (prevRank == 'Q' && newRank != 'K') || (prevRank == 'Q' && newRank != 'K'))
+				|| (prevRank == '8' && newRank != '7') || (prevRank == '9' && newRank != '8') || (prevRank == ':' && newRank != '9')
+				|| (prevRank == 'J' && newRank != ':') || (prevRank == 'Q' && newRank != 'J') || (prevRank == 'K' && newRank != 'Q'))
 			{
 				std::cout << "Incompatible rank! " << prevRank << " can't go on " << newRank << std::endl;
 				++numberOfRankErrors;
@@ -1399,7 +1411,6 @@ void GameAnalytics::printPlayingBoardState()
 	std::cout << std::endl;
 }
 
-
 /****************************************************
  *	TEST FUNCTIONS
  ****************************************************/
@@ -1479,9 +1490,7 @@ void GameAnalytics::test()
 	allExtractedImages.resize(testImages.size());
 	for (int i = 0; i < testImages.size(); i++)	// first, get all cards extracted correctly
 	{
-		ec.findCardsFromBoardImage(testImages.at(i));
-
-		allExtractedImages.at(i) = ec.getCards();
+		allExtractedImages.at(i) = ec.findCardsFromBoardImage(testImages.at(i));
 	}
 	std::pair<Mat, Mat> cardCharacteristics;
 	std::pair<classifiers, classifiers> cardType;

@@ -32,7 +32,7 @@ public:
 
 
 	// MAIN FUNCTIONS
-	void findCardsFromBoardImage(Mat const & boardImage);	// main extraction function
+	const std::vector<cv::Mat> & findCardsFromBoardImage(Mat const & boardImage);	// main extraction function
 	void resizeBoardImage(Mat const & boardImage, Mat & resizedBoardImage);	// resize the playing board to standardBoardWidth/Height
 	void extractCardRegions(const cv::Mat & src);	// extract each region that contains a card
 	void extractCards();	// extract the top card from a card region
@@ -48,9 +48,8 @@ public:
 	int getIndexOfSelectedCard(int i);	// find the index of the deepest card that was selected by the player (topcard = 0, below top card = 1, etc.)
 	
 
-	// GAMEANALYTICS GETTERS AND CHECKS
+	// END OF GAME CHECK
 	bool checkForOutOfMovesState(const cv::Mat &src);	// check if the middle of the screen is mostly white == out of moves screen
-	const std::vector<cv::Mat> & getCards();	// getter for extracted cards
 
 
 private:

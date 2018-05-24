@@ -19,12 +19,14 @@
 #include "opencv2/imgcodecs.hpp"
 
 // mysql includes
+#ifdef NDEBUG // database storage is only possible in release mode
 #include "mysql_connection.h"
 #include "cppconn/driver.h"
 #include "cppconn/exception.h"
 #include "cppconn/resultset.h"
 #include "cppconn/statement.h"
-#include <cppconn/prepared_statement.h>
+#include <cppconn/prepared_statement.h>  
+#endif // NDEBUG 
 
 
 #include <ctime>
@@ -75,6 +77,7 @@ public:
 	GameAnalytics();
 	~GameAnalytics();
 
+
 	// INITIALIZATIONS
 	void initScreenCapture();	// initialize the screen capture relative to the correct monitor
 	void initGameLogic();	// intialize tracking variables and the state of the game 
@@ -91,6 +94,7 @@ public:
 	// MAIN FUNCTIONS
 	void process();	// main function of the application
 	void determineNextState(const int & x, const int & y);	// check what the main function should do next
+	void calculateFinalScore();
 	void handleUndoState();	// take the previous state of the playing board if undo was pressed
 	void handleEndOfGame();	// print all tracked data
 	bool handlePlayingState();	// extract cards, classify them and check for changes in the playing board
