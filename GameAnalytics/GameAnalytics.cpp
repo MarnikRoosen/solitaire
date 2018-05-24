@@ -172,6 +172,9 @@ void GameAnalytics::initLogin() {
 					input = 0;
 					break;
 				}
+
+				res = stmt->executeQuery("SELECT playerId FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
+				playerID = res->getInt(1);
 				loggedin = true;
 				std::cout << "Login succesful! Enjoy playing the game" << std::endl;
 				std::cout << std::endl;
