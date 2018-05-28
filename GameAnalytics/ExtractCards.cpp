@@ -22,7 +22,7 @@ void ExtractCards::determineROI(const Mat & boardImage)
 	vector<Vec4i> hierarchy;
 
 	cvtColor(src, adaptedSrc, COLOR_BGR2GRAY);	// convert the image to gray
-	threshold(adaptedSrc, adaptedSrc, 220, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
+	threshold(adaptedSrc, adaptedSrc, 210, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
 	findContours(adaptedSrc, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE, Point(0, 0));	// find all the contours using the thresholded image
 
 	auto new_end = std::remove_if(contours.begin(), contours.end(), [](const std::vector<cv::Point>& c1) {	// remove all small contours
@@ -73,11 +73,10 @@ const std::vector<cv::Mat> & ExtractCards::findCardsFromBoardImage(Mat const & b
 		extractCards();	// extract the topcard from the regions
 	}
 	catch (const std::exception&)	// if the board image wasn't captured correctly
-	{
-		cv::Mat test;
-		cvtColor(boardImage, test, COLOR_BGR2GRAY);
-		threshold(test, test, 0, 255, THRESH_BINARY);	// threshold the image to keep only brighter regions (cards are white)										
-		std::cerr << "ERROR: Amount of not captured pixels in the image = " << cv::countNonZero(test) << std::endl;
+	{		
+		std::cerr << std::endl;
+		std::cerr << "The image of the board wasn't captured correctly, trying again" << std::endl;
+		std::cerr << std::endl;
 	}
 	return cards;
 }

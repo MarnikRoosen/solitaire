@@ -108,6 +108,7 @@ public:
 	void addCoordinatesToBuffer(const int x, const int y);	// function called by the callback of the hookMouse that adds the coordinates of the mouseclick to the buffer
 	cv::Mat waitForStableImage();	// wait for the end of a cardanimation before grabbing the new screenshot
 	cv::Mat hwnd2mat(const HWND & hwnd);	// makes an image from the window handle
+	bool getEndOfGameBool();
 
 
 	// PROCESSING OF SELECTED CARDS BY THE PLAYER
@@ -133,16 +134,15 @@ private:
 	ClassifyCard cc;
 	SolitaireState currentState;
 
-
-#ifdef NDEBUG
 	// DATABASE VARIABLES
-	sql::Connection *con;
-	sql::Statement *stmt;
-	sql::ResultSet *res;
-	sql::PreparedStatement  *prep_stmt;
-#endif // NDEBUG
 
-
+	#ifdef NDEBUG
+		
+		sql::Connection *con;
+		sql::Statement *stmt;
+		sql::ResultSet *res;
+		sql::PreparedStatement  *prep_stmt;
+	#endif // NDEBUG
 
 
 	// SCREENSHOT AND PLAYINGBOARD PROCESSING VARIABLES

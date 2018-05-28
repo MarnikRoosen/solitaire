@@ -86,11 +86,13 @@ void GameAnalytics::initScreenCapture()
 void GameAnalytics::initLogin() {
 
 	std::cout << "Welcome to the Game Analytics tool of Klondike Solitaire" << std::endl;
+	std::cout << "---------------------------------------------------------------------------------------------------------" << std::endl;
 	std::cout << "If you want to continue without logging in, press 1" << std::endl;
 	std::cout << "If you want to log in, press 2" << std::endl;
 	std::cout << "If you want to register, press 3" << std::endl;
 	std::cout << "If you want to quit, press esc" << std::endl;
 	std::cout << std::endl;
+	std::cout << "Your choice: ";
 
 
 	try {
@@ -121,13 +123,17 @@ void GameAnalytics::initLogin() {
 				std::cout << "If you want to register, press 3" << std::endl;
 				std::cout << "If you want to quit, press esc" << std::endl;
 				std::cout << std::endl;
+				std::cout << "Your choice: ";
 				std::cin >> input;
 				break;
 
 
 			case 1:
 				playerID = -1; //negative value to show in DB it's an unregistered player
+				std::cout << std::endl;
 				std::cout << "You chose to play without logging in, so no data will be linked to your personal account. Enjoy the game!" << std::endl;
+				std::cout << "---------------------------------------------------------------------------------------------------------" << std::endl;
+				std::cout << std::endl;
 				loggedin = true;
 				break;
 
@@ -176,7 +182,9 @@ void GameAnalytics::initLogin() {
 				res = stmt->executeQuery("SELECT playerId FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
 				playerID = res->getInt(1);
 				loggedin = true;
+				std::cout << std::endl;
 				std::cout << "Login succesful! Enjoy playing the game" << std::endl;
+				std::cout << "---------------------------------------------------------------------------------------------------------" << std::endl;
 				std::cout << std::endl;
 				break;
 
@@ -819,6 +827,12 @@ void GameAnalytics::hookMouseClicks()
 	// handeling the incoming mouse data
 	ClicksHooks::Instance().Messages();
 }
+
+bool GameAnalytics::getEndOfGameBool()
+{
+	return endOfGameBool;	// check for the hooks thread to see if the game is over
+}
+
 
 void GameAnalytics::toggleClickDownBool()
 {
