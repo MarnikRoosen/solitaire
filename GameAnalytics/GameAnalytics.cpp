@@ -149,7 +149,8 @@ void GameAnalytics::initLogin() {
 
 				std::cout << "Welcome to the login menu" << std::endl;
 				std::cout << "Username: ";
-				std::cin >> username;
+				//std::cin >> username;
+				std::getline(std::cin, username);
 
 				res = stmt->executeQuery("SELECT * FROM UserInfo WHERE BINARY username = '" + username + "'");
 
@@ -208,12 +209,12 @@ void GameAnalytics::initLogin() {
 				std::cout << "Welcome to the register menu. Please choose a username and password." << std::endl;
 
 				std::cout << "Choose username: ";
-				std::cin >> username;
+				std::getline(std::cin, username);
 				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
 				while (res->next()) {
 						std::cout << "Username is already taken. Please choose another username" << std::endl;
 						std::cout << "Choose username: ";
-						std::cin >> username;
+						std::getline(std::cin, username);
 						res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
 				}
 				
