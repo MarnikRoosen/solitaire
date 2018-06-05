@@ -33,6 +33,12 @@
 
 //#include <openssl/sha.h>
 
+//#include "dll.h"
+#include <hex.h>
+#include <sha.h>
+#include <pwdbased.h>
+// locale includes for tolower()
+#include <locale>
 
 // other includes
 #include <vector>
@@ -52,6 +58,14 @@
 typedef std::chrono::high_resolution_clock Clock;	// clock used for testing
 using namespace cv;
 using namespace std;
+
+
+using namespace CryptoPP;
+
+
+#define SHA_512_cryptopp       2500
+
+
 
 struct cardLocation	// struct used to keep track of the playing board
 {
@@ -88,6 +102,9 @@ public:
 	void disconnectDB();
 
 	//String hashPassword(const string str);
+	String hidePassword();
+	string PBKDF2_HMAC_SHA_512_string(string pass, string salt, uint iterations, uint outputBytes);
+	string generateSalt(int length);
 
 
 

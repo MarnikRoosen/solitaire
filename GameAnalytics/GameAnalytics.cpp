@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "GameAnalytics.h"
 
+#include <conio.h>
+
 CRITICAL_SECTION threadLock;
 GameAnalytics ga;
 
@@ -92,19 +94,20 @@ void GameAnalytics::initLogin() {
 	std::cout << "If you want to register, press 3" << std::endl;
 	std::cout << "If you want to quit, press esc" << std::endl;
 	std::cout << std::endl;
-	std::cout << "Your choice: ";
+	//std::cout << "Your choice: ";
 
 
 	try {
-		int input;
-		std::cin >> input;
+		
+		char input;
+		//std::cin >> input;
+		input = _getch();
+
 
 		std::string username, password, passwordcheck;
+		std::string hashedPassword, salt;
 
 		bool loggedin = false;	
-
-		HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-		DWORD mode = 0;
 
 		while (loggedin != true)
 		{
@@ -114,21 +117,24 @@ void GameAnalytics::initLogin() {
 
 
 			case 27:
+				std::cout << "exit" << endl;
 				exit(EXIT_SUCCESS);
 				break;
 
-			case 0:
+			case '0':
 				std::cout << "If you want to continue without logging in, press 1" << std::endl;
 				std::cout << "If you want to log in, press 2" << std::endl;
 				std::cout << "If you want to register, press 3" << std::endl;
 				std::cout << "If you want to quit, press esc" << std::endl;
+
+				//std::cout << "Your choice: ";
+				//std::cin >> input;
+				input = _getch();
 				std::cout << std::endl;
-				std::cout << "Your choice: ";
-				std::cin >> input;
 				break;
 
 
-			case 1:
+			case '1':
 				playerID = -1; //negative value to show in DB it's an unregistered player
 				std::cout << std::endl;
 				std::cout << "You chose to play without logging in, so no data will be linked to your personal account. Enjoy the game!" << std::endl;
@@ -137,37 +143,43 @@ void GameAnalytics::initLogin() {
 				loggedin = true;
 				break;
 
-			case 2:
+			case '2':
+
+
+
+				std::cout << "Welcome to the login menu" << std::endl;
 				std::cout << "Username: ";
 				std::cin >> username;
-				std::cout << "Password: ";
-				std::cin >> password;
 
-
-				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE username = '" + username + "'");
+				res = stmt->executeQuery("SELECT * FROM UserInfo WHERE BINARY username = '" + username + "'");
 
 				if (res->next()) 
 				{
-					res = stmt->executeQuery("SELECT password FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
 
-					int i = 3;
-					while (!res->next() && i > 0)
+					std::cout << "Password: ";
+					password = hidePassword();
+
+					//res = stmt->executeQuery("SELECT password FROM UserInfo WHERE BINARY username ='" + username + "' AND BINARY password='" + password + "'");
+					salt = res->getString("salt");
+					hashedPassword = PBKDF2_HMAC_SHA_512_string(password, salt, 10000, 20);
+
+					int i = 2;
+					while (hashedPassword.compare(res->getString("password")) != 0 && i > 0)
 					{
 
 						std::cout << "Wrong password. " << i << " attempts left before going back to menu." << std::endl;
 						i--;
-						std::cout << "Password (hidden): ";
-						//std::cin >> password;
-						GetConsoleMode(hStdin, &mode);
-						SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
-						getline(cin, password);
-						res = stmt->executeQuery("SELECT password FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
+						std::cout << "Password: ";
+						password = hidePassword();
+						hashedPassword = PBKDF2_HMAC_SHA_512_string(password, salt, 10000, 20);
+						//res = stmt->executeQuery("SELECT password FROM UserInfo WHERE BINARY username ='" + username + "' AND BINARY password='" + password + "'");
 						
 					}
-					if (i == 0) {
+					if (i == 0 && hashedPassword.compare(res->getString("password")) != 0) {
 						std::cout << std::endl;
 						std::cout << "Out of attempts. Try logging in again or register another account" << std::endl;
-						input = 0;
+						//input = _getch(); 
+						input = '0';
 						break;
 					}
 				}
@@ -175,12 +187,13 @@ void GameAnalytics::initLogin() {
 				{
 					std::cout << "Username not found! Try to login with another username or register first." << std::endl;
 					std::cout << std::endl;
-					input = 0;
+					//input = _getch(); 
+					input = '0';
 					break;
 				}
 
-				res = stmt->executeQuery("SELECT playerId FROM UserInfo WHERE username ='" + username + "' AND password='" + password + "'");
-				playerID = res->getInt(1);
+				playerID = res->getInt("playerId");
+
 				loggedin = true;
 				std::cout << std::endl;
 				std::cout << "Login succesful! Enjoy playing the game" << std::endl;
@@ -189,21 +202,35 @@ void GameAnalytics::initLogin() {
 				break;
 
 
-			case 3:
+			case '3':
+
+				std::cout << endl;
+				std::cout << "Welcome to the register menu. Please choose a username and password." << std::endl;
+
 				std::cout << "Choose username: ";
 				std::cin >> username;
-				std::cout << "Choose password: ";
-				std::cin >> password;
-				std::cout << "Retype chosen password: ";
-				std::cin >> passwordcheck;
+				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
+				while (res->next()) {
+						std::cout << "Username is already taken. Please choose another username" << std::endl;
+						std::cout << "Choose username: ";
+						std::cin >> username;
+						res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
+				}
+				
 
-				while (password != passwordcheck) {
+
+				std::cout << "Choose password: ";
+				password = hidePassword();
+				std::cout << "Retype chosen password: ";
+				passwordcheck = hidePassword();
+
+				while (password.compare(passwordcheck) != 0) {
 
 					std::cout << "Passwords don't match. Please give in password again" << std::endl;
 					std::cout << "Choose password: ";
-					std::cin >> password;
+					password = hidePassword();
 					std::cout << "Retype chosen password: ";
-					std::cin >> passwordcheck;
+					passwordcheck = hidePassword();
 
 				}
 
@@ -218,28 +245,34 @@ void GameAnalytics::initLogin() {
 				}
 				else playerID = 1;
 
+				salt = generateSalt(10);
+				hashedPassword = PBKDF2_HMAC_SHA_512_string(password, salt, 10000, 20);
 
-				prep_stmt = con->prepareStatement("INSERT INTO UserInfo(playerId, username, password) VALUES (?, ?, ?)");
+				prep_stmt = con->prepareStatement("INSERT INTO UserInfo(playerId, username, password, salt) VALUES (?, ?, ?, ?)");
 				prep_stmt->setInt(1, playerID);
 				prep_stmt->setString(2, username);
-				prep_stmt->setString(3, password);
+				prep_stmt->setString(3, hashedPassword);
+				prep_stmt->setString(4, salt);
 
 				prep_stmt->execute();
 
 
-				std::cout << "You are now registered. Please login to continue" << std::endl;
+				std::cout << "You are now registered. Enjoy playing the game!" << std::endl;
 				std::cout << std::endl;
-				input = 2;
+				loggedin = true;
+				//input = '2';
 				break;
 
 
 			default:
 
-				std::cout << "Not a valid input. Please press a number between 1 and 3" << std::endl;
+				std::cout << "Not a valid input. Input is: '" << input << "'. Please press a number between 1 and 3" << std::endl;
 				std::cout << std::endl;
-				input = 0;
+				//input =_getch();
+				input = '0';
 				break;
 			}
+
 		}
 	}
 	catch (sql::SQLException &e) {
@@ -249,6 +282,83 @@ void GameAnalytics::initLogin() {
 		cout << " (MySQL error code: " << e.getErrorCode();
 		cout << ", SQLState: " << e.getSQLState() << " )" << endl;
 	}
+}
+
+
+String GameAnalytics::hidePassword() {
+
+	const char BACKSPACE = 8;
+	const char RETURN = 13;
+
+	string password;
+	unsigned char ch = 0;
+
+
+	DWORD con_mode_before, con_mode;
+	DWORD dwRead;
+
+	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+
+	GetConsoleMode(hIn, &con_mode_before);
+	con_mode = con_mode_before;
+	SetConsoleMode(hIn, con_mode & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT));
+
+	while (ReadConsoleA(hIn, &ch, 1, &dwRead, NULL) && ch != RETURN)
+	{
+		if (ch == BACKSPACE)
+		{
+			if (password.length() != 0)
+			{
+					std::cout << "\b \b";
+				password.resize(password.length() - 1);
+			}
+		}
+		else
+		{
+			password += ch;
+				cout << '*';
+		}
+	}
+	std::cout << endl;
+
+	SetConsoleMode(hIn, con_mode_before);
+	return password;
+}
+
+
+//https://github.com/Anti-weakpasswords/PBKDF2-Gplusplus-Cryptopp-library/blob/master/pbkdf2_crypto%2B%2B.cpp
+string GameAnalytics::PBKDF2_HMAC_SHA_512_string(string pass, string salt, uint iterations, uint outputBytes)
+
+{
+
+	SecByteBlock result(outputBytes);
+	string hexResult;
+
+	PKCS5_PBKDF2_HMAC<SHA512> pbkdf;
+	pbkdf.DeriveKey(result, result.size(), 0x00, (byte *)pass.data(), pass.size(), (byte *)salt.data(), salt.size(), iterations);
+
+	ArraySource resultEncoder(result, result.size(), true, new HexEncoder(new StringSink(hexResult)));
+
+	return hexResult;
+}
+
+//https://stackoverflow.com/questions/440133/how-do-i-create-a-random-alpha-numeric-string-in-c?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+string GameAnalytics::generateSalt(int length)
+{
+	
+	srand(time(NULL));
+
+		 char charset[] =
+			"0123456789"
+			"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+			"abcdefghijklmnopqrstuvwxyz";
+
+		 string res = "";
+		 for (int i = 0; i < length; i++)
+			 res = res + charset[rand() % 62];
+
+		 return res;
+	
 }
 
 /*
@@ -293,11 +403,11 @@ void GameAnalytics::initDBConn() {
 
 		//Create the table for the Game Statistics
 		//stmt->execute("DROP TABLE IF EXISTS GameStats");
-		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(gameId int, playerId int, undos int, hints int, suiterrors int, rankerrors int, score int, endofgame CHAR(3), gameresult CHAR(4), starttime DATETIME, totaltimeinsec int, nrmoves int, avgtimemoveinmilsec int)");
+		stmt->execute("CREATE TABLE IF NOT EXISTS GameStats(gameId int, playerId int, undos int, hints int, suitErrors int, rankErrors int, score int, gameResult CHAR(4), startTime DATETIME, totalTimeInSec int, nrMoves int, avgTimeMoveInMilsec int)");
 
 		//Create the table with user information
 		//stmt->execute("DROP TABLE IF EXISTS UserInfo");
-		stmt->execute("CREATE TABLE IF NOT EXISTS UserInfo(playerId int, username CHAR(50), password CHAR(50))");
+		stmt->execute("CREATE TABLE IF NOT EXISTS UserInfo(playerId int, username CHAR(50), password CHAR(50), salt CHAR(10))");
 
 		//Create the table with pressed card locations
 		//stmt->execute("DROP TABLE IF EXISTS PressedLocations");
@@ -305,7 +415,7 @@ void GameAnalytics::initDBConn() {
 
 		//Create the table with all the click coordinates
 		//stmt->execute("DROP TABLE IF EXISTS ClickCoord");
-		stmt->execute("CREATE TABLE IF NOT EXISTS ClickCoord(clickId int, gameId int, xcoord int, ycoord int)");
+		stmt->execute("CREATE TABLE IF NOT EXISTS ClickCoord(clickId int, gameId int, xCoord int, yCoord int)");
 
 		
 
@@ -350,7 +460,7 @@ void GameAnalytics::insertMetricsDB() {
 
 
 		//Insert data into the GameStats table
-		prep_stmt = con->prepareStatement("INSERT INTO GameStats(gameId, playerId, undos, hints, suiterrors, rankerrors, score, endofgame, gameresult, starttime, totaltimeinsec, nrmoves, avgtimemoveinmilsec) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		prep_stmt = con->prepareStatement("INSERT INTO GameStats(gameId, playerId, undos, hints, suitErrors, rankErrors, score, gameResult, startTime, totalTimeInSec, nrMoves, avgTimeMoveInMilsec) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 		prep_stmt->setInt(1, gameID);
 		prep_stmt->setInt(2, playerID);
 		prep_stmt->setInt(3, numberOfUndos);
@@ -359,15 +469,11 @@ void GameAnalytics::insertMetricsDB() {
 		prep_stmt->setInt(6, numberOfRankErrors);
 		prep_stmt->setInt(7, score);
 
-		if (endOfGameBool == true)
-			prep_stmt->setString(8, "YES");
-		else
-			prep_stmt->setString(8, "NO");
 
 		if (gameWon == true)
-			prep_stmt->setString(9, "WON");
+			prep_stmt->setString(8, "WON");
 		else
-			prep_stmt->setString(9, "LOST");
+			prep_stmt->setString(8, "LOST");
 
 
 		//char buffer[80];
@@ -378,15 +484,15 @@ void GameAnalytics::insertMetricsDB() {
 
 		std::ostringstream oss;
 		oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
-		prep_stmt->setDateTime(10, oss.str());
+		prep_stmt->setDateTime(9, oss.str());
 
 		//		stmt->execute("INSERT INTO test(id, label) VALUES (, 'a')");
 
 		//insert duration
-		prep_stmt->setInt(11, duration);
+		prep_stmt->setInt(10, duration);
 
-		prep_stmt->setInt(12, averageThinkDurations.size());
-		prep_stmt->setInt(13, avgTimeMove);
+		prep_stmt->setInt(11, averageThinkDurations.size());
+		prep_stmt->setInt(12, avgTimeMove);
 		
 
 		prep_stmt->execute();
@@ -411,7 +517,7 @@ void GameAnalytics::insertMetricsDB() {
 		prep_stmt->execute();
 
 
-		prep_stmt = con->prepareStatement("INSERT INTO ClickCoord(clickId, gameId, xcoord, ycoord) VALUES (?, ?, ?, ?)");
+		prep_stmt = con->prepareStatement("INSERT INTO ClickCoord(clickId, gameId, xCoord, yCoord) VALUES (?, ?, ?, ?)");
 		for (int i = 0; i < locationOfPresses.size(); i++) {
 			prep_stmt->setInt(1, i);
 			prep_stmt->setInt(2, gameID);
