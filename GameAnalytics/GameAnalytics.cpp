@@ -162,7 +162,10 @@ void GameAnalytics::initLogin() {
 					std::getline(std::cin, username);
 				}
 
-				res = stmt->executeQuery("SELECT * FROM UserInfo WHERE BINARY username = '" + username + "'");
+				//res = stmt->executeQuery("SELECT * FROM UserInfo WHERE BINARY username = '" + username + "'");
+				prep_stmt = con->prepareStatement("SELECT * FROM UserInfo WHERE BINARY username = ?");
+				prep_stmt->setString(1, username);
+				res = prep_stmt->executeQuery();
 
 				if (res->next()) 
 				{
@@ -251,11 +254,16 @@ void GameAnalytics::initLogin() {
 					if (username.length() == 0) {
 						std::cout << "Username field is empty. Please give in username." << std::endl;
 					}
+					std::cout << "Choose username: ";
 					std::getline(std::cin, username);
 				}
 
 
-				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
+				//res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
+				prep_stmt = con->prepareStatement("SELECT username FROM UserInfo WHERE BINARY username = ?");
+				prep_stmt->setString(1, username);
+				res = prep_stmt->executeQuery();
+
 				while (res->next()) {
 						std::cout << "Username is already taken. Please choose another username" << std::endl;
 						std::cout << "Choose username: ";
@@ -268,19 +276,21 @@ void GameAnalytics::initLogin() {
 							if (username.length() == 0) {
 								std::cout << "Username field is empty. Please give in username." << std::endl;
 							}
+							std::cout << "Choose username: ";
 							std::getline(std::cin, username);
 						}
 
 
-						res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
+						//res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
+						prep_stmt = con->prepareStatement("SELECT username FROM UserInfo WHERE BINARY username = ?");
+						prep_stmt->setString(1, username);
+						res = prep_stmt->executeQuery();
 				}
 				
 
 
 				std::cout << "Choose password: ";
 				password = hidePassword();
-				std::cout << "Retype chosen password: ";
-				passwordcheck = hidePassword();
 
 				while (password.length() > 50 || password.length() == 0) {
 					if (password.length() > 50) {
@@ -291,15 +301,18 @@ void GameAnalytics::initLogin() {
 					}
 					std::cout << "Password: ";
 					password = hidePassword();
-				}
+				}				
+				
+				std::cout << "Retype chosen password: ";
+				passwordcheck = hidePassword();
+
 
 				while (password.compare(passwordcheck) != 0) {
 
 					std::cout << "Passwords don't match. Please give in password again" << std::endl;
 					std::cout << "Choose password: ";
 					password = hidePassword();
-					std::cout << "Retype chosen password: ";
-					passwordcheck = hidePassword();
+
 
 					while (password.length() > 50 || password.length() == 0) {
 						if (password.length() > 50) {
@@ -310,7 +323,10 @@ void GameAnalytics::initLogin() {
 						}
 						std::cout << "Password: ";
 						password = hidePassword();
-					}
+					}					
+					
+					std::cout << "Retype chosen password: ";
+					passwordcheck = hidePassword();
 
 				}
 
