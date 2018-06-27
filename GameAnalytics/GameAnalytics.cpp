@@ -115,12 +115,13 @@ void GameAnalytics::initLogin() {
 			switch (input)
 			{
 
-
+			//exit when escape button is pressed
 			case 27:
 				std::cout << "exit" << endl;
 				exit(EXIT_SUCCESS);
 				break;
-
+			
+			//Standard menu
 			case '0':
 				std::cout << "If you want to continue without logging in, press 1" << std::endl;
 				std::cout << "If you want to log in, press 2" << std::endl;
@@ -133,7 +134,7 @@ void GameAnalytics::initLogin() {
 				std::cout << std::endl;
 				break;
 
-
+			//Continue without logging in
 			case '1':
 				playerID = -1; //negative value to show in DB it's an unregistered player
 				std::cout << std::endl;
@@ -143,14 +144,23 @@ void GameAnalytics::initLogin() {
 				loggedin = true;
 				break;
 
+			//Login menu
 			case '2':
-
-
 
 				std::cout << "Welcome to the login menu" << std::endl;
 				std::cout << "Username: ";
 				//std::cin >> username;
 				std::getline(std::cin, username);
+				
+				while (username.length() > 50 || username.length()==0) {
+					if (username.length() > 50) {
+						std::cout << "Username too long. Max 50 characters" << std::endl;
+					}
+					if (username.length() == 0) {
+						std::cout << "Username field is empty. Please give in username." << std::endl;
+					}
+					std::getline(std::cin, username);
+				}
 
 				res = stmt->executeQuery("SELECT * FROM UserInfo WHERE BINARY username = '" + username + "'");
 
@@ -159,6 +169,17 @@ void GameAnalytics::initLogin() {
 
 					std::cout << "Password: ";
 					password = hidePassword();
+
+					while (password.length() > 50 || password.length() == 0) {
+						if (password.length() > 50) {
+							std::cout << "Password too long. Max 50 characters" << std::endl;
+						}
+						if (password.length() == 0) {
+							std::cout << "Password field is empty; Please give in password." << std::endl;
+						}
+						std::cout << "Password: ";
+						password = hidePassword();
+					}
 
 					//res = stmt->executeQuery("SELECT password FROM UserInfo WHERE BINARY username ='" + username + "' AND BINARY password='" + password + "'");
 					salt = res->getString("salt");
@@ -172,6 +193,18 @@ void GameAnalytics::initLogin() {
 						i--;
 						std::cout << "Password: ";
 						password = hidePassword();
+
+						while (password.length() > 50 || password.length() == 0) {
+							if (password.length() > 50) {
+								std::cout << "Password too long. Max 50 characters" << std::endl;
+							}
+							if (password.length() == 0) {
+								std::cout << "Password field is empty; Please give in password." << std::endl;
+							}
+							std::cout << "Password: ";
+							password = hidePassword();
+						}
+
 						hashedPassword = PBKDF2_HMAC_SHA_512_string(password, salt, 10000, 20);
 						//res = stmt->executeQuery("SELECT password FROM UserInfo WHERE BINARY username ='" + username + "' AND BINARY password='" + password + "'");
 						
@@ -202,7 +235,7 @@ void GameAnalytics::initLogin() {
 				std::cout << std::endl;
 				break;
 
-
+			//Register menu
 			case '3':
 
 				std::cout << endl;
@@ -210,11 +243,35 @@ void GameAnalytics::initLogin() {
 
 				std::cout << "Choose username: ";
 				std::getline(std::cin, username);
+
+				while (username.length() > 50 || username.length() == 0) {
+					if (username.length() > 50) {
+						std::cout << "Username too long. Max 50 characters" << std::endl;
+					}
+					if (username.length() == 0) {
+						std::cout << "Username field is empty. Please give in username." << std::endl;
+					}
+					std::getline(std::cin, username);
+				}
+
+
 				res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
 				while (res->next()) {
 						std::cout << "Username is already taken. Please choose another username" << std::endl;
 						std::cout << "Choose username: ";
 						std::getline(std::cin, username);
+
+						while (username.length() > 50 || username.length() == 0) {
+							if (username.length() > 50) {
+								std::cout << "Username too long. Max 50 characters" << std::endl;
+							}
+							if (username.length() == 0) {
+								std::cout << "Username field is empty. Please give in username." << std::endl;
+							}
+							std::getline(std::cin, username);
+						}
+
+
 						res = stmt->executeQuery("SELECT username FROM UserInfo WHERE BINARY username = '" + username + "'");
 				}
 				
@@ -225,6 +282,17 @@ void GameAnalytics::initLogin() {
 				std::cout << "Retype chosen password: ";
 				passwordcheck = hidePassword();
 
+				while (password.length() > 50 || password.length() == 0) {
+					if (password.length() > 50) {
+						std::cout << "Password too long. Max 50 characters" << std::endl;
+					}
+					if (password.length() == 0) {
+						std::cout << "Password field is empty; Please give in password." << std::endl;
+					}
+					std::cout << "Password: ";
+					password = hidePassword();
+				}
+
 				while (password.compare(passwordcheck) != 0) {
 
 					std::cout << "Passwords don't match. Please give in password again" << std::endl;
@@ -232,6 +300,17 @@ void GameAnalytics::initLogin() {
 					password = hidePassword();
 					std::cout << "Retype chosen password: ";
 					passwordcheck = hidePassword();
+
+					while (password.length() > 50 || password.length() == 0) {
+						if (password.length() > 50) {
+							std::cout << "Password too long. Max 50 characters" << std::endl;
+						}
+						if (password.length() == 0) {
+							std::cout << "Password field is empty; Please give in password." << std::endl;
+						}
+						std::cout << "Password: ";
+						password = hidePassword();
+					}
 
 				}
 
@@ -285,7 +364,7 @@ void GameAnalytics::initLogin() {
 	}
 }
 
-
+//method to show asterisks on the terminal instead of the letters when typing in the password
 String GameAnalytics::hidePassword() {
 
 	const char BACKSPACE = 8;
@@ -328,6 +407,7 @@ String GameAnalytics::hidePassword() {
 
 
 //https://github.com/Anti-weakpasswords/PBKDF2-Gplusplus-Cryptopp-library/blob/master/pbkdf2_crypto%2B%2B.cpp
+// Method for the PBKDF hashing of the password
 string GameAnalytics::PBKDF2_HMAC_SHA_512_string(string pass, string salt, uint iterations, uint outputBytes)
 
 {
@@ -344,6 +424,7 @@ string GameAnalytics::PBKDF2_HMAC_SHA_512_string(string pass, string salt, uint 
 }
 
 //https://stackoverflow.com/questions/440133/how-do-i-create-a-random-alpha-numeric-string-in-c?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+//Method for the generating of a random salt for the password hashing
 string GameAnalytics::generateSalt(int length)
 {
 	
@@ -361,6 +442,7 @@ string GameAnalytics::generateSalt(int length)
 		 return res;
 	
 }
+
 
 /*
 String GameAnalytics::hashPassword(const string str){
@@ -380,6 +462,7 @@ String GameAnalytics::hashPassword(const string str){
 }
 */
 
+// Make a connection with the database and create the tables if they don't exist yet
 void GameAnalytics::initDBConn() {
 
 
@@ -601,7 +684,7 @@ void GameAnalytics::initGameLogic()
 
 	startOfGame = Clock::now();	// tracking the time between moves and total game time
 	startOfMove = Clock::now();
-
+	startOfGameDB = time(0);
 
 classifiedCardsFromPlayingBoard.reserve(12);
 cv::Mat src = waitForStableImage();	// get the first image of the board
